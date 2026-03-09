@@ -1,0 +1,18 @@
+[
+  {
+    "id": "1",
+    "category": "React",
+    "subcategory": "Hooks",
+    "question": "为什么 React 不推荐用 index 作为 key？",
+    "answer": "因为 key 用于识别元素稳定性，index 会导致 diff 错误。",
+    "content": "当列表顺序变化时，React 会错误复用 DOM..."
+  },
+  {
+    "id": "2",
+    "category": "React",
+    "subcategory": "Hooks",
+    "question": "useEffect 为什么不能 async？",
+    "answer": "因为 useEffect 期望返回 cleanup 函数。",
+    "content": "async 会返回 Promise，不符合 React 预期。"
+  }
+]
