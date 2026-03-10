@@ -34,7 +34,8 @@
     "build:quickapp-webview": "uni build -p quickapp-webview",
     "build:quickapp-webview-huawei": "uni build -p quickapp-webview-huawei",
     "build:quickapp-webview-union": "uni build -p quickapp-webview-union",
-    "type-check": "vue-tsc --noEmit"
+    "type-check": "vue-tsc --noEmit",
+    "import:word": "node ./scripts/import-word-to-cards.mjs"
   },
   "dependencies": {
     "@dcloudio/uni-app": "3.0.0-4080420251103001",
@@ -64,6 +65,7 @@
     "@dcloudio/vite-plugin-uni": "3.0.0-4080420251103001",
     "@vue/tsconfig": "^0.9.0",
     "@vue/runtime-core": "^3.4.21",
+    "mammoth": "^1.9.0",
     "typescript": "^5.9.3",
     "vite": "5.2.8",
     "vue-tsc": "^3.2.5"
