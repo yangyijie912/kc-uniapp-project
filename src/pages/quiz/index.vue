@@ -14,22 +14,47 @@
       <view class="question-tag">React / Hooks</view>
       <view class="question-title">为什么 useEffect 不能直接写成 async？</view>
       <view class="question-desc">先想返回值，再想副作用执行时机。</view>
+      <view class="reveal-btn" @click="toggleAnswer">
+        {{ showAnswer ? '收起答案' : '展开查看答案' }}
+      </view>
     </view>
 
-    <view class="answer-list">
-      <view class="answer-item">因为 async 会返回 Promise，不符合 effect 对 cleanup 函数的预期。</view>
-      <view class="answer-item">因为 async 会阻塞组件渲染。</view>
-      <view class="answer-item">因为 React 不支持异步函数。</view>
+    <view v-if="showAnswer" class="answer-panel">
+      <view class="answer-label">参考答案</view>
+      <view class="answer-text"
+        >因为 async 会返回 Promise，不符合 effect 对 cleanup 函数的预期。effect
+        期望返回的是清理函数，或者不返回内容。</view
+      >
+      <view class="answer-tip">记忆点：先想 useEffect 的返回值，再判断 async 会不会破坏这个约定。</view>
+
+      <view class="content-block">
+        <view class="content-label">补充笔记</view>
+        <rich-text class="content-rich" :nodes="content"></rich-text>
+      </view>
     </view>
 
     <view class="bottom-row">
-      <view class="ghost-btn">跳过</view>
-      <view class="primary-btn">提交答案</view>
+      <view class="status-btn status-unknown">不会</view>
+      <view class="status-btn status-fuzzy">模糊</view>
+      <view class="status-btn status-mastered">掌握</view>
     </view>
   </view>
 </template>
 
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { ref } from 'vue';
+
+const showAnswer = ref(false);
+const content = `
+  <h3>补充理解</h3>
+  <p>useEffect 的返回值只能是 cleanup 函数，或者什么都不返回。</p>
+  <p>如果直接写成 async，返回值会变成 Promise，语义就错了。</p>
+`;
+
+const toggleAnswer = () => {
+  showAnswer.value = !showAnswer.value;
+};
+</script>
 
 <style scoped>
 .page {
@@ -107,18 +132,57 @@
   font-size: 26rpx;
 }
 
-.answer-list {
+.reveal-btn {
   margin-top: 22rpx;
-  display: flex;
-  flex-direction: column;
-  gap: 16rpx;
+  height: 78rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 28rpx;
+  border-radius: 999rpx;
+  background: rgba(31, 94, 255, 0.1);
+  color: #1f5eff;
+  font-size: 26rpx;
+  font-weight: 600;
 }
 
-.answer-item {
-  padding: 24rpx;
+.answer-panel {
+  margin-top: 22rpx;
+  padding: 28rpx;
+  border-radius: 28rpx;
+  border: 1rpx solid rgba(61, 43, 24, 0.12);
+  background: rgba(255, 252, 247, 0.84);
+  box-shadow: 0 16rpx 40rpx rgba(80, 55, 25, 0.06);
+}
+
+.answer-label {
+  color: #127a72;
+  font-size: 22rpx;
+}
+
+.answer-text {
+  margin-top: 12rpx;
   color: #1e1c18;
-  font-size: 28rpx;
+  font-size: 30rpx;
   line-height: 1.7;
+}
+
+.answer-tip {
+  margin-top: 14rpx;
+  color: #6c645a;
+  font-size: 24rpx;
+  line-height: 1.7;
+}
+
+.content-block {
+  margin-top: 24rpx;
+  padding-top: 24rpx;
+  border-top: 1rpx solid rgba(61, 43, 24, 0.08);
+}
+
+.content-label {
+  color: #127a72;
+  font-size: 22rpx;
 }
 
 .bottom-row {
@@ -127,8 +191,7 @@
   gap: 16rpx;
 }
 
-.ghost-btn,
-.primary-btn {
+.status-btn {
   flex: 1;
   height: 88rpx;
   display: flex;
@@ -139,13 +202,18 @@
   font-weight: 600;
 }
 
-.ghost-btn {
+.status-unknown {
   background: rgba(255, 255, 255, 0.72);
   color: #6c645a;
 }
 
-.primary-btn {
+.status-fuzzy {
+  background: rgba(239, 125, 66, 0.14);
+  color: #c76530;
+}
+
+.status-mastered {
   background: #ef7d42;
-  color: #fff;
+  color: #fff7ed;
 }
 </style>

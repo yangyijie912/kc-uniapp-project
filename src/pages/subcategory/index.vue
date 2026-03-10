@@ -7,16 +7,6 @@
     </view>
 
     <view class="panel">
-      <view class="section-title">子分类</view>
-      <view class="chip-list">
-        <view class="chip active">Hooks</view>
-        <view class="chip">状态管理</view>
-        <view class="chip">性能优化</view>
-        <view class="chip">组件设计</view>
-      </view>
-    </view>
-
-    <view class="panel">
       <view class="section-title">推荐入口</view>
       <view class="topic-list">
         <view class="topic-item">
@@ -95,28 +85,6 @@
   color: #1e1c18;
   font-size: 32rpx;
   font-weight: 700;
-}
-
-.chip-list {
-  margin-top: 18rpx;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16rpx;
-}
-
-.chip {
-  padding: 14rpx 22rpx;
-  border-radius: 999rpx;
-  background: rgba(255, 255, 255, 0.78);
-  border: 1rpx solid rgba(61, 43, 24, 0.08);
-  color: #6c645a;
-  font-size: 24rpx;
-}
-
-.chip.active {
-  background: rgba(31, 94, 255, 0.1);
-  border-color: rgba(31, 94, 255, 0.18);
-  color: #1f5eff;
 }
 
 .topic-list {

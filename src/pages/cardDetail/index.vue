@@ -7,7 +7,7 @@
     </view>
 
     <view class="panel">
-      <view class="panel-title">标准答案</view>
+      <view class="panel-title">答案</view>
       <view class="panel-text">
         因为 key 用来标识节点稳定性。使用 index 时，一旦列表顺序变化，React 可能把旧节点错误复用到新位置，导致状态和 DOM
         不一致。
@@ -15,7 +15,7 @@
     </view>
 
     <view class="panel">
-      <view class="panel-title">记忆提示</view>
+      <view class="panel-title">笔记</view>
       <view class="bullet">key 的作用不是消除警告，而是辅助 diff</view>
       <view class="bullet">顺序会变的列表，不要用 index</view>
       <view class="bullet">静态列表、永不变动时才勉强可以接受</view>
