@@ -6,7 +6,7 @@
       <view class="hero-desc"> 用抽题、分类和检索把前端知识点串起来，适合日常复习和面试前冲刺。 </view>
 
       <view class="hero-actions">
-        <view class="quiz-btn">开始抽题</view>
+        <view class="quiz-btn" @click="onQuiz">开始抽题</view>
         <view class="secondary-btn">查看卡库</view>
       </view>
 
@@ -38,7 +38,7 @@
           placeholder="例如：useEffect、闭包、响应式"
           placeholder-class="search-placeholder"
         />
-        <view class="search-btn">搜索</view>
+        <view class="search-btn" @click="searchCard">搜索</view>
       </view>
     </view>
 
@@ -49,28 +49,62 @@
       </view>
 
       <view class="category-list">
-        <view class="category-item category-react">
-          <text class="category-name">React</text>
-          <text class="category-count">36 张卡片</text>
-        </view>
-        <view class="category-item category-vue">
-          <text class="category-name">Vue</text>
-          <text class="category-count">24 张卡片</text>
-        </view>
-        <view class="category-item category-js">
-          <text class="category-name">JavaScript</text>
-          <text class="category-count">41 张卡片</text>
-        </view>
-        <view class="category-item category-engineering">
-          <text class="category-name">工程化</text>
-          <text class="category-count">18 张卡片</text>
+        <view
+          v-for="c in categoriesData"
+          :key="c.id"
+          class="category-item"
+          :style="{ background: getCategoryTheme(c.name).background, color: getCategoryTheme(c.name).color }"
+          @click="goToSubcategory(c.id)"
+        >
+          <text class="category-name">{{ c.name }}</text>
+          <text class="category-count">0 张卡片</text>
         </view>
       </view>
     </view>
   </view>
 </template>
 
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { onMounted, ref } from 'vue';
+import { getCategories } from '@/services/categoryService';
+import { getCategoryTheme } from '@/utils/categoryTheme';
+import type { Category } from '@/types/card';
+import type { Ref } from 'vue';
+
+const categoriesData: Ref<Category[]> = ref([]);
+
+// 搜索
+const searchCard = () => {
+  uni.navigateTo({
+    url: '/pages/cardList/index',
+  });
+};
+
+// 抽题
+const onQuiz = () => {
+  uni.navigateTo({
+    url: '/pages/quiz/index',
+  });
+};
+
+// 进入子分类
+const goToSubcategory = (categoryId: string) => {
+  uni.navigateTo({
+    url: `/pages/subcategory/index?categoryId=${categoryId}`,
+  });
+};
+
+// 获取分类数据
+const fetchCategories = () => {
+  const res = getCategories();
+  categoriesData.value = res;
+  console.log('Fetched Categories:', categoriesData.value);
+};
+
+onMounted(() => {
+  fetchCategories(); // 预加载分类数据
+});
+</script>
 
 <style scoped>
 .page {
@@ -278,26 +312,6 @@
   flex-direction: column;
   justify-content: space-between;
   box-sizing: border-box;
-}
-
-.category-react {
-  background: linear-gradient(135deg, #1f2937, #334155);
-  color: #f8fafc;
-}
-
-.category-vue {
-  background: linear-gradient(135deg, #0f766e, #10b981);
-  color: #f0fdfa;
-}
-
-.category-js {
-  background: linear-gradient(135deg, #f59e0b, #facc15);
-  color: #3b2f0f;
-}
-
-.category-engineering {
-  background: linear-gradient(135deg, #7c3aed, #2563eb);
-  color: #eff6ff;
 }
 
 .category-name {
