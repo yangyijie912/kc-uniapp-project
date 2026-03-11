@@ -8,7 +8,7 @@
 
     <view class="toolbar-card">
       <view class="toolbar-title">当前分类</view>
-      <view class="toolbar-action">新增分类</view>
+      <view class="toolbar-action" @click="addCategory">新增分类</view>
     </view>
 
     <view class="list-card">
@@ -18,7 +18,7 @@
           <view class="category-meta">ID: {{ category.id }}</view>
         </view>
         <view class="row-actions">
-          <view class="row-btn">编辑</view>
+          <view class="row-btn" @click="goToEdit(category.id)">编辑</view>
           <view class="row-btn row-btn-danger">删除</view>
         </view>
       </view>
@@ -32,6 +32,21 @@ import { getCategories } from '@/services/categoryService';
 import type { Category } from '@/types/card';
 
 const categoriesData = ref<Category[]>(getCategories());
+const popup = ref<any>(null);
+
+// 进入分类编辑页
+const goToEdit = (id: string) => {
+  uni.navigateTo({
+    url: `/pages/categoryEdit/index?id=${id}`,
+  });
+};
+
+// 新增分类
+const addCategory = () => {
+  uni.navigateTo({
+    url: '/pages/categoryEdit/index',
+  });
+};
 </script>
 
 <style scoped>

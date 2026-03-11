@@ -3,6 +3,7 @@ export type CardStatus = 'unknown' | 'fuzzy' | 'mastered';
 export type Category = {
   id: string;
   name: string;
+  sort: number;
 };
 
 export type Subcategory = {

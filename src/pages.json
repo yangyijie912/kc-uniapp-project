@@ -19,6 +19,12 @@
       }
     },
     {
+      "path": "pages/categoryEdit/index",
+      "style": {
+        "navigationBarTitleText": "分类"
+      }
+    },
+    {
       "path": "pages/cardList/index",
       "style": {
         "navigationBarTitleText": "列表"
