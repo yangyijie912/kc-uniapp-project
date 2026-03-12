@@ -33,12 +33,35 @@ import { onShow } from '@dcloudio/uni-app';
 
 const categoriesData = ref<Category[]>([]);
 
+// 加载分类数据
+const loadCategories = () => {
+  categoriesData.value = getCategories();
+};
+
 // 删除分类
 const removeCategory = (id: string) => {
+  uni.showModal({
+    title: '确认删除',
+    content: '删除分类会将该分类的卡片全部移入未分类，请谨慎操作。',
+    confirmText: '删除',
+    cancelText: '取消',
+    success: (res) => {
+      if (res.confirm) {
+        performDelete(id);
+      }
+    },
+  });
+};
+
+const performDelete = (id: string) => {
   const success = deleteCategory(id);
   if (success) {
-    categoriesData.value = getCategories();
+    loadCategories();
   }
+  uni.showToast({
+    title: success ? '分类删除成功' : '分类删除失败',
+    icon: success ? 'success' : 'none',
+  });
 };
 
 // 进入分类编辑页
@@ -57,7 +80,7 @@ const addCategory = () => {
 
 onShow(() => {
   // 每次进入页面都刷新分类数据，确保和编辑页修改后保持同步
-  categoriesData.value = getCategories();
+  loadCategories();
   console.log('Fetched Categories on Show:', categoriesData.value);
 });
 </script>

@@ -5,65 +5,106 @@ import { generateUUID } from '@/utils/uuid';
 // 本地存储的键名
 const key = 'knowledge-card-categories';
 
-let categoryList: Category[] = categories;
+// 默认分类列表，从静态数据文件加载
+const defaultCategories: Category[] = (categories as Category[]).map((category) => ({ ...category }));
+
+// 当前的分类列表，初始值为空，后续会从本地存储加载或使用默认分类
+let categoryList: Category[] = [];
+
+// 克隆一个分类对象，确保外部修改不会影响内部数据
+function cloneCategory(category: Category): Category {
+  return { ...category };
+}
+
+// 对分类列表进行排序，首先按照 sort 字段升序排序，如果 sort 相同则按照 name 字段的字母顺序排序
+function normalizeCategories(list: Category[]): Category[] {
+  return list.map(cloneCategory).sort((left, right) => left.sort - right.sort || left.name.localeCompare(right.name));
+}
+
+// 从本地存储加载分类列表，如果没有则使用默认分类，并保存到本地存储
+function loadCategoriesFromStorage(): Category[] {
+  const saved = uni.getStorageSync(key);
+
+  if (!saved) {
+    categoryList = normalizeCategories(defaultCategories);
+    saveCategoriesToStorage(categoryList);
+    return categoryList;
+  }
+
+  categoryList = normalizeCategories(JSON.parse(saved) as Category[]);
+  return categoryList;
+}
 
 // 保存整个分类列表到本地存储
 export function saveCategoriesToStorage(list: Category[]) {
-  uni.setStorageSync(key, JSON.stringify(list));
+  const normalizedList = normalizeCategories(list);
+  uni.setStorageSync(key, JSON.stringify(normalizedList));
+  categoryList = normalizedList;
 }
 
-// 初始化时将默认分类列表存储到本地存储中，如果已经存在则不覆盖
-if (!uni.getStorageSync(key)) {
-  saveCategoriesToStorage(categoryList);
-} else {
-  // 如果本地存储中已经有数据，则使用存储的数据覆盖默认的分类列表
-  categoryList = JSON.parse(uni.getStorageSync(key)) as Category[];
-}
+loadCategoriesFromStorage();
 
 // 获取分类列表，支持根据参数过滤分类
 export function getCategories(params?: Partial<Category>): Category[] {
+  const currentList = loadCategoriesFromStorage();
+
   if (!params) {
-    return categoryList;
+    return currentList.map(cloneCategory);
   }
-  return categoryList.filter((category) => {
-    return (Object.keys(params) as Array<keyof Category>).every((key) => category[key] === params[key]);
-  });
+
+  return currentList
+    .filter((category) => {
+      return (Object.keys(params) as Array<keyof Category>).every((key) => category[key] === params[key]);
+    })
+    .map(cloneCategory);
 }
 
 // 根据 id 获取单个分类
 export function getCategoryById(id: string): Category | undefined {
-  return categoryList.find((category) => category.id === id);
+  const category = loadCategoriesFromStorage().find((item) => item.id === id);
+  return category ? cloneCategory(category) : undefined;
 }
 
 // 添加新分类
 export function addCategory(category: Omit<Category, 'id'>): Category {
+  const currentList = loadCategoriesFromStorage();
   const newCategory: Category = {
     id: generateUUID(),
     ...category,
   };
-  categoryList.push(newCategory);
-  saveCategoriesToStorage(categoryList);
-  return newCategory;
+
+  saveCategoriesToStorage([...currentList, newCategory]);
+  return cloneCategory(newCategory);
 }
 
 // 更新分类
 export function updateCategory(updates: Partial<Category>): Category | null {
-  const category = categoryList.find((cat) => cat.id === updates.id);
-  if (!category) {
+  const currentList = loadCategoriesFromStorage();
+  const index = currentList.findIndex((category) => category.id === updates.id);
+
+  if (index === -1) {
     return null;
   }
-  Object.assign(category, updates);
-  saveCategoriesToStorage(categoryList);
-  return category;
+
+  const updatedCategory: Category = {
+    ...currentList[index],
+    ...updates,
+  };
+
+  currentList[index] = updatedCategory;
+  saveCategoriesToStorage(currentList);
+  return cloneCategory(updatedCategory);
 }
 
 // 删除分类
 export function deleteCategory(id: string): boolean {
-  const index = categoryList.findIndex((category) => category.id === id);
-  if (index === -1) {
+  const currentList = loadCategoriesFromStorage();
+  const nextList = currentList.filter((category) => category.id !== id);
+
+  if (nextList.length === currentList.length) {
     return false;
   }
-  categoryList.splice(index, 1);
-  saveCategoriesToStorage(categoryList);
+
+  saveCategoriesToStorage(nextList);
   return true;
 }
