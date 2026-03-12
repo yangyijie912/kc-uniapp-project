@@ -122,7 +122,6 @@ const goToSubcategory = (categoryId: string) => {
 const fetchCategories = () => {
   const res = getCategories();
   categoriesData.value = res;
-  console.log('Fetched Categories:', categoriesData.value);
 };
 
 onMounted(() => {
@@ -385,7 +384,7 @@ onMounted(() => {
   line-height: 1.7;
 }
 
-@media (max-width: 420px) {
+@media (max-width: 320px) {
   .manage-grid {
     grid-template-columns: 1fr;
   }
@@ -404,7 +403,7 @@ onMounted(() => {
   box-shadow: inset 10rpx 0 0 #1f5eff;
 }
 
-@media (max-width: 420px) {
+@media (max-width: 320px) {
   .hero-title {
     font-size: 48rpx;
   }

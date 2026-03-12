@@ -44,7 +44,7 @@ import { onLoad } from '@dcloudio/uni-app';
 
 const form = reactive({
   name: '',
-  sort: '',
+  sort: '', // sort 先用字符串接收，方便输入和校验，避免输入过程中出现奇怪的浮点数
 });
 
 let categoryId: string | null = null;
@@ -61,12 +61,15 @@ onLoad((options) => {
   }
 });
 
+// 监听排序输入，确保只接受数字
 const onSortInput = (event: Event | { detail?: { value?: string } }) => {
+  // 兼容不同平台的输入事件结构，一种是标准的 DOM 输入事件，另一种是部分平台（如微信小程序）的事件结构
   const detailValue = 'detail' in event ? event.detail?.value : undefined;
   const targetValue = 'target' in event && event.target instanceof HTMLInputElement ? event.target.value : undefined;
   form.sort = detailValue ?? targetValue ?? '';
 };
 
+// 保存分类
 const save = () => {
   if (form.name.trim() === '') {
     uni.showToast({
@@ -76,6 +79,7 @@ const save = () => {
     return;
   }
 
+  // 将排序转换为数字，如果输入为空则默认为 0
   const sort = form.sort.trim() === '' ? 0 : Number(form.sort);
 
   if (Number.isNaN(sort)) {
@@ -219,7 +223,7 @@ const cancel = () => {
   border: 1rpx solid rgba(61, 43, 24, 0.08);
 }
 
-@media (max-width: 420px) {
+@media (max-width: 320px) {
   .form-actions {
     flex-direction: column-reverse;
   }

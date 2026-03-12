@@ -15,11 +15,10 @@
       <view v-for="category in categoriesData" :key="category.id" class="category-row">
         <view>
           <view class="category-name">{{ category.name }}</view>
-          <view class="category-meta">ID: {{ category.id }}</view>
         </view>
         <view class="row-actions">
           <view class="row-btn" @click="goToEdit(category.id)">编辑</view>
-          <view class="row-btn row-btn-danger">删除</view>
+          <view class="row-btn row-btn-danger" @click="removeCategory(category.id)">删除</view>
         </view>
       </view>
     </view>
@@ -28,11 +27,19 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { getCategories } from '@/services/categoryService';
+import { getCategories, deleteCategory } from '@/services/categoryService';
 import type { Category } from '@/types/card';
+import { onShow } from '@dcloudio/uni-app';
 
-const categoriesData = ref<Category[]>(getCategories());
-const popup = ref<any>(null);
+const categoriesData = ref<Category[]>([]);
+
+// 删除分类
+const removeCategory = (id: string) => {
+  const success = deleteCategory(id);
+  if (success) {
+    categoriesData.value = getCategories();
+  }
+};
 
 // 进入分类编辑页
 const goToEdit = (id: string) => {
@@ -47,6 +54,12 @@ const addCategory = () => {
     url: '/pages/categoryEdit/index',
   });
 };
+
+onShow(() => {
+  // 每次进入页面都刷新分类数据，确保和编辑页修改后保持同步
+  categoriesData.value = getCategories();
+  console.log('Fetched Categories on Show:', categoriesData.value);
+});
 </script>
 
 <style scoped>
@@ -128,7 +141,7 @@ const addCategory = () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16rpx;
+  /* gap: 16rpx; */
   border-bottom: 1rpx solid rgba(61, 43, 24, 0.08);
 }
 
@@ -140,12 +153,6 @@ const addCategory = () => {
   color: #1e1c18;
   font-size: 30rpx;
   font-weight: 700;
-}
-
-.category-meta {
-  margin-top: 8rpx;
-  color: #6c645a;
-  font-size: 22rpx;
 }
 
 .row-actions {
@@ -171,7 +178,7 @@ const addCategory = () => {
   color: #c76530;
 }
 
-@media (max-width: 420px) {
+@media (max-width: 320px) {
   .toolbar-card,
   .category-row {
     flex-direction: column;
