@@ -121,7 +121,14 @@ const goToSubcategory = (categoryId: string) => {
 // 获取分类数据
 const fetchCategories = () => {
   const res = getCategories();
-  categoriesData.value = res;
+  if (res.success && res.data) {
+    categoriesData.value = res.data;
+  } else {
+    uni.showToast({
+      title: '分类数据加载失败',
+      icon: 'none',
+    });
+  }
 };
 
 onMounted(() => {

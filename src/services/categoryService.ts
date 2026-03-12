@@ -1,6 +1,8 @@
 import categories from '@/data/category.json';
 import type { Category } from '@/types/card';
+import type { ServiceResult } from '@/types/service';
 import { generateUUID } from '@/utils/uuid';
+import { success, fail } from './serviceHelper';
 
 // 本地存储的键名
 const key = 'knowledge-card-categories';
@@ -45,28 +47,30 @@ export function saveCategoriesToStorage(list: Category[]) {
 loadCategoriesFromStorage();
 
 // 获取分类列表，支持根据参数过滤分类
-export function getCategories(params?: Partial<Category>): Category[] {
+export function getCategories(params?: Partial<Category>): ServiceResult<Category[]> {
   const currentList = loadCategoriesFromStorage();
 
   if (!params) {
-    return currentList.map(cloneCategory);
+    return success(currentList.map(cloneCategory));
   }
 
-  return currentList
-    .filter((category) => {
-      return (Object.keys(params) as Array<keyof Category>).every((key) => category[key] === params[key]);
-    })
-    .map(cloneCategory);
+  return success(
+    currentList
+      .filter((category) => {
+        return (Object.keys(params) as Array<keyof Category>).every((key) => category[key] === params[key]);
+      })
+      .map(cloneCategory),
+  );
 }
 
 // 根据 id 获取单个分类
-export function getCategoryById(id: string): Category | undefined {
+export function getCategoryById(id: string): ServiceResult<Category | undefined> {
   const category = loadCategoriesFromStorage().find((item) => item.id === id);
-  return category ? cloneCategory(category) : undefined;
+  return category ? success(cloneCategory(category)) : fail('分类未找到');
 }
 
 // 添加新分类
-export function addCategory(category: Omit<Category, 'id'>): Category {
+export function addCategory(category: Omit<Category, 'id'>): ServiceResult<Category> {
   const currentList = loadCategoriesFromStorage();
   const newCategory: Category = {
     id: generateUUID(),
@@ -74,16 +78,16 @@ export function addCategory(category: Omit<Category, 'id'>): Category {
   };
 
   saveCategoriesToStorage([...currentList, newCategory]);
-  return cloneCategory(newCategory);
+  return success(cloneCategory(newCategory));
 }
 
 // 更新分类
-export function updateCategory(updates: Partial<Category>): Category | null {
+export function updateCategory(updates: Partial<Category>): ServiceResult<Category | null> {
   const currentList = loadCategoriesFromStorage();
   const index = currentList.findIndex((category) => category.id === updates.id);
 
   if (index === -1) {
-    return null;
+    return fail('分类未找到');
   }
 
   const updatedCategory: Category = {
@@ -93,18 +97,18 @@ export function updateCategory(updates: Partial<Category>): Category | null {
 
   currentList[index] = updatedCategory;
   saveCategoriesToStorage(currentList);
-  return cloneCategory(updatedCategory);
+  return success(cloneCategory(updatedCategory));
 }
 
 // 删除分类
-export function deleteCategory(id: string): boolean {
+export function deleteCategory(id: string): ServiceResult<null> {
   const currentList = loadCategoriesFromStorage();
   const nextList = currentList.filter((category) => category.id !== id);
 
   if (nextList.length === currentList.length) {
-    return false;
+    return fail('分类未找到');
   }
 
   saveCategoriesToStorage(nextList);
-  return true;
+  return success(null);
 }

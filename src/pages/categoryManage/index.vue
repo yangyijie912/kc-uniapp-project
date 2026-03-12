@@ -35,7 +35,15 @@ const categoriesData = ref<Category[]>([]);
 
 // 加载分类数据
 const loadCategories = () => {
-  categoriesData.value = getCategories();
+  const res = getCategories();
+  if (res.success && res.data) {
+    categoriesData.value = res.data;
+  } else {
+    uni.showToast({
+      title: '分类数据加载失败',
+      icon: 'none',
+    });
+  }
 };
 
 // 删除分类
@@ -81,7 +89,6 @@ const addCategory = () => {
 onShow(() => {
   // 每次进入页面都刷新分类数据，确保和编辑页修改后保持同步
   loadCategories();
-  console.log('Fetched Categories on Show:', categoriesData.value);
 });
 </script>
 

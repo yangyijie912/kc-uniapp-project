@@ -53,10 +53,10 @@ onLoad((options) => {
   categoryId = options?.id || null;
   if (categoryId) {
     // 编辑模式，加载分类数据
-    const category = getCategoryById(categoryId);
-    if (category) {
-      form.name = category.name;
-      form.sort = String(category.sort);
+    const res = getCategoryById(categoryId);
+    if (res.success && res.data) {
+      form.name = res.data.name;
+      form.sort = String(res.data.sort);
     }
   }
 });
