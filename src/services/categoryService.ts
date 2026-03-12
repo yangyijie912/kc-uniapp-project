@@ -7,10 +7,18 @@ import { success, fail } from './serviceHelper';
 // 本地存储的键名
 const key = 'knowledge-card-categories';
 
+// 固定的未分类ID，确保在任何情况下都存在一个未分类
+const uncategorizedId = 'uncategorized';
+const uncategorizedCategory: Category = {
+  id: uncategorizedId,
+  name: '未分类',
+  sort: Number.MAX_SAFE_INTEGER, // 确保未分类总是排在最后
+};
+
 // 默认分类列表，从静态数据文件加载
 const defaultCategories: Category[] = (categories as Category[]).map((category) => ({ ...category }));
 
-// 当前的分类列表，初始值为空，后续会从本地存储加载或使用默认分类
+// 当前的分类列表，后续会从本地存储加载或使用默认分类
 let categoryList: Category[] = [];
 
 // 克隆一个分类对象，确保外部修改不会影响内部数据
@@ -28,12 +36,19 @@ function loadCategoriesFromStorage(): Category[] {
   const saved = uni.getStorageSync(key);
 
   if (!saved) {
-    categoryList = normalizeCategories(defaultCategories);
+    // 本地没有数据，使用默认分类并添加未分类
+    categoryList = normalizeCategories([...defaultCategories, uncategorizedCategory]);
     saveCategoriesToStorage(categoryList);
     return categoryList;
   }
 
-  categoryList = normalizeCategories(JSON.parse(saved) as Category[]);
+  const savedList = JSON.parse(saved) as Category[];
+  // 如果有数据，判断是否包含未分类，如果没有则添加一个
+  if (!saved.includes(uncategorizedId)) {
+    savedList.push(uncategorizedCategory);
+  }
+  categoryList = normalizeCategories(savedList);
+  saveCategoriesToStorage(categoryList);
   return categoryList;
 }
 
@@ -102,9 +117,11 @@ export function updateCategory(updates: Partial<Category>): ServiceResult<Catego
 
 // 删除分类
 export function deleteCategory(id: string): ServiceResult<null> {
+  if (id === uncategorizedId) {
+    return fail('未分类不能删除');
+  }
   const currentList = loadCategoriesFromStorage();
   const nextList = currentList.filter((category) => category.id !== id);
-
   if (nextList.length === currentList.length) {
     return fail('分类未找到');
   }
