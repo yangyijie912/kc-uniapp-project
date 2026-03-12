@@ -8,7 +8,7 @@ import { success, fail } from './serviceHelper';
 const key = 'knowledge-card-categories';
 
 // 固定的未分类ID，确保在任何情况下都存在一个未分类
-const uncategorizedId = 'uncategorized';
+export const uncategorizedId = 'uncategorized';
 const uncategorizedCategory: Category = {
   id: uncategorizedId,
   name: '未分类',

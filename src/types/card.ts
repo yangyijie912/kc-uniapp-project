@@ -1,10 +1,10 @@
 export type CardStatus = 'unknown' | 'fuzzy' | 'mastered';
 
-export type Category = {
+export interface Category {
   id: string;
   name: string;
   sort: number;
-};
+}
 
 export type Subcategory = {
   id: string;
@@ -23,4 +23,11 @@ export interface Card {
   status?: CardStatus;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface CategoryView extends Category {
+  cardCount: number;
+  canEdit: boolean;
+  canDelete: boolean;
+  visible: boolean;
 }

@@ -12,13 +12,16 @@
     </view>
 
     <view class="list-card">
-      <view v-for="category in categoriesData" :key="category.id" class="category-row">
+      <view v-for="category in categoryList" :key="category.id" class="category-row">
         <view>
           <view class="category-name">{{ category.name }}</view>
+          <view class="category-count">{{ category.cardCount }} 张卡片</view>
         </view>
         <view class="row-actions">
-          <view class="row-btn" @click="goToEdit(category.id)">编辑</view>
-          <view class="row-btn row-btn-danger" @click="removeCategory(category.id)">删除</view>
+          <view class="row-btn" @click="goToEdit(category.id)" v-if="category.canEdit">编辑</view>
+          <view class="row-btn row-btn-danger" @click="removeCategory(category.id)" v-if="category.canDelete"
+            >删除</view
+          >
         </view>
       </view>
     </view>
@@ -26,25 +29,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { getCategories, deleteCategory } from '@/services/categoryService';
-import type { Category } from '@/types/card';
+import { deleteCategory } from '@/services/categoryService';
 import { onShow } from '@dcloudio/uni-app';
-
-const categoriesData = ref<Category[]>([]);
-
-// 加载分类数据
-const loadCategories = () => {
-  const res = getCategories();
-  if (res.success && res.data) {
-    categoriesData.value = res.data;
-  } else {
-    uni.showToast({
-      title: '分类数据加载失败',
-      icon: 'none',
-    });
-  }
-};
+import useCategoryView from '@/composables/useCategoryView';
+const { categoryList, loadCategoryViews } = useCategoryView();
 
 // 删除分类
 const removeCategory = (id: string) => {
@@ -64,7 +52,7 @@ const removeCategory = (id: string) => {
 const performDelete = (id: string) => {
   const success = deleteCategory(id);
   if (success) {
-    loadCategories();
+    loadCategoryViews(); // 刷新分类视图，确保未分类被正确更新
   }
   uni.showToast({
     title: success ? '分类删除成功' : '分类删除失败',
@@ -88,7 +76,7 @@ const addCategory = () => {
 
 onShow(() => {
   // 每次进入页面都刷新分类数据，确保和编辑页修改后保持同步
-  loadCategories();
+  loadCategoryViews();
 });
 </script>
 
@@ -183,6 +171,11 @@ onShow(() => {
   color: #1e1c18;
   font-size: 30rpx;
   font-weight: 700;
+}
+
+.category-count {
+  margin-top: 6rpx;
+  color: #6c645a;
 }
 
 .row-actions {

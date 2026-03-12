@@ -50,14 +50,14 @@
 
       <view class="category-list">
         <view
-          v-for="c in categoriesData"
+          v-for="c in categoryList"
           :key="c.id"
           class="category-item"
           :style="{ background: getCategoryTheme(c.name).background, color: getCategoryTheme(c.name).color }"
           @click="goToSubcategory(c.id)"
         >
           <text class="category-name">{{ c.name }}</text>
-          <text class="category-count">0 张卡片</text>
+          <text class="category-count">{{ c.cardCount }} 张卡片</text>
         </view>
       </view>
     </view>
@@ -84,12 +84,11 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { getCategories } from '@/services/categoryService';
 import { getCategoryTheme } from '@/utils/categoryTheme';
 import type { Category } from '@/types/card';
 import type { Ref } from 'vue';
-
-const categoriesData: Ref<Category[]> = ref([]);
+import useCategoryView from '@/composables/useCategoryView';
+const { categoryList, loadCategoryViews } = useCategoryView();
 
 // 搜索
 const searchCard = () => {
@@ -118,21 +117,8 @@ const goToSubcategory = (categoryId: string) => {
   });
 };
 
-// 获取分类数据
-const fetchCategories = () => {
-  const res = getCategories();
-  if (res.success && res.data) {
-    categoriesData.value = res.data;
-  } else {
-    uni.showToast({
-      title: '分类数据加载失败',
-      icon: 'none',
-    });
-  }
-};
-
 onMounted(() => {
-  fetchCategories(); // 预加载分类数据
+  loadCategoryViews(); // 预加载分类数据
 });
 </script>
 
