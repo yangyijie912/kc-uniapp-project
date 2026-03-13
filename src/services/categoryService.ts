@@ -53,7 +53,7 @@ function loadCategoriesFromStorage(): Category[] {
 }
 
 // 保存整个分类列表到本地存储
-export function saveCategoriesToStorage(list: Category[]) {
+function saveCategoriesToStorage(list: Category[]) {
   const normalizedList = normalizeCategories(list);
   uni.setStorageSync(key, JSON.stringify(normalizedList));
   categoryList = normalizedList;

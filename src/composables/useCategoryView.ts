@@ -9,7 +9,16 @@ export default function useCategoryView() {
   const cardList = ref<Card[]>([]);
 
   function loadCards() {
-    cardList.value = getCards();
+    const res = getCards();
+    if (res.success && res.data) {
+      cardList.value = res.data;
+    } else {
+      cardList.value = [];
+      uni.showToast({
+        title: res.message || '加载卡片失败',
+        icon: 'none',
+      });
+    }
   }
 
   function loadCategories() {
