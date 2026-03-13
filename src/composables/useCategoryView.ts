@@ -1,15 +1,33 @@
 // 分类页展示逻辑
-import type { Card, CategoryView } from '@/types/card';
+import type { Card, Category, CategoryView } from '@/types/card';
 import { getCards } from '@/services/cardService';
 import { getCategories, uncategorizedId } from '@/services/categoryService';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
 export default function useCategoryView() {
-  const categoryList = ref<CategoryView[]>([]);
+  const categoryList = ref<Category[]>([]);
   const cardList = ref<Card[]>([]);
 
   function loadCards() {
     cardList.value = getCards();
+  }
+
+  function loadCategories() {
+    const res = getCategories();
+    if (res.success && res.data) {
+      categoryList.value = res.data;
+    } else {
+      categoryList.value = [];
+      uni.showToast({
+        title: res.message || '加载分类失败',
+        icon: 'none',
+      });
+    }
+  }
+
+  function loadAllData() {
+    loadCards();
+    loadCategories();
   }
 
   // 创建一个映射，统计每个分类的卡片数量，格式为 { [categoryId]: count }
@@ -25,44 +43,33 @@ export default function useCategoryView() {
     return countMap;
   }
 
-  // 加载分类数据并计算每个分类的卡片数量
-  function loadCategoryViews() {
-    loadCards();
-    const res = getCategories();
+  // 计算每个分类的卡片数量，建立一个映射，告诉Vue卡片数量依赖于当前的卡片列表
+  //   const cardCountMap = computed(() => createCardCountMap(cardList.value));
 
-    if (res.success && res.data) {
-      const categories = res.data;
-      const countMap = createCardCountMap(cardList.value);
+  // 计算分类视图列表，包含每个分类的卡片数量和是否可编辑/删除等属性
+  const categoryViewList = computed<CategoryView[]>(() => {
+    return categoryList.value
+      .map((category) => {
+        const cardCount = createCardCountMap(cardList.value)[category.id] ?? 0;
+        const isUncategorized = category.id === uncategorizedId;
 
-      categoryList.value = categories
-        .map((category) => {
-          const cardCount = countMap[category.id] ?? 0;
-          const isUncategorized = category.id === uncategorizedId;
-
-          return {
-            ...category,
-            cardCount,
-            canEdit: !isUncategorized,
-            canDelete: !isUncategorized,
-            visible: !(isUncategorized && cardCount === 0),
-          };
-        })
-        .filter((category) => category.visible); // 只保留可见的分类
-
-      return;
-    } else {
-      categoryList.value = [];
-      uni.showToast({
-        title: res.message || '加载分类失败',
-        icon: 'none',
-      });
-    }
-  }
+        return {
+          ...category,
+          cardCount,
+          canEdit: !isUncategorized,
+          canDelete: !isUncategorized,
+          visible: !(isUncategorized && cardCount === 0),
+        };
+      })
+      .filter((category) => category.visible);
+  });
 
   return {
     categoryList,
     cardList,
-    loadCategoryViews,
+    categoryViewList,
+    loadCategories,
     loadCards,
+    loadAllData,
   };
 }

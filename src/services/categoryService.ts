@@ -44,7 +44,7 @@ function loadCategoriesFromStorage(): Category[] {
 
   const savedList = JSON.parse(saved) as Category[];
   // 如果有数据，判断是否包含未分类，如果没有则添加一个
-  if (!saved.includes(uncategorizedId)) {
+  if (savedList.findIndex((category) => category.id === uncategorizedId) === -1) {
     savedList.push(uncategorizedCategory);
   }
   categoryList = normalizeCategories(savedList);

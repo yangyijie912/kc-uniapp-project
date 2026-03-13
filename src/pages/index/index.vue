@@ -50,7 +50,7 @@
 
       <view class="category-list">
         <view
-          v-for="c in categoryList"
+          v-for="c in categoryViewList"
           :key="c.id"
           class="category-item"
           :style="{ background: getCategoryTheme(c.name).background, color: getCategoryTheme(c.name).color }"
@@ -83,12 +83,10 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { onShow } from '@dcloudio/uni-app';
 import { getCategoryTheme } from '@/utils/categoryTheme';
-import type { Category } from '@/types/card';
-import type { Ref } from 'vue';
 import useCategoryView from '@/composables/useCategoryView';
-const { categoryList, loadCategoryViews } = useCategoryView();
+const { categoryViewList, loadAllData } = useCategoryView();
 
 // 搜索
 const searchCard = () => {
@@ -117,8 +115,8 @@ const goToSubcategory = (categoryId: string) => {
   });
 };
 
-onMounted(() => {
-  loadCategoryViews(); // 预加载分类数据
+onShow(() => {
+  loadAllData(); // 预加载分类数据
 });
 </script>
 

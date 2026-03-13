@@ -12,7 +12,7 @@
     </view>
 
     <view class="list-card">
-      <view v-for="category in categoryList" :key="category.id" class="category-row">
+      <view v-for="category in categoryViewList" :key="category.id" class="category-row">
         <view>
           <view class="category-name">{{ category.name }}</view>
           <view class="category-count">{{ category.cardCount }} 张卡片</view>
@@ -32,7 +32,7 @@
 import { deleteCategory } from '@/services/categoryService';
 import { onShow } from '@dcloudio/uni-app';
 import useCategoryView from '@/composables/useCategoryView';
-const { categoryList, loadCategoryViews } = useCategoryView();
+const { categoryViewList, loadAllData } = useCategoryView();
 
 // 删除分类
 const removeCategory = (id: string) => {
@@ -53,7 +53,7 @@ const performDelete = (id: string) => {
   const res = deleteCategory(id);
 
   if (res.success) {
-    loadCategoryViews(); // 刷新分类视图，确保未分类被正确更新
+    loadAllData(); // 刷新分类视图，确保未分类被正确更新
   }
 
   uni.showToast({
@@ -78,7 +78,7 @@ const addCategory = () => {
 
 onShow(() => {
   // 每次进入页面都刷新分类数据，确保和编辑页修改后保持同步
-  loadCategoryViews();
+  loadAllData();
 });
 </script>
 
