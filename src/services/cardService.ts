@@ -3,6 +3,7 @@ import type { Card, Category } from '@/types/card';
 import { getCategories } from './categoryService';
 import type { ServiceResult } from '@/types/service';
 import { success, fail } from './serviceHelper';
+import { generateUUID } from '@/utils/uuid';
 
 // 本地存储的键名
 const key = 'knowledge-card-cards';
@@ -117,5 +118,45 @@ export function getCards(params?: Partial<Card>): ServiceResult<Card[]> {
 export function getCardById(id: string): ServiceResult<Card | undefined> {
   const currentList = loadCardsFromStorage();
   const card = currentList.find((item) => item.id === id);
-  return card ? success(cloneCard(card)) : fail('卡片未找到');
+  return card ? success(cloneCard(card)) : fail('题目未找到');
+}
+
+// 添加新卡片
+export function addCard(card: Omit<Card, 'id'>): ServiceResult<Card> {
+  const currentList = loadCardsFromStorage();
+  const newCard: Card = {
+    id: generateUUID(),
+    ...card,
+  };
+  const updatedList = [...currentList, newCard];
+  saveCardsToStorage(updatedList);
+  return success(cloneCard(newCard));
+}
+
+// 更新卡片
+export function updateCard(id: string, updates: Partial<Card>): ServiceResult<Card> {
+  const currentList = loadCardsFromStorage();
+  const index = currentList.findIndex((item) => item.id === id);
+  if (index === -1) {
+    return fail('题目未找到');
+  }
+  const updatedCard: Card = {
+    ...currentList[index],
+    ...updates,
+  };
+  const updatedList = [...currentList];
+  updatedList[index] = updatedCard;
+  saveCardsToStorage(updatedList);
+  return success(cloneCard(updatedCard));
+}
+
+// 删除卡片
+export function deleteCard(id: string): ServiceResult<null> {
+  const currentList = loadCardsFromStorage();
+  const nextList = currentList.filter((card) => card.id !== id);
+  if (nextList.length === currentList.length) {
+    return fail('题目未找到');
+  }
+  saveCardsToStorage(nextList);
+  return success(null);
 }

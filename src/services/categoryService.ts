@@ -3,6 +3,7 @@ import type { Category } from '@/types/card';
 import type { ServiceResult } from '@/types/service';
 import { generateUUID } from '@/utils/uuid';
 import { success, fail } from './serviceHelper';
+import { getCards, updateCard } from './cardService';
 
 // 本地存储的键名
 const key = 'knowledge-card-categories';
@@ -124,6 +125,13 @@ export function deleteCategory(id: string): ServiceResult<null> {
   const nextList = currentList.filter((category) => category.id !== id);
   if (nextList.length === currentList.length) {
     return fail('分类未找到');
+  }
+  // 将被删除的分类下的卡片移动到未分类
+  const res = getCards({ categoryId: id });
+  if (res.success && res.data) {
+    res.data.forEach((card) => {
+      updateCard(card.id, { categoryId: uncategorizedId });
+    });
   }
 
   saveCategoriesToStorage(nextList);
