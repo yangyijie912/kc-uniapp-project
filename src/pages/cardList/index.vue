@@ -13,43 +13,79 @@
     </view>
 
     <view class="card-list">
-      <view class="card-item" @click="goToDetail()">
+      <view v-for="value in cardList" :key="value.id" class="card-item" @click="goToDetail(value.id)">
         <view class="card-top">
-          <view class="card-tag">React / Hooks</view>
-          <view class="card-status status-fuzzy">模糊</view>
+          <view class="card-tag">{{ value.categoryId }}</view>
+          <view class="card-status" :class="`status-${value.status}`">{{ value.status }}</view>
         </view>
-        <view class="card-question">为什么 React 不推荐用 index 作为 key？</view>
-        <view class="card-answer">因为列表重排时会导致节点错误复用，影响状态和渲染结果。</view>
-      </view>
-
-      <view class="card-item">
-        <view class="card-top">
-          <view class="card-tag">Vue / 响应式</view>
-          <view class="card-status status-mastered">已掌握</view>
-        </view>
-        <view class="card-question">Vue 3 的响应式为什么改成了 Proxy？</view>
-        <view class="card-answer">它可以拦截更多操作，避免 Vue 2 在数组和对象属性上的限制。</view>
-      </view>
-
-      <view class="card-item">
-        <view class="card-top">
-          <view class="card-tag">JavaScript / 基础</view>
-          <view class="card-status status-new">未复习</view>
-        </view>
-        <view class="card-question">闭包的本质是什么？</view>
-        <view class="card-answer">函数与其词法作用域形成绑定，使外层变量在函数外层执行结束后仍可访问。</view>
+        <view class="card-question">{{ value.question }}</view>
+        <view class="card-answer">{{ value.answer }}</view>
       </view>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
+import { getCards } from '@/services/cardService';
+import { onLoad, onShow } from '@dcloudio/uni-app';
+import { reactive, ref } from 'vue';
+import type { Card } from '@/types/card';
+
+// 定义查询参数类型
+type QueryParams = {
+  categoryId?: string;
+  keyword?: string;
+};
+
+// 定义页面接收的查询参数类型
+type PageOptions = {
+  categoryId?: string;
+  keyword?: string;
+};
+
+const queryParams = reactive<PageOptions>({});
+
+const parseParams = (options?: PageOptions): QueryParams => {
+  return {
+    categoryId: options?.categoryId || undefined,
+    keyword: options?.keyword || undefined,
+  };
+};
+
+const cardList = ref<Card[]>([]); // 定义卡片列表数据
+
+// 加载卡片数据
+const loadCards = () => {
+  const params = {
+    categoryId: queryParams.categoryId,
+    ...(queryParams.keyword ? { keyword: queryParams.keyword } : {}),
+  };
+
+  const res = getCards(params);
+  if (res.success) {
+    cardList.value = res.data || [];
+  } else {
+    uni.showToast({
+      title: res.message || '卡片加载失败',
+      icon: 'none',
+    });
+  }
+};
+
 // 进入卡片详情
-const goToDetail = () => {
+const goToDetail = (id: string) => {
   uni.navigateTo({
-    url: '/pages/cardDetail/index',
+    url: `/pages/cardDetail/index?id=${id}`,
   });
 };
+
+onLoad((options) => {
+  Object.assign(queryParams, parseParams(options as PageOptions));
+});
+
+onShow(() => {
+  loadCards();
+});
 </script>
 
 <style scoped>

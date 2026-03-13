@@ -130,16 +130,43 @@ function saveCardsToStorage(list: Card[]) {
 
 loadCardsFromStorage();
 
+type CardQueryParams = Partial<Card> & {
+  keyword?: string;
+};
+
 // 根据参数获取卡片
-export function getCards(params?: Partial<Card>): ServiceResult<Card[]> {
+export function getCards(params?: CardQueryParams): ServiceResult<Card[]> {
   const currentList = loadCardsFromStorage();
   if (!params) {
     return success(currentList.map(cloneCard));
   }
-  const filteredCards = currentList.filter((card) => {
-    return (Object.keys(params) as Array<keyof Card>).every((key) => card[key] === params[key]);
+  const { keyword, ...filters } = params;
+  const k = keyword?.trim().toLowerCase();
+  const result = currentList.filter((card) => {
+    // keyword 模糊搜索
+    if (k) {
+      const matchKeyword =
+        card.question.toLowerCase().includes(k) ||
+        card.answer.toLowerCase().includes(k) ||
+        card.content?.toLowerCase().includes(k) ||
+        card.tags?.some((tag) => tag.toLowerCase().includes(k));
+
+      if (!matchKeyword) return false;
+    }
+
+    // 精确过滤
+    for (const key of Object.keys(filters) as Array<keyof Card>) {
+      const value = filters[key];
+      // 如果参数中有这个字段，并且卡片的对应字段不等于这个值，则过滤掉这个卡片
+      if (value !== undefined && card[key] !== value) {
+        return false;
+      }
+    }
+
+    return true;
   });
-  return success(filteredCards.map(cloneCard));
+
+  return success(result.map(cloneCard));
 }
 
 // 根据 id 获取单个卡片

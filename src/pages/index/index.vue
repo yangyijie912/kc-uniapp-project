@@ -37,6 +37,7 @@
           class="search-input"
           placeholder="例如：useEffect、闭包、响应式"
           placeholder-class="search-placeholder"
+          v-model="searchQuery"
         />
         <view class="search-btn" @click="searchCard">搜索</view>
       </view>
@@ -86,12 +87,19 @@
 import { onShow } from '@dcloudio/uni-app';
 import { getCategoryTheme } from '@/utils/categoryTheme';
 import useCategoryView from '@/composables/useCategoryView';
+import { ref } from 'vue';
+
 const { categoryViewList, loadAllData } = useCategoryView();
+const searchQuery = ref('');
+
+onShow(() => {
+  loadAllData(); // 加载分类数据
+});
 
 // 搜索
 const searchCard = () => {
   uni.navigateTo({
-    url: '/pages/cardList/index',
+    url: '/pages/cardList/index?keyword=' + encodeURIComponent(searchQuery.value),
   });
 };
 
@@ -102,12 +110,6 @@ const onQuiz = () => {
   });
 };
 
-const goToCategoryManage = () => {
-  uni.navigateTo({
-    url: '/pages/categoryManage/index',
-  });
-};
-
 // 进入卡片列表
 const goToCardList = (categoryId: string) => {
   uni.navigateTo({
@@ -115,9 +117,12 @@ const goToCardList = (categoryId: string) => {
   });
 };
 
-onShow(() => {
-  loadAllData(); // 预加载分类数据
-});
+// 进入分类管理
+const goToCategoryManage = () => {
+  uni.navigateTo({
+    url: '/pages/categoryManage/index',
+  });
+};
 </script>
 
 <style scoped>
