@@ -12,7 +12,6 @@ const key = 'knowledge-card-cards';
 type RawCard = {
   id: string;
   category: string;
-  subcategory: string;
   question: string;
   answer: string;
   content?: string;
@@ -37,6 +36,38 @@ const categoryList: Category[] = res.success && res.data ? res.data : [];
 // 创建一个映射通过categoryName 来快速获取 categoryId
 const categoryIdByName = new Map(categoryList.map((category) => [category.name, category.id]));
 
+// 清洗标签数据，去除空字符串和重复项
+function normalizeTags(tags?: string[]): string[] | undefined {
+  // 使用 Set 来去重，同时保持原有的顺序
+  const tagSet = new Set<string>();
+  (tags ?? []).forEach((tag) => {
+    const normalizedTag = tag.trim();
+    if (normalizedTag) {
+      tagSet.add(normalizedTag);
+    }
+  });
+  if (tagSet.size === 0) {
+    return undefined;
+  }
+  // 将 Set 转换回数组，并返回
+  return Array.from(tagSet);
+}
+
+// 清洗卡片数据，确保每个字段都符合预期的格式
+function normalizeCard(card: Card): Card {
+  return {
+    id: card.id,
+    categoryId: card.categoryId,
+    question: card.question,
+    answer: card.answer,
+    content: card.content,
+    tags: normalizeTags(card.tags),
+    status: card.status,
+    createdAt: card.createdAt,
+    updatedAt: card.updatedAt,
+  };
+}
+
 // 将原始卡片数据转换为Card类型
 function toCard(rawCard: RawCard): Card {
   // 法一：使用对象来映射
@@ -50,11 +81,10 @@ function toCard(rawCard: RawCard): Card {
   return {
     id: rawCard.id,
     categoryId,
-    subcategoryId: toSubcategoryId(categoryId, rawCard.subcategory),
     question: rawCard.question,
     answer: rawCard.answer,
     content: rawCard.content,
-    tags: rawCard.tags,
+    tags: normalizeTags(rawCard.tags),
     status: rawCard.status,
     createdAt: rawCard.createdAt,
     updatedAt: rawCard.updatedAt,
@@ -71,36 +101,34 @@ let cardList: Card[] = [];
 
 // 克隆一个分类对象，确保外部修改不会影响内部数据
 function cloneCard(card: Card): Card {
-  return { ...card };
+  return {
+    ...card,
+    tags: card.tags ? [...card.tags] : undefined,
+  };
 }
 
 // 从本地存储加载卡片列表，如果没有则使用默认卡片，并保存到本地存储
 function loadCardsFromStorage(): Card[] {
   const saved = uni.getStorageSync(key);
   if (saved) {
-    const cards = JSON.parse(saved) as Card[];
-    saveCardsToStorage(cards); // 确保加载后保存到内存中
-    cardList = cards.map(cloneCard);
-    return cards;
+    const savedCards = JSON.parse(saved) as Card[];
+    const normalizedCards = savedCards.map(normalizeCard);
+    saveCardsToStorage(normalizedCards);
+    return normalizedCards.map(cloneCard);
   } else {
     saveCardsToStorage(defaultCards); // 保存默认卡片到本地存储
-    cardList = defaultCards.map(cloneCard);
-    return defaultCards;
+    return defaultCards.map(cloneCard);
   }
 }
 
 // 保存整个卡片列表到本地存储
 function saveCardsToStorage(list: Card[]) {
-  uni.setStorageSync(key, JSON.stringify(list));
-  cardList = list;
+  const normalizedList = list.map(normalizeCard);
+  uni.setStorageSync(key, JSON.stringify(normalizedList));
+  cardList = normalizedList.map(cloneCard);
 }
 
 loadCardsFromStorage();
-
-// 子类别ID生成函数，格式为 "categoryId:subcategoryName"，其中subcategoryName经过处理以适合URL或ID格式
-function toSubcategoryId(categoryId: string, subcategoryName: string): string {
-  return `${categoryId}:${subcategoryName.trim().toLowerCase().replace(/\s+/g, '-')}`;
-}
 
 // 根据参数获取卡片
 export function getCards(params?: Partial<Card>): ServiceResult<Card[]> {

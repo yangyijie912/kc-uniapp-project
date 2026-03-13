@@ -54,7 +54,7 @@
           :key="c.id"
           class="category-item"
           :style="{ background: getCategoryTheme(c.name).background, color: getCategoryTheme(c.name).color }"
-          @click="goToSubcategory(c.id)"
+          @click="goToCardList(c.id)"
         >
           <text class="category-name">{{ c.name }}</text>
           <text class="category-count">{{ c.cardCount }} 张卡片</text>
@@ -108,10 +108,10 @@ const goToCategoryManage = () => {
   });
 };
 
-// 进入子分类
-const goToSubcategory = (categoryId: string) => {
+// 进入卡片列表
+const goToCardList = (categoryId: string) => {
   uni.navigateTo({
-    url: `/pages/subcategory/index?categoryId=${categoryId}`,
+    url: `/pages/cardList/index?categoryId=${categoryId}`,
   });
 };
 

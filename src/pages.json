@@ -7,12 +7,6 @@
       }
     },
     {
-      "path": "pages/subcategory/index",
-      "style": {
-        "navigationBarTitleText": "子分类"
-      }
-    },
-    {
       "path": "pages/categoryManage/index",
       "style": {
         "navigationBarTitleText": "分类管理"

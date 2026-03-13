@@ -6,16 +6,9 @@ export interface Category {
   sort: number;
 }
 
-export type Subcategory = {
-  id: string;
-  name: string;
-  categoryId: string;
-};
-
 export interface Card {
   id: string;
   categoryId: string;
-  subcategoryId: string;
   question: string;
   answer: string;
   content?: string;
