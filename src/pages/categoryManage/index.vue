@@ -50,13 +50,15 @@ const removeCategory = (id: string) => {
 };
 
 const performDelete = (id: string) => {
-  const success = deleteCategory(id);
-  if (success) {
+  const res = deleteCategory(id);
+
+  if (res.success) {
     loadCategoryViews(); // 刷新分类视图，确保未分类被正确更新
   }
+
   uni.showToast({
-    title: success ? '分类删除成功' : '分类删除失败',
-    icon: success ? 'success' : 'none',
+    title: res.success ? '分类删除成功' : res.message || '分类删除失败',
+    icon: res.success ? 'success' : 'none',
   });
 };
 

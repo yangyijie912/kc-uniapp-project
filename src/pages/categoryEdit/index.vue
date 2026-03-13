@@ -57,6 +57,11 @@ onLoad((options) => {
     if (res.success && res.data) {
       form.name = res.data.name;
       form.sort = String(res.data.sort);
+    } else {
+      uni.showToast({
+        title: res.message || '分类加载失败',
+        icon: 'none',
+      });
     }
   }
 });
@@ -91,10 +96,20 @@ const save = () => {
   }
 
   // 调用添加或更新分类的服务
+  let res;
+
   if (categoryId) {
-    updateCategory({ id: categoryId, name: form.name.trim(), sort });
+    res = updateCategory({ id: categoryId, name: form.name.trim(), sort });
   } else {
-    addCategory({ name: form.name.trim(), sort });
+    res = addCategory({ name: form.name.trim(), sort });
+  }
+
+  if (!res.success) {
+    uni.showToast({
+      title: res.message || '保存失败',
+      icon: 'none',
+    });
+    return;
   }
 
   uni.navigateBack();

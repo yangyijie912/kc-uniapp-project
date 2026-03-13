@@ -9,34 +9,49 @@ export default function useCategoryView() {
   const cardList = ref<Card[]>([]);
 
   function loadCards() {
-    const cards = getCards();
-    cardList.value = cards;
+    cardList.value = getCards();
+  }
+
+  // 创建一个映射，统计每个分类的卡片数量，格式为 { [categoryId]: count }
+  function createCardCountMap(cards: Card[]) {
+    const countMap: Record<string, number> = {};
+
+    cards.forEach((card) => {
+      const currentCount = countMap[card.categoryId] ?? 0;
+      // 如果出现这个分类ID，表示有一条该分类的卡片，累加一次
+      countMap[card.categoryId] = currentCount + 1;
+    });
+
+    return countMap;
   }
 
   // 加载分类数据并计算每个分类的卡片数量
   function loadCategoryViews() {
-    // 加载数据
     loadCards();
     const res = getCategories();
+
     if (res.success && res.data) {
       const categories = res.data;
+      const countMap = createCardCountMap(cardList.value);
+
       categoryList.value = categories
         .map((category) => {
-          const cardCount = cardList.value.filter((card) => card.categoryId === category.id).length;
-          const visible = !(category.id === uncategorizedId && cardCount === 0); // 如果是未分类且没有卡片，则隐藏
+          const cardCount = countMap[category.id] ?? 0;
+          const isUncategorized = category.id === uncategorizedId;
+
           return {
             ...category,
-            // 计算每个分类的卡片数量
             cardCount,
-            // 固定的未分类不可以编辑和删除
-            canEdit: category.id !== uncategorizedId,
-            canDelete: category.id !== uncategorizedId,
-            // 如果是未分类且没有卡片，则隐藏
-            visible,
+            canEdit: !isUncategorized,
+            canDelete: !isUncategorized,
+            visible: !(isUncategorized && cardCount === 0),
           };
         })
         .filter((category) => category.visible); // 只保留可见的分类
+
+      return;
     } else {
+      categoryList.value = [];
       uni.showToast({
         title: res.message || '加载分类失败',
         icon: 'none',
