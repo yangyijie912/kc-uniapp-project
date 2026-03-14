@@ -1,11 +1,21 @@
 <template>
   <view class="page">
-    <view class="toolbar">
-      <input class="search-input" placeholder="搜索问题或答案" placeholder-class="placeholder" />
-      <view class="filter-btn">筛选</view>
+    <view v-if="!isSearchResultMode" class="toolbar">
+      <input
+        :value="queryParams.keyword"
+        class="search-input"
+        placeholder="搜索问题或答案"
+        placeholder-class="placeholder"
+      />
+      <view class="filter-btn" @click="searchCard">筛选</view>
     </view>
 
-    <view class="filter-row">
+    <view v-if="isSearchResultMode" class="result-banner">
+      <view class="result-title">搜索结果</view>
+      <view class="result-keyword">关键词：{{ queryParams.keyword }}</view>
+    </view>
+
+    <view v-if="!isSearchResultMode" class="filter-row">
       <view class="filter-chip active">全部</view>
       <view class="filter-chip">已掌握</view>
       <view class="filter-chip">模糊</view>
@@ -27,7 +37,7 @@
 
 <script setup lang="ts">
 import { onLoad, onShow } from '@dcloudio/uni-app';
-import { reactive, ref } from 'vue';
+import { computed, reactive } from 'vue';
 import useCardListView from '@/composables/useCardListView';
 
 const { cardViewList, loadAllData, setQueryParams } = useCardListView();
@@ -46,6 +56,10 @@ type PageOptions = {
 
 const queryParams = reactive<PageOptions>({});
 
+const isSearchResultMode = computed(() => {
+  return Boolean(queryParams.keyword?.trim());
+});
+
 const parseParams = (options?: PageOptions): QueryParams => {
   return {
     categoryId: options?.categoryId || undefined,
@@ -58,6 +72,17 @@ const goToDetail = (id: string) => {
   uni.navigateTo({
     url: `/pages/cardDetail/index?id=${id}`,
   });
+};
+
+const searchCard = () => {
+  if (!queryParams.keyword?.trim()) {
+    uni.showToast({
+      title: '请输入搜索关键词',
+      icon: 'none',
+    });
+    return;
+  }
+  setQueryParams({ ...queryParams }); // 触发列表刷新
 };
 
 onLoad((options) => {
@@ -113,6 +138,26 @@ onShow(() => {
   color: #fff;
   font-size: 28rpx;
   font-weight: 600;
+}
+
+.result-banner {
+  padding: 26rpx 28rpx;
+  border-radius: 28rpx;
+  background: rgba(255, 252, 247, 0.84);
+  border: 1rpx solid rgba(61, 43, 24, 0.12);
+  box-shadow: 0 16rpx 40rpx rgba(80, 55, 25, 0.06);
+}
+
+.result-title {
+  color: #1e1c18;
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.result-keyword {
+  margin-top: 8rpx;
+  color: #6c645a;
+  font-size: 24rpx;
 }
 
 .filter-row {
