@@ -1,7 +1,7 @@
 <template>
   <view class="page">
     <view class="detail-card">
-      <view class="detail-tag">{{ cardData?.categoryId }}</view>
+      <view class="detail-tag">{{ categoryName }}</view>
       <view class="detail-title">{{ cardData?.question }}</view>
       <!-- <view class="detail-summary">{{ cardData?.summary }}</view> -->
     </view>
@@ -19,11 +19,6 @@
         <rich-text :nodes="cardData?.content || ''"></rich-text>
       </view>
     </view>
-
-    <view class="action-row">
-      <view class="ghost-btn">标记模糊</view>
-      <view class="primary-btn">标记掌握</view>
-    </view>
   </view>
 </template>
 
@@ -31,16 +26,27 @@
 import { onLoad, onShow } from '@dcloudio/uni-app';
 import { ref } from 'vue';
 import { getCardById } from '@/services/cardService';
+import { getCategoryById } from '@/services/categoryService';
 import type { Card } from '@/types/card';
 
 const cardId = ref<string | null>(null);
 const cardData = ref<Card | null>(null);
+const categoryName = ref('');
 
 const loadCardData = (id: string) => {
   const res = getCardById(id);
   if (res.success && res.data) {
     cardData.value = res.data;
+
+    const categoryRes = getCategoryById(res.data.categoryId);
+    if (categoryRes.success && categoryRes.data) {
+      categoryName.value = categoryRes.data.name;
+    } else {
+      categoryName.value = '未分类';
+    }
   } else {
+    cardData.value = null;
+    categoryName.value = '';
     uni.showToast({
       title: res.message || '数据加载失败',
       icon: 'none',
@@ -124,33 +130,5 @@ onShow(() => {
   color: #6c645a;
   font-size: 26rpx;
   line-height: 1.8;
-}
-
-.action-row {
-  margin-top: 24rpx;
-  display: flex;
-  gap: 16rpx;
-}
-
-.ghost-btn,
-.primary-btn {
-  flex: 1;
-  height: 88rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999rpx;
-  font-size: 28rpx;
-  font-weight: 600;
-}
-
-.ghost-btn {
-  background: rgba(255, 255, 255, 0.72);
-  color: #6c645a;
-}
-
-.primary-btn {
-  background: #1f5eff;
-  color: #fff;
 }
 </style>
