@@ -13,10 +13,10 @@
     </view>
 
     <view class="card-list">
-      <view v-for="value in cardList" :key="value.id" class="card-item" @click="goToDetail(value.id)">
+      <view v-for="value in cardViewList" :key="value.id" class="card-item" @click="goToDetail(value.id)">
         <view class="card-top">
-          <view class="card-tag">{{ value.categoryId }}</view>
-          <view class="card-status" :class="`status-${value.status}`">{{ value.status }}</view>
+          <view class="card-tag">{{ value.categoryName }}</view>
+          <view class="card-status" :class="`status-${value.status}`">{{ value.statusName }}</view>
         </view>
         <view class="card-question">{{ value.question }}</view>
         <view class="card-answer">{{ value.answer }}</view>
@@ -26,10 +26,11 @@
 </template>
 
 <script setup lang="ts">
-import { getCards } from '@/services/cardService';
 import { onLoad, onShow } from '@dcloudio/uni-app';
 import { reactive, ref } from 'vue';
-import type { Card } from '@/types/card';
+import useCardListView from '@/composables/useCardListView';
+
+const { cardViewList, loadAllData, setQueryParams } = useCardListView();
 
 // 定义查询参数类型
 type QueryParams = {
@@ -52,26 +53,6 @@ const parseParams = (options?: PageOptions): QueryParams => {
   };
 };
 
-const cardList = ref<Card[]>([]); // 定义卡片列表数据
-
-// 加载卡片数据
-const loadCards = () => {
-  const params = {
-    categoryId: queryParams.categoryId,
-    ...(queryParams.keyword ? { keyword: queryParams.keyword } : {}),
-  };
-
-  const res = getCards(params);
-  if (res.success) {
-    cardList.value = res.data || [];
-  } else {
-    uni.showToast({
-      title: res.message || '卡片加载失败',
-      icon: 'none',
-    });
-  }
-};
-
 // 进入卡片详情
 const goToDetail = (id: string) => {
   uni.navigateTo({
@@ -80,11 +61,13 @@ const goToDetail = (id: string) => {
 };
 
 onLoad((options) => {
-  Object.assign(queryParams, parseParams(options as PageOptions));
+  const p = parseParams(options as PageOptions);
+  Object.assign(queryParams, p);
+  setQueryParams(p);
 });
 
 onShow(() => {
-  loadCards();
+  loadAllData();
 });
 </script>
 

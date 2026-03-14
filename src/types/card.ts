@@ -24,3 +24,8 @@ export interface CategoryView extends Category {
   canDelete: boolean;
   visible: boolean;
 }
+
+export interface CardView extends Card {
+  categoryName?: string;
+  statusName?: string;
+}

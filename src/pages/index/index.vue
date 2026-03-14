@@ -98,6 +98,13 @@ onShow(() => {
 
 // 搜索
 const searchCard = () => {
+  if (!searchQuery.value.trim()) {
+    uni.showToast({
+      title: '请输入搜索关键词',
+      icon: 'none',
+    });
+    return;
+  }
   uni.navigateTo({
     url: '/pages/cardList/index?keyword=' + encodeURIComponent(searchQuery.value),
   });
