@@ -16,7 +16,10 @@ export default function useCardListView() {
   const cardList = ref<Card[]>([]);
   const categoryList = ref<Category[]>([]);
   const queryParams = ref<CardQueryParams>({});
-  let categoryNameById: Map<string, string> = new Map();
+
+  const categoryNameById = computed(() => {
+    return new Map(categoryList.value.map((category) => [category.id, category.name]));
+  });
 
   function setQueryParams(params: Partial<CardQueryParams>) {
     // 更新查询参数，合并新的参数到现有的查询参数中
@@ -43,10 +46,8 @@ export default function useCardListView() {
     const res = getCategories();
     if (res.success && res.data) {
       categoryList.value = res.data;
-      categoryNameById = new Map(res.data.map((category) => [category.id, category.name]));
     } else {
       categoryList.value = [];
-      categoryNameById = new Map();
       uni.showToast({
         title: res.message || '加载分类失败',
         icon: 'none',
@@ -62,7 +63,7 @@ export default function useCardListView() {
   const cardViewList = computed<CardView[]>(() => {
     return cardList.value.map((card) => ({
       ...card,
-      categoryName: categoryNameById.get(card.categoryId),
+      categoryName: categoryNameById.value.get(card.categoryId),
       statusName: card.status ? cardStatusTextMap[card.status] : undefined,
     }));
   });

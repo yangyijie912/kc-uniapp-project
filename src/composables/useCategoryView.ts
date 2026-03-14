@@ -52,14 +52,13 @@ export default function useCategoryView() {
     return countMap;
   }
 
-  // 计算每个分类的卡片数量，建立一个映射，告诉Vue卡片数量依赖于当前的卡片列表
-  //   const cardCountMap = computed(() => createCardCountMap(cardList.value));
+  const cardCountMap = computed(() => createCardCountMap(cardList.value));
 
   // 计算分类视图列表，包含每个分类的卡片数量和是否可编辑/删除等属性
   const categoryViewList = computed<CategoryView[]>(() => {
     return categoryList.value
       .map((category) => {
-        const cardCount = createCardCountMap(cardList.value)[category.id] ?? 0;
+        const cardCount = cardCountMap.value[category.id] ?? 0;
         const isUncategorized = category.id === uncategorizedId;
 
         return {
