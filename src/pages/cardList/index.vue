@@ -1,12 +1,7 @@
 <template>
   <view class="page">
     <view v-if="!isSearchResultMode" class="toolbar">
-      <input
-        :value="queryParams.keyword"
-        class="search-input"
-        placeholder="搜索问题或答案"
-        placeholder-class="placeholder"
-      />
+      <input v-model="inputKeyword" class="search-input" placeholder="搜索问题或答案" placeholder-class="placeholder" />
       <view class="filter-btn" @click="searchCard">筛选</view>
     </view>
 
@@ -16,10 +11,14 @@
     </view>
 
     <view v-if="!isSearchResultMode" class="filter-row">
-      <view class="filter-chip active">全部</view>
-      <view class="filter-chip">已掌握</view>
-      <view class="filter-chip">模糊</view>
-      <view class="filter-chip">未复习</view>
+      <view
+        v-for="value in statusTabs"
+        :key="value.value"
+        class="filter-chip"
+        :class="{ active: queryParams.status === value.value }"
+        @click="toggleStatusFilter(value.value)"
+        >{{ value.label }}</view
+      >
     </view>
 
     <view class="card-list">
@@ -31,27 +30,44 @@
         <view class="card-question">{{ value.question }}</view>
         <view class="card-answer">{{ value.answer }}</view>
       </view>
+
+      <view v-if="cardViewList.length === 0" class="result-banner">
+        <view class="result-title">没有找到相关卡片</view>
+        <view class="result-keyword">试试调整搜索关键词或筛选条件？</view>
+      </view>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
 import { onLoad, onShow } from '@dcloudio/uni-app';
-import { computed, reactive } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import useCardListView from '@/composables/useCardListView';
+import type { CardStatus } from '@/types/card';
 
 const { cardViewList, loadAllData, setQueryParams } = useCardListView();
+
+const inputKeyword = ref('');
+
+const statusTabs = [
+  { label: '全部', value: undefined },
+  { label: '掌握', value: 'mastered' },
+  { label: '模糊', value: 'fuzzy' },
+  { label: '未知', value: 'unknown' },
+] as const;
 
 // 定义查询参数类型
 type QueryParams = {
   categoryId?: string;
   keyword?: string;
+  status?: CardStatus;
 };
 
 // 定义页面接收的查询参数类型
 type PageOptions = {
   categoryId?: string;
   keyword?: string;
+  status?: string;
 };
 
 const queryParams = reactive<PageOptions>({});
@@ -60,10 +76,21 @@ const isSearchResultMode = computed(() => {
   return Boolean(queryParams.keyword?.trim());
 });
 
+// 解析状态参数，确保它是合法的 CardStatus 值
+const parseStatus = (status?: string): CardStatus | undefined => {
+  if (status === 'mastered' || status === 'fuzzy' || status === 'unknown') {
+    return status;
+  }
+
+  return undefined;
+};
+
+// 解析页面参数，设置查询参数
 const parseParams = (options?: PageOptions): QueryParams => {
   return {
     categoryId: options?.categoryId || undefined,
     keyword: options?.keyword || undefined,
+    status: parseStatus(options?.status),
   };
 };
 
@@ -74,15 +101,35 @@ const goToDetail = (id: string) => {
   });
 };
 
+// 搜索/筛选卡片
 const searchCard = () => {
-  if (!queryParams.keyword?.trim()) {
+  if (!inputKeyword.value?.trim()) {
     uni.showToast({
       title: '请输入搜索关键词',
       icon: 'none',
     });
     return;
   }
-  setQueryParams({ ...queryParams }); // 触发列表刷新
+
+  queryParams.keyword = inputKeyword.value.trim();
+
+  setQueryParams({
+    categoryId: queryParams.categoryId,
+    status: parseStatus(queryParams.status),
+    keyword: queryParams.keyword,
+  });
+  loadAllData();
+};
+
+// 切换状态筛选
+const toggleStatusFilter = (status?: CardStatus) => {
+  queryParams.status = status;
+  setQueryParams({
+    categoryId: queryParams.categoryId,
+    keyword: queryParams.keyword,
+    status,
+  });
+  loadAllData();
 };
 
 onLoad((options) => {
