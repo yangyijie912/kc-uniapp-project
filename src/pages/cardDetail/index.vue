@@ -1,24 +1,23 @@
 <template>
   <view class="page">
     <view class="detail-card">
-      <view class="detail-tag">React / Hooks</view>
-      <view class="detail-title">为什么 React 不推荐用 index 作为 key？</view>
-      <view class="detail-summary">这个问题通常出现在列表渲染、排序和删除场景里，是面试高频题。</view>
+      <view class="detail-tag">{{ cardData?.categoryId }}</view>
+      <view class="detail-title">{{ cardData?.question }}</view>
+      <!-- <view class="detail-summary">{{ cardData?.summary }}</view> -->
     </view>
 
     <view class="panel">
       <view class="panel-title">答案</view>
       <view class="panel-text">
-        因为 key 用来标识节点稳定性。使用 index 时，一旦列表顺序变化，React 可能把旧节点错误复用到新位置，导致状态和 DOM
-        不一致。
+        {{ cardData?.answer }}
       </view>
     </view>
 
     <view class="panel">
       <view class="panel-title">笔记</view>
-      <view class="bullet">key 的作用不是消除警告，而是辅助 diff</view>
-      <view class="bullet">顺序会变的列表，不要用 index</view>
-      <view class="bullet">静态列表、永不变动时才勉强可以接受</view>
+      <view class="bullet">
+        <rich-text :nodes="cardData?.content || ''"></rich-text>
+      </view>
     </view>
 
     <view class="action-row">
@@ -28,7 +27,45 @@
   </view>
 </template>
 
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { onLoad, onShow } from '@dcloudio/uni-app';
+import { ref } from 'vue';
+import { getCardById } from '@/services/cardService';
+import type { Card } from '@/types/card';
+
+const cardId = ref<string | null>(null);
+const cardData = ref<Card | null>(null);
+
+const loadCardData = (id: string) => {
+  const res = getCardById(id);
+  if (res.success && res.data) {
+    cardData.value = res.data;
+  } else {
+    uni.showToast({
+      title: res.message || '数据加载失败',
+      icon: 'none',
+    });
+  }
+};
+
+onLoad((options) => {
+  cardId.value = options?.id || null;
+  if (cardId.value) {
+    loadCardData(cardId.value);
+  } else {
+    uni.showToast({
+      title: '未指定卡片 ID',
+      icon: 'none',
+    });
+  }
+});
+
+onShow(() => {
+  if (cardId.value) {
+    loadCardData(cardId.value);
+  }
+});
+</script>
 
 <style scoped>
 .page {
