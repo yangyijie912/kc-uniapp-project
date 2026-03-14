@@ -7,21 +7,21 @@
 
       <view class="hero-actions">
         <view class="quiz-btn" @click="onQuiz">开始抽题</view>
-        <view class="secondary-btn">查看卡库</view>
+        <view class="secondary-btn" @click="goToCardListbyAll">查看卡库</view>
       </view>
 
       <view class="hero-metrics">
         <view class="metric-item">
-          <view class="metric-value">128</view>
+          <view class="metric-value">{{ cardList.length }}</view>
           <view class="metric-label">知识卡</view>
         </view>
         <view class="metric-item">
-          <view class="metric-value">12</view>
+          <view class="metric-value">{{ categoryViewList.length }}</view>
           <view class="metric-label">分类</view>
         </view>
         <view class="metric-item">
-          <view class="metric-value">7</view>
-          <view class="metric-label">今日复习</view>
+          <view class="metric-value">{{ cardList.filter((card) => card.status !== 'mastered').length }}</view>
+          <view class="metric-label">未掌握</view>
         </view>
       </view>
     </view>
@@ -89,7 +89,7 @@ import { getCategoryTheme } from '@/utils/categoryTheme';
 import useCategoryView from '@/composables/useCategoryView';
 import { ref } from 'vue';
 
-const { categoryViewList, loadAllData } = useCategoryView();
+const { categoryViewList, cardList, loadAllData } = useCategoryView();
 const searchQuery = ref('');
 
 onShow(() => {
@@ -114,6 +114,13 @@ const searchCard = () => {
 const onQuiz = () => {
   uni.navigateTo({
     url: '/pages/quiz/index',
+  });
+};
+
+// 进入卡片列表
+const goToCardListbyAll = () => {
+  uni.navigateTo({
+    url: '/pages/cardList/index',
   });
 };
 
