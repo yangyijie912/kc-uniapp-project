@@ -1,7 +1,12 @@
 <template>
   <view class="page">
     <view class="detail-card">
-      <view class="detail-tag">{{ categoryName }}</view>
+      <view class="detail-head">
+        <view class="detail-tag">{{ categoryName }}</view>
+        <view class="icon-btn edit-btn" @click="goToEdit">
+          <text class="icon-mark">✎</text>
+        </view>
+      </view>
       <view class="detail-title">{{ cardData?.question }}</view>
       <!-- <view class="detail-summary">{{ cardData?.summary }}</view> -->
     </view>
@@ -54,6 +59,16 @@ const loadCardData = (id: string) => {
   }
 };
 
+const goToEdit = () => {
+  if (!cardId.value) {
+    return;
+  }
+
+  uni.navigateTo({
+    url: `/pages/cardEdit/index?id=${cardId.value}`,
+  });
+};
+
 onLoad((options) => {
   cardId.value = options?.id || null;
   if (cardId.value) {
@@ -93,9 +108,38 @@ onShow(() => {
   padding: 30rpx;
 }
 
+.detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
 .detail-tag {
   color: #127a72;
   font-size: 22rpx;
+}
+
+.icon-btn {
+  width: 72rpx;
+  height: 72rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1rpx solid rgba(61, 43, 24, 0.08);
+  box-shadow: 0 12rpx 24rpx rgba(80, 55, 25, 0.08);
+}
+
+.icon-mark {
+  font-size: 30rpx;
+  line-height: 1;
+  font-weight: 600;
+}
+
+.edit-btn {
+  background: rgba(31, 94, 255, 0.1);
+  color: #1f5eff;
 }
 
 .detail-title {

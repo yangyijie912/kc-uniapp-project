@@ -19,6 +19,12 @@
         @click="toggleStatusFilter(value.value)"
         >{{ value.label }}</view
       >
+
+      <view class="page-actions">
+        <view class="icon-btn add-btn" @click="goToAddCard">
+          <text class="icon-mark">+</text>
+        </view>
+      </view>
     </view>
 
     <view class="card-list">
@@ -98,6 +104,14 @@ const parseParams = (options?: PageOptions): QueryParams => {
 const goToDetail = (id: string) => {
   uni.navigateTo({
     url: `/pages/cardDetail/index?id=${id}`,
+  });
+};
+
+const goToAddCard = () => {
+  const query = queryParams.categoryId ? `?categoryId=${queryParams.categoryId}` : '';
+
+  uni.navigateTo({
+    url: `/pages/cardEdit/index${query}`,
   });
 };
 
@@ -205,6 +219,34 @@ onShow(() => {
   margin-top: 8rpx;
   color: #6c645a;
   font-size: 24rpx;
+}
+
+.page-actions {
+  margin-top: 18rpx;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.icon-btn {
+  width: 72rpx;
+  height: 72rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1rpx solid rgba(61, 43, 24, 0.08);
+  box-shadow: 0 12rpx 24rpx rgba(80, 55, 25, 0.08);
+}
+
+.icon-mark {
+  font-size: 38rpx;
+  line-height: 1;
+  font-weight: 600;
+}
+
+.add-btn {
+  background: rgba(18, 122, 114, 0.12);
+  color: #127a72;
 }
 
 .filter-row {
