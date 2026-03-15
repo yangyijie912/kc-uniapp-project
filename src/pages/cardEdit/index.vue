@@ -28,6 +28,7 @@
           class="form-textarea form-textarea-title"
           placeholder="例如：Vue 的 computed 和 watch 有什么区别？"
           placeholder-class="input-placeholder"
+          maxlength="-1"
           auto-height
         />
       </view>
@@ -39,6 +40,7 @@
           class="form-textarea"
           placeholder="先写一个简短、能直接展示的答案。"
           placeholder-class="input-placeholder"
+          maxlength="-1"
           auto-height
         />
       </view>
@@ -50,6 +52,7 @@
           class="form-textarea form-textarea-content"
           placeholder="补充更完整的解释、例子或笔记内容。"
           placeholder-class="input-placeholder"
+          maxlength="-1"
           auto-height
         />
       </view>
@@ -85,7 +88,7 @@
 import { computed, reactive, ref } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 import { getCategories } from '@/services/categoryService';
-import { getCardById, updateCard } from '@/services/cardService';
+import { getCardById, updateCard, addCard } from '@/services/cardService';
 import type { Category } from '@/types/card';
 
 const cardId = ref<string | null>(null);
@@ -196,30 +199,39 @@ function save() {
   const isValid = validateForm();
   if (!isValid) {
     return;
+  }
+
+  // 传递的参数
+  const params = {
+    categoryId: form.categoryId,
+    question: form.question.trim(),
+    answer: form.answer.trim(),
+    content: form.content.trim(),
+    tags: form.tagsText
+      .split(/[,、]/)
+      .map((tag) => tag.trim())
+      .filter((tag) => tag),
+  };
+
+  let res = undefined;
+
+  if (cardId.value) {
+    res = updateCard({ id: cardId.value, ...params });
   } else {
-    const res = updateCard({
-      id: cardId.value!,
-      categoryId: form.categoryId,
-      question: form.question.trim(),
-      answer: form.answer.trim(),
-      content: form.content.trim(),
-      tags: form.tagsText
-        .split(/[,、]/)
-        .map((tag) => tag.trim())
-        .filter((tag) => tag),
+    res = addCard(params);
+  }
+
+  if (res.success) {
+    uni.showToast({
+      title: '卡片更新成功',
+      icon: 'success',
     });
-    if (res.success) {
-      uni.showToast({
-        title: '卡片更新成功',
-        icon: 'success',
-      });
-      uni.navigateBack();
-    } else {
-      uni.showToast({
-        title: res.message || '卡片更新失败',
-        icon: 'none',
-      });
-    }
+    uni.navigateBack();
+  } else {
+    uni.showToast({
+      title: res.message || '卡片更新失败',
+      icon: 'none',
+    });
   }
 }
 

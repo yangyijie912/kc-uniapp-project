@@ -11,14 +11,16 @@
     </view>
 
     <view v-if="!isSearchResultMode" class="filter-row">
-      <view
-        v-for="value in statusTabs"
-        :key="value.value"
-        class="filter-chip"
-        :class="{ active: queryParams.status === value.value }"
-        @click="toggleStatusFilter(value.value)"
-        >{{ value.label }}</view
-      >
+      <view class="filter-status">
+        <view
+          v-for="value in statusTabs"
+          :key="value.value"
+          class="filter-chip"
+          :class="{ active: queryParams.status === value.value }"
+          @click="toggleStatusFilter(value.value)"
+          >{{ value.label }}</view
+        >
+      </view>
 
       <view class="page-actions">
         <view class="icon-btn add-btn" @click="goToAddCard">
@@ -222,14 +224,13 @@ onShow(() => {
 }
 
 .page-actions {
-  margin-top: 18rpx;
   display: flex;
   justify-content: flex-end;
 }
 
 .icon-btn {
-  width: 72rpx;
-  height: 72rpx;
+  width: 60rpx;
+  height: 60rpx;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -253,6 +254,13 @@ onShow(() => {
   margin-top: 18rpx;
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.filter-status {
+  display: flex;
+  align-items: center;
   gap: 14rpx;
 }
 
