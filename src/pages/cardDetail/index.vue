@@ -33,6 +33,7 @@ import { ref } from 'vue';
 import { getCardById } from '@/services/cardService';
 import { getCategoryById } from '@/services/categoryService';
 import type { Card } from '@/types/card';
+import { UNCATEGORIZED_NAME } from '@/constants/category';
 
 const cardId = ref<string | null>(null);
 const cardData = ref<Card | null>(null);
@@ -47,7 +48,7 @@ const loadCardData = (id: string) => {
     if (categoryRes.success && categoryRes.data) {
       categoryName.value = categoryRes.data.name;
     } else {
-      categoryName.value = '未分类';
+      categoryName.value = UNCATEGORIZED_NAME;
     }
   } else {
     cardData.value = null;

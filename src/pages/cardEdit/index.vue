@@ -99,20 +99,34 @@ const form = reactive({
   tagsText: '',
 });
 
+// 计算当前选中分类在 picker 中的索引
 const pickerIndex = computed(() => {
   const index = categoryOptions.value.findIndex((category) => category.id === form.categoryId);
   return index === -1 ? 0 : index;
 });
 
+// 计算当前选中分类的名称，用于展示在 picker 输入框中
 const selectedCategoryName = computed(() => {
   return categoryOptions.value.find((category) => category.id === form.categoryId)?.name || '';
 });
 
+// 监听分类选择变化，更新 form.categoryId
+function onCategoryChange(event: { detail: { value: string } }) {
+  const index = Number(event.detail.value);
+  const category = categoryOptions.value[index];
+
+  if (category) {
+    form.categoryId = category.id;
+  }
+}
+
+// 加载分类列表，优先设置 form.categoryId 为第一个分类的 id，确保有默认值
 function loadCategories() {
   const res = getCategories();
 
   if (res.success && res.data) {
     categoryOptions.value = res.data;
+    console.log('Loaded categories:', categoryOptions.value);
 
     if (!form.categoryId && res.data.length > 0) {
       form.categoryId = res.data[0].id;
@@ -128,6 +142,7 @@ function loadCategories() {
   });
 }
 
+// 加载卡片数据
 function loadCard(id: string) {
   const res = getCardById(id);
 
@@ -144,15 +159,6 @@ function loadCard(id: string) {
     title: res.message || '卡片加载失败',
     icon: 'none',
   });
-}
-
-function onCategoryChange(event: { detail: { value: string } }) {
-  const index = Number(event.detail.value);
-  const category = categoryOptions.value[index];
-
-  if (category) {
-    form.categoryId = category.id;
-  }
 }
 
 function cancel() {

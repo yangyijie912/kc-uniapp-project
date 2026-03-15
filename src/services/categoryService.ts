@@ -1,20 +1,15 @@
 import categories from '@/data/category.json';
+import { UNCATEGORIZED_CATEGORY, UNCATEGORIZED_ID } from '@/constants/category';
+import { CATEGORY_STORAGE_KEY } from '@/constants/storageKeys';
 import type { Category } from '@/types/card';
 import type { ServiceResult } from '@/types/service';
 import { generateUUID } from '@/utils/uuid';
 import { success, fail } from './serviceHelper';
 import { getCards, updateCard } from './cardService';
 
-// 本地存储的键名
-const key = 'knowledge-card-categories';
-
 // 固定的未分类ID，确保在任何情况下都存在一个未分类
-export const uncategorizedId = 'uncategorized';
-const uncategorizedCategory: Category = {
-  id: uncategorizedId,
-  name: '未分类',
-  sort: Number.MAX_SAFE_INTEGER, // 确保未分类总是排在最后
-};
+export const uncategorizedId = UNCATEGORIZED_ID;
+const uncategorizedCategory: Category = UNCATEGORIZED_CATEGORY;
 
 // 默认分类列表，从静态数据文件加载
 const defaultCategories: Category[] = (categories as Category[]).map((category) => ({ ...category }));
@@ -34,7 +29,7 @@ function normalizeCategories(list: Category[]): Category[] {
 
 // 从本地存储加载分类列表，如果没有则使用默认分类，并保存到本地存储
 function loadCategoriesFromStorage(): Category[] {
-  const saved = uni.getStorageSync(key);
+  const saved = uni.getStorageSync(CATEGORY_STORAGE_KEY);
 
   if (!saved) {
     // 本地没有数据，使用默认分类并添加未分类
@@ -56,7 +51,7 @@ function loadCategoriesFromStorage(): Category[] {
 // 保存整个分类列表到本地存储
 function saveCategoriesToStorage(list: Category[]) {
   const normalizedList = normalizeCategories(list);
-  uni.setStorageSync(key, JSON.stringify(normalizedList));
+  uni.setStorageSync(CATEGORY_STORAGE_KEY, JSON.stringify(normalizedList));
   categoryList = normalizedList;
 }
 

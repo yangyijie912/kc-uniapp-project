@@ -1,17 +1,19 @@
 import cards from '@/data/cards.json';
+import categories from '@/data/category.json';
+import { UNCATEGORIZED_CATEGORY, UNCATEGORIZED_ID, UNCATEGORIZED_NAME } from '@/constants/category';
+import { CARD_STORAGE_KEY, CATEGORY_STORAGE_KEY } from '@/constants/storageKeys';
 import type { Card, Category } from '@/types/card';
-import { getCategories } from './categoryService';
 import type { ServiceResult } from '@/types/service';
 import { success, fail } from './serviceHelper';
 import { generateUUID } from '@/utils/uuid';
 
-// 本地存储的键名
-const key = 'knowledge-card-cards';
+const uncategorizedId = UNCATEGORIZED_ID;
 
 // 定义一个类型来表示原始的卡片数据结构
 type RawCard = {
   id: string;
-  category: string;
+  categoryId?: string;
+  category?: string;
   question: string;
   answer: string;
   content?: string;
@@ -21,20 +23,83 @@ type RawCard = {
   updatedAt?: string;
 };
 
-/** ================= */
-/**
- * 加载分类数据并创建一个映射，方便后续将原始卡片数据中的 category 字段转换为 categoryId。
- */
-const res = getCategories();
-const categoryList: Category[] = res.success && res.data ? res.data : [];
+// 先拿到分类列表，如果本地存储没有数据，则使用默认分类列表，并确保包含未分类
+function getCurrentCategories(): Category[] {
+  const saved = uni.getStorageSync(CATEGORY_STORAGE_KEY);
+  const fallbackList = (categories as Category[]).map((category) => ({ ...category }));
+  const categoryList = saved ? (JSON.parse(saved) as Category[]) : fallbackList;
+  if (categoryList.findIndex((category) => category.id === uncategorizedId) === -1) {
+    categoryList.push(UNCATEGORIZED_CATEGORY);
+  }
+  return categoryList.map((category) => ({ ...category }));
+}
 
-// const categoryIdByNameObj: Record<string, string> = {};
-// categoryList.forEach((category) => {
-//   categoryIdByNameObj[category.name] = category.id;
-// });
+// 保存分类列表到本地存储
+function saveCurrentCategories(list: Category[]) {
+  uni.setStorageSync(CATEGORY_STORAGE_KEY, JSON.stringify(list));
+}
 
-// 创建一个映射通过categoryName 来快速获取 categoryId
-const categoryIdByName = new Map(categoryList.map((category) => [category.name, category.id]));
+// 新建分类，用于导入时创建不存在的分类
+function createImportedCategory(name: string): Category {
+  const currentCategories = getCurrentCategories();
+  // 计算当前分类列表中最大的 sort 值，给新建的分类排序值加1，确保新分类排在最后面
+  const maxSort = currentCategories.reduce((maxValue, category) => {
+    return category.sort > maxValue && Number.isFinite(category.sort) ? category.sort : maxValue;
+  }, 0);
+
+  const newCategory: Category = {
+    id: generateUUID(),
+    name,
+    sort: maxSort + 1,
+  };
+
+  saveCurrentCategories([...currentCategories, newCategory]);
+  return newCategory;
+}
+
+// 解析并处理原始卡片数据中的分类信息，返回最终的 categoryId，确保导入的卡片能够正确关联到分类
+function resolveCategoryId(rawCard: RawCard): string {
+  const currentCategories = getCurrentCategories();
+  // 从原始数据中获取分类名称和ID
+  const rawCategoryName = rawCard.category?.trim();
+  // 按原始卡片名称获取匹配的分类，优先按名称匹配
+  const categoryByName = rawCategoryName
+    ? currentCategories.find((category) => category.name === rawCategoryName)
+    : undefined;
+  // 按原始卡片ID获取匹配的分类，次要按ID匹配
+  const categoryById = rawCard.categoryId
+    ? currentCategories.find((category) => category.id === rawCard.categoryId)
+    : undefined;
+
+  // 1. categoryId 和 categoryName 都与系统一致，正常导入
+  if (rawCategoryName && categoryByName && categoryById && categoryByName.id === categoryById.id) {
+    // 卡片有分类名字，系统有这个分类名，并且卡片的 categoryId 在系统中对应
+    return categoryById.id;
+  }
+
+  // 2. categoryId 不一致或没有，但 categoryName 一致，按 categoryName 导入
+  if (rawCategoryName && categoryByName) {
+    if (rawCard.categoryId && categoryById && categoryById.id !== categoryByName.id) {
+      console.warn(
+        `[cardService] 导入分类冲突：card=${rawCard.id}, categoryId=${rawCard.categoryId}, category=${rawCategoryName}，已按分类名导入。`,
+      );
+    }
+    return categoryByName.id;
+  }
+
+  // 3. 有 categoryName 但是和系统不一致，新建分类
+  if (rawCategoryName) {
+    return createImportedCategory(rawCategoryName).id;
+  }
+
+  // 4. 没有 categoryName，但是有 categoryId，能找到就按 ID，找不到进未分类
+  if (categoryById) {
+    return categoryById.id;
+  }
+
+  // 5. 其余情况，移入未分类
+  return uncategorizedId;
+}
 
 // 清洗标签数据，去除空字符串和重复项
 function normalizeTags(tags?: string[]): string[] | undefined {
@@ -70,13 +135,7 @@ function normalizeCard(card: Card): Card {
 
 // 将原始卡片数据转换为Card类型
 function toCard(rawCard: RawCard): Card {
-  // 法一：使用对象来映射
-  // const categoryId = categoryIdByNameObj[rawCard.category] ?? rawCard.category;
-  // 法二：直接查找
-  // const category = categoryList.find((item) => item.name === rawCard.category);
-  // const categoryId = category ? category.id : rawCard.category;
-  // 法三：使用Map来映射
-  const categoryId = categoryIdByName.get(rawCard.category) ?? rawCard.category;
+  const categoryId = resolveCategoryId(rawCard);
 
   return {
     id: rawCard.id,
@@ -91,15 +150,13 @@ function toCard(rawCard: RawCard): Card {
   };
 }
 
-/** ================= */
-
 // 默认的卡片列表，从静态数据文件加载
 const defaultCards: Card[] = (cards as RawCard[]).map((rawCard) => toCard(rawCard));
 
 // 当前的卡片列表，后续会从本地存储加载或使用默认卡片
 let cardList: Card[] = [];
 
-// 克隆一个分类对象，确保外部修改不会影响内部数据
+// 克隆一个卡片对象，确保外部修改不会影响内部数据
 function cloneCard(card: Card): Card {
   return {
     ...card,
@@ -109,7 +166,7 @@ function cloneCard(card: Card): Card {
 
 // 从本地存储加载卡片列表，如果没有则使用默认卡片，并保存到本地存储
 function loadCardsFromStorage(): Card[] {
-  const saved = uni.getStorageSync(key);
+  const saved = uni.getStorageSync(CARD_STORAGE_KEY);
   if (saved) {
     const savedCards = JSON.parse(saved) as Card[];
     const normalizedCards = savedCards.map(normalizeCard);
@@ -124,7 +181,7 @@ function loadCardsFromStorage(): Card[] {
 // 保存整个卡片列表到本地存储
 function saveCardsToStorage(list: Card[]) {
   const normalizedList = list.map(normalizeCard);
-  uni.setStorageSync(key, JSON.stringify(normalizedList));
+  uni.setStorageSync(CARD_STORAGE_KEY, JSON.stringify(normalizedList));
   cardList = normalizedList.map(cloneCard);
 }
 
