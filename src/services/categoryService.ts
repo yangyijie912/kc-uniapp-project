@@ -125,7 +125,10 @@ export function deleteCategory(id: string): ServiceResult<null> {
   const res = getCards({ categoryId: id });
   if (res.success && res.data) {
     res.data.forEach((card) => {
-      updateCard(card.id, { categoryId: uncategorizedId });
+      updateCard({
+        id: card.id,
+        categoryId: uncategorizedId,
+      });
     });
   }
 

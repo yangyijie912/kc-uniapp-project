@@ -85,7 +85,7 @@
 import { computed, reactive, ref } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 import { getCategories } from '@/services/categoryService';
-import { getCardById } from '@/services/cardService';
+import { getCardById, updateCard } from '@/services/cardService';
 import type { Category } from '@/types/card';
 
 const cardId = ref<string | null>(null);
@@ -123,18 +123,13 @@ function onCategoryChange(event: { detail: { value: string } }) {
 // 加载分类列表，优先设置 form.categoryId 为第一个分类的 id，确保有默认值
 function loadCategories() {
   const res = getCategories();
-
   if (res.success && res.data) {
     categoryOptions.value = res.data;
-    console.log('Loaded categories:', categoryOptions.value);
-
     if (!form.categoryId && res.data.length > 0) {
       form.categoryId = res.data[0].id;
     }
-
     return;
   }
-
   categoryOptions.value = [];
   uni.showToast({
     title: res.message || '分类加载失败',
@@ -165,11 +160,67 @@ function cancel() {
   uni.navigateBack();
 }
 
+// 校验
+function validateForm() {
+  const validateRules = [
+    {
+      field: 'categoryId',
+      message: '请选择分类',
+      validate: () => !!form.categoryId,
+    },
+    {
+      field: 'question',
+      message: '问题不能为空',
+      validate: () => !!form.question.trim(),
+    },
+    {
+      field: 'answer',
+      message: '答案不能为空',
+      validate: () => !!form.answer.trim(),
+    },
+  ];
+  for (const rule of validateRules) {
+    if (!rule.validate()) {
+      uni.showToast({
+        title: rule.message,
+        icon: 'none',
+      });
+      return false;
+    }
+  }
+  return true;
+}
+
+// 保存
 function save() {
-  uni.showToast({
-    title: '样式已就位，保存逻辑下一步接入',
-    icon: 'none',
-  });
+  const isValid = validateForm();
+  if (!isValid) {
+    return;
+  } else {
+    const res = updateCard({
+      id: cardId.value!,
+      categoryId: form.categoryId,
+      question: form.question.trim(),
+      answer: form.answer.trim(),
+      content: form.content.trim(),
+      tags: form.tagsText
+        .split(/[,、]/)
+        .map((tag) => tag.trim())
+        .filter((tag) => tag),
+    });
+    if (res.success) {
+      uni.showToast({
+        title: '卡片更新成功',
+        icon: 'success',
+      });
+      uni.navigateBack();
+    } else {
+      uni.showToast({
+        title: res.message || '卡片更新失败',
+        icon: 'none',
+      });
+    }
+  }
 }
 
 function deleteCard() {
@@ -187,7 +238,7 @@ onLoad((options) => {
     loadCard(cardId.value);
     return;
   }
-
+  // 新增卡片时，如果传入了 categoryId 参数，优先使用这个参数
   if (options?.categoryId) {
     form.categoryId = options.categoryId;
   }

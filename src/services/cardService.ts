@@ -246,9 +246,9 @@ export function addCard(card: Omit<Card, 'id'>): ServiceResult<Card> {
 }
 
 // 更新卡片
-export function updateCard(id: string, updates: Partial<Card>): ServiceResult<Card> {
+export function updateCard(updates: Partial<Card>): ServiceResult<Card> {
   const currentList = loadCardsFromStorage();
-  const index = currentList.findIndex((item) => item.id === id);
+  const index = currentList.findIndex((item) => item.id === updates.id);
   if (index === -1) {
     return fail('题目未找到');
   }
