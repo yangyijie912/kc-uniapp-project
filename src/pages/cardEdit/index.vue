@@ -223,13 +223,13 @@ function save() {
 
   if (res.success) {
     uni.showToast({
-      title: '卡片更新成功',
+      title: res.message || '保存成功',
       icon: 'success',
     });
     uni.navigateBack();
   } else {
     uni.showToast({
-      title: res.message || '卡片更新失败',
+      title: res.message || '保存失败',
       icon: 'none',
     });
   }
