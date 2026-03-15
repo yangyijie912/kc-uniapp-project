@@ -3,7 +3,7 @@
     <view class="hero-card">
       <view class="eyebrow">Category Editor</view>
       <view class="title">{{ categoryId ? '编辑分类' : '新增分类' }}</view>
-      <view class="desc">先把分类名称和排序维护清楚，后面的卡片归类和列表展示会更稳定。</view>
+      <view class="desc">会影响卡片的归类和展示顺序。</view>
     </view>
 
     <view class="form-card">

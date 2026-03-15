@@ -3,11 +3,11 @@
     <view class="hero-card">
       <view class="eyebrow">Category Admin</view>
       <view class="title">分类管理</view>
-      <view class="desc">先把分类结构维护清楚，后面的卡片新增、筛选和跳转都会简单很多。</view>
+      <view class="desc">管理分类结构，方便卡片的新增、筛选和跳转。</view>
     </view>
 
     <view class="toolbar-card">
-      <view class="toolbar-title">当前分类</view>
+      <view class="toolbar-title">全部分类</view>
       <view class="toolbar-action" @click="addCategory">新增分类</view>
     </view>
 

@@ -122,8 +122,8 @@ onShow(() => {
 }
 
 .icon-btn {
-  width: 72rpx;
-  height: 72rpx;
+  width: 60rpx;
+  height: 60rpx;
   display: inline-flex;
   align-items: center;
   justify-content: center;

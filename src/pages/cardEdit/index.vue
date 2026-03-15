@@ -3,13 +3,13 @@
     <view class="hero-card">
       <view class="eyebrow">Card Editor</view>
       <view class="title">{{ cardId ? '编辑卡片' : '新增卡片' }}</view>
-      <view class="desc">先把题目、答案和标签整理清楚，后面再把保存、删除和跳转行为补齐。</view>
+      <view class="desc">进行题目的编辑，编辑的卡片会保存在本地存储，请及时导出进行备份</view>
     </view>
 
     <view class="form-card">
       <view class="form-header">
         <view class="form-title">基础信息</view>
-        <view class="form-tip">卡片先维护分类、题目和答案，状态继续交给测验页处理。</view>
+        <view class="form-tip">修改基础信息，答案尽量概括，正文内容可补充更完整的解释、例子或笔记内容。</view>
       </view>
 
       <view class="form-group">
@@ -71,7 +71,7 @@
       <view v-if="cardId" class="danger-card">
         <view>
           <view class="danger-title">危险操作</view>
-          <view class="danger-desc">删除卡片会从本地题库中移除，建议等 CRUD 接好后再放开。</view>
+          <view class="danger-desc">请确认不再需要或已经进行导出备份</view>
         </view>
         <view class="danger-btn" @click="deleteCard">删除卡片</view>
       </view>
