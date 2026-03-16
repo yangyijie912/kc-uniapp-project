@@ -36,7 +36,7 @@
             <view class="card-category">{{ value.categoryName }}</view>
             <view class="card-tag">/ {{ value.tags?.join('•') }}</view>
           </view>
-          <view class="card-status" :class="`status-${value.status}`">{{ value.statusName ?? '未知' }}</view>
+          <view class="card-status" :class="`status-${value.status}`">{{ value.statusName ?? '新' }}</view>
         </view>
         <view class="card-question">{{ value.question }}</view>
         <view class="card-answer">{{ value.answer }}</view>

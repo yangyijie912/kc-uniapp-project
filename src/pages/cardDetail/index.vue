@@ -10,7 +10,7 @@
       <view class="detail-title">{{ cardData?.question }}</view>
       <view class="detail-summary">
         <view class="detail-top">
-          <view class="detail-status" :class="`status-${cardData?.status}`">{{ cardData?.status ?? '未知' }}</view>
+          <view class="detail-status" :class="`status-${cardData?.status}`">{{ cardData?.status ?? '新' }}</view>
           <view class="detail-tag">/ {{ cardData?.tags?.join('•') }}</view>
         </view>
       </view>
