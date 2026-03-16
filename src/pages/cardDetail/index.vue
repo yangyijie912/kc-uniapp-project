@@ -2,13 +2,18 @@
   <view class="page">
     <view class="detail-card">
       <view class="detail-head">
-        <view class="detail-tag">{{ categoryName }}</view>
+        <view class="detail-category">{{ categoryName }}</view>
         <view class="icon-btn edit-btn" @click="goToEdit">
           <text class="icon-mark">✎</text>
         </view>
       </view>
       <view class="detail-title">{{ cardData?.question }}</view>
-      <!-- <view class="detail-summary">{{ cardData?.summary }}</view> -->
+      <view class="detail-summary">
+        <view class="detail-top">
+          <view class="detail-status" :class="`status-${cardData?.status}`">{{ cardData?.status ?? '未知' }}</view>
+          <view class="detail-tag">/ {{ cardData?.tags?.join('•') }}</view>
+        </view>
+      </view>
     </view>
 
     <view class="panel">
@@ -116,9 +121,9 @@ onShow(() => {
   gap: 16rpx;
 }
 
-.detail-tag {
+.detail-category {
   color: #127a72;
-  font-size: 22rpx;
+  font-size: 24rpx;
 }
 
 .icon-btn {
@@ -153,9 +158,52 @@ onShow(() => {
 
 .detail-summary {
   margin-top: 14rpx;
+  color: #9d9487;
+}
+
+.detail-top {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.detail-tag {
+  color: #9d9487;
+  font-size: 22rpx;
+  /* 溢出省略 */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* 不准挤别人 */
+  min-width: 0;
+}
+
+.detail-status {
+  padding: 8rpx 16rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  /* 禁止被挤压 */
+  flex-shrink: 0;
+}
+
+.status-fuzzy {
+  background: rgba(239, 125, 66, 0.12);
+  color: #c76530;
+}
+
+.status-mastered {
+  background: rgba(18, 122, 114, 0.12);
+  color: #127a72;
+}
+
+.status-unknown {
+  background: rgba(255, 255, 255, 0.72);
   color: #6c645a;
-  font-size: 26rpx;
-  line-height: 1.7;
+}
+
+.status-undefined {
+  background: rgba(31, 94, 255, 0.1);
+  color: #1f5eff;
 }
 
 .panel {

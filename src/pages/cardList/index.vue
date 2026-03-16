@@ -32,8 +32,11 @@
     <view class="card-list">
       <view v-for="value in cardViewList" :key="value.id" class="card-item" @click="goToDetail(value.id)">
         <view class="card-top">
-          <view class="card-tag">{{ value.categoryName }}</view>
-          <view class="card-status" :class="`status-${value.status}`">{{ value.statusName }}</view>
+          <view class="card-title">
+            <view class="card-category">{{ value.categoryName }}</view>
+            <view class="card-tag">/ {{ value.tags?.join('•') }}</view>
+          </view>
+          <view class="card-status" :class="`status-${value.status}`">{{ value.statusName ?? '未知' }}</view>
         </view>
         <view class="card-question">{{ value.question }}</view>
         <view class="card-answer">{{ value.answer }}</view>
@@ -295,13 +298,29 @@ onShow(() => {
 .card-top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12rpx;
 }
 
-.card-tag {
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.card-category {
   color: #127a72;
+  font-size: 24rpx;
+}
+
+.card-tag {
+  color: #9d9487;
   font-size: 22rpx;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .card-status {
@@ -320,7 +339,12 @@ onShow(() => {
   color: #127a72;
 }
 
-.status-new {
+.status-unknown {
+  background: rgba(255, 255, 255, 0.72);
+  color: #6c645a;
+}
+
+.status-undefined {
   background: rgba(31, 94, 255, 0.1);
   color: #1f5eff;
 }
