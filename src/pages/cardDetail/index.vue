@@ -28,7 +28,7 @@
     <view class="panel">
       <view class="panel-title">笔记</view>
       <view class="bullet">
-        <rich-text :nodes="cardData?.content || ''"></rich-text>
+        <rich-text :nodes="renderMarkdownToRichText"></rich-text>
       </view>
     </view>
   </view>
@@ -36,16 +36,34 @@
 
 <script setup lang="ts">
 import { onLoad, onShow } from '@dcloudio/uni-app';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { getCardById } from '@/services/cardService';
 import { getCategoryById } from '@/services/categoryService';
 import type { Card } from '@/types/card';
 import { UNCATEGORIZED_NAME } from '@/constants/category';
 import { cardStatusTextMap } from '@/constants/cardStatus';
+import MarkdownIt from 'markdown-it';
 
 const cardId = ref<string | null>(null);
 const cardData = ref<Card | null>(null);
 const categoryName = ref('');
+
+// 初始化 MarkdownIt 实例
+const md = new MarkdownIt({
+  html: false, // 禁止 HTML 标签，确保安全
+  breaks: true, // 换行转换为 <br>
+  linkify: true, // 自动识别链接
+  typographer: true, // 启用一些语言替换 + 引号美化
+});
+
+// 将 Markdown 转换为富文本格式
+const renderMarkdownToRichText = computed(() => {
+  if (!cardData.value?.content) {
+    return '';
+  }
+  const html = md.render(cardData.value.content);
+  return html;
+});
 
 const loadCardData = (id: string) => {
   const res = getCardById(id);
