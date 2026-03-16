@@ -10,7 +10,9 @@
       <view class="detail-title">{{ cardData?.question }}</view>
       <view class="detail-summary">
         <view class="detail-top">
-          <view class="detail-status" :class="`status-${cardData?.status}`">{{ cardData?.status ?? '新' }}</view>
+          <view class="detail-status" :class="`status-${cardData?.status}`">{{
+            cardData?.status ? cardStatusTextMap[cardData.status] : '新'
+          }}</view>
           <view class="detail-tag">/ {{ cardData?.tags?.join('•') }}</view>
         </view>
       </view>
@@ -39,6 +41,7 @@ import { getCardById } from '@/services/cardService';
 import { getCategoryById } from '@/services/categoryService';
 import type { Card } from '@/types/card';
 import { UNCATEGORIZED_NAME } from '@/constants/category';
+import { cardStatusTextMap } from '@/constants/cardStatus';
 
 const cardId = ref<string | null>(null);
 const cardData = ref<Card | null>(null);
