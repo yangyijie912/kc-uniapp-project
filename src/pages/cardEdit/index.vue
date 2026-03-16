@@ -73,7 +73,7 @@
           <view class="danger-title">危险操作</view>
           <view class="danger-desc">请确认不再需要或已经进行导出备份</view>
         </view>
-        <view class="danger-btn" @click="deleteCard">删除卡片</view>
+        <view class="danger-btn" @click="removeCard">删除卡片</view>
       </view>
 
       <view class="form-actions">
@@ -88,7 +88,7 @@
 import { computed, reactive, ref } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 import { getCategories } from '@/services/categoryService';
-import { getCardById, updateCard, addCard } from '@/services/cardService';
+import { getCardById, updateCard, addCard, deleteCard } from '@/services/cardService';
 import type { Category } from '@/types/card';
 
 const cardId = ref<string | null>(null);
@@ -235,12 +235,47 @@ function save() {
   }
 }
 
-function deleteCard() {
-  uni.showToast({
-    title: '删除逻辑下一步接入',
-    icon: 'none',
+// 删除
+function removeCard() {
+  uni.showModal({
+    title: '确认删除',
+    content: '删除后将无法恢复，请确认已经导出备份。',
+    confirmText: '删除',
+    cancelText: '取消',
+    success: (res) => {
+      if (res.confirm) {
+        performDelete();
+      }
+    },
   });
 }
+
+const performDelete = () => {
+  if (!cardId.value) {
+    uni.showToast({
+      title: '卡片数据异常，无法删除',
+      icon: 'none',
+    });
+    return;
+  }
+
+  const res = deleteCard(cardId.value);
+
+  if (res.success) {
+    uni.showToast({
+      title: res.message || '删除成功',
+      icon: 'success',
+    });
+    uni.navigateBack({
+      delta: 2,
+    });
+  } else {
+    uni.showToast({
+      title: res.message || '删除失败',
+      icon: 'none',
+    });
+  }
+};
 
 onLoad((options) => {
   loadCategories();
