@@ -47,14 +47,7 @@
 
       <view class="form-group">
         <view class="form-label">正文内容</view>
-        <textarea
-          v-model="form.content"
-          class="form-textarea form-textarea-content"
-          placeholder="补充更完整的解释、例子或笔记内容。"
-          placeholder-class="input-placeholder"
-          maxlength="-1"
-          auto-height
-        />
+        <MarkdownToolbar v-model="form.content" />
       </view>
 
       <view class="form-group">
@@ -65,7 +58,7 @@
           placeholder="例如：响应式、生命周期、组件通信"
           placeholder-class="input-placeholder"
         />
-        <view class="field-tip">先用中文顿号或逗号分隔，后面再统一清洗成 tags。</view>
+        <view class="field-tip">用顿号或逗号分隔。</view>
       </view>
 
       <view v-if="cardId" class="danger-card">
@@ -90,6 +83,7 @@ import { onLoad } from '@dcloudio/uni-app';
 import { getCategories } from '@/services/categoryService';
 import { getCardById, updateCard, addCard, deleteCard } from '@/services/cardService';
 import type { Category } from '@/types/card';
+import MarkdownToolbar from '@/componets/MarkdownToolbar.vue';
 
 const cardId = ref<string | null>(null);
 const categoryOptions = ref<Category[]>([]);
@@ -208,7 +202,7 @@ function save() {
     answer: form.answer.trim(),
     content: form.content.trim(),
     tags: form.tagsText
-      .split(/[,、]/)
+      .split(/[,、，]/)
       .map((tag) => tag.trim())
       .filter((tag) => tag),
   };
