@@ -5,26 +5,6 @@
       <view class="content-toolbar-hint">常用格式快捷插入</view>
     </view>
     <view class="content-actions">
-      <view class="content-action action-heading" @click="insertHeading()">
-        <view class="content-action-icon">H</view>
-        <view class="content-action-text">标题</view>
-      </view>
-      <view class="content-action action-strong" @click="insertBold()">
-        <view class="content-action-icon">B</view>
-        <view class="content-action-text">加粗</view>
-      </view>
-      <view class="content-action action-quote" @click="insertQuote()">
-        <view class="content-action-icon">“</view>
-        <view class="content-action-text">引用</view>
-      </view>
-      <view class="content-action action-list" @click="insertList()">
-        <view class="content-action-icon">•</view>
-        <view class="content-action-text">列表</view>
-      </view>
-      <view class="content-action action-link" @click="insertLink()">
-        <view class="content-action-icon">@</view>
-        <view class="content-action-text">链接</view>
-      </view>
       <view class="content-action action-image" @click="insertImageTemplate()">
         <view class="content-action-icon">IMG</view>
         <view class="content-action-text">图片</view>
@@ -33,13 +13,41 @@
         <view class="content-action-icon">&lt;/&gt;</view>
         <view class="content-action-text">代码块</view>
       </view>
+      <view class="content-action action-list" @click="insertList()">
+        <view class="content-action-icon">•</view>
+        <view class="content-action-text">列表</view>
+      </view>
       <view class="content-action action-table" @click="insertTable()">
         <view class="content-action-icon">TBL</view>
         <view class="content-action-text">表格</view>
       </view>
-      <view class="content-action action-divider" @click="insertDivider()">
+      <view v-show="!isMore" class="content-toggle" @click="isMore = !isMore">
+        <view class="content-toggle-icon">+</view>
+      </view>
+
+      <view v-show="isMore" class="content-action action-heading" @click="insertHeading()">
+        <view class="content-action-icon">H</view>
+        <view class="content-action-text">标题</view>
+      </view>
+      <view v-show="isMore" class="content-action action-strong" @click="insertBold()">
+        <view class="content-action-icon">B</view>
+        <view class="content-action-text">加粗</view>
+      </view>
+      <view v-show="isMore" class="content-action action-quote" @click="insertQuote()">
+        <view class="content-action-icon">“</view>
+        <view class="content-action-text">引用</view>
+      </view>
+      <view v-show="isMore" class="content-action action-link" @click="insertLink()">
+        <view class="content-action-icon">@</view>
+        <view class="content-action-text">链接</view>
+      </view>
+      <view v-show="isMore" class="content-action action-divider" @click="insertDivider()">
         <view class="content-action-icon">---</view>
         <view class="content-action-text">分割线</view>
+      </view>
+
+      <view v-show="isMore" class="content-toggle content-toggle-close" @click="isMore = !isMore">
+        <view class="content-toggle-icon">−</view>
       </view>
     </view>
     <textarea
@@ -58,6 +66,8 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+
+const isMore = ref(false);
 
 // 维护光标位置，确保插入内容后光标能正确定位
 const cursorPosition = ref(0);
@@ -194,9 +204,9 @@ function insertImageTemplate() {
 </script>
 <style lang="css" scoped>
 .content-toolbar {
-  margin-top: 12rpx;
-  padding: 16rpx;
-  border-radius: 20rpx;
+  margin-top: 8rpx;
+  padding: 14rpx;
+  border-radius: 18rpx;
   background:
     radial-gradient(circle at top left, rgba(18, 122, 114, 0.1), transparent 34%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(247, 244, 239, 0.94));
@@ -208,61 +218,96 @@ function insertImageTemplate() {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 16rpx;
+  gap: 10rpx;
   flex-wrap: wrap;
 }
 
 .content-toolbar-title {
   color: #1e1c18;
-  font-size: 24rpx;
+  font-size: 22rpx;
   font-weight: 700;
 }
 
 .content-toolbar-hint {
   color: #6f6a62;
-  font-size: 20rpx;
-  line-height: 1.6;
+  font-size: 18rpx;
+  line-height: 1.4;
 }
 
 .content-actions {
-  margin: 14rpx 0;
+  margin: 10rpx 0;
   display: flex;
   flex-wrap: wrap;
-  align-items: stretch;
-  gap: 10rpx;
+  align-items: center;
+  gap: 6rpx;
 }
 
 .content-action {
-  min-height: 74rpx;
-  padding: 10rpx 6rpx;
+  min-width: 82rpx;
+  min-height: 50rpx;
+  padding: 0 10rpx;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 6rpx;
-  border-radius: 16rpx;
+  gap: 8rpx;
+  border-radius: 14rpx;
   border: 1rpx solid transparent;
   box-sizing: border-box;
   font-weight: 600;
+  box-shadow: 0 4rpx 12rpx rgba(80, 55, 25, 0.04);
 }
 
 .content-action-icon {
-  min-width: 44rpx;
-  height: 30rpx;
-  padding: 0 8rpx;
+  min-width: 24rpx;
+  height: 20rpx;
+  font-size: 14rpx;
+  padding: 0 6rpx;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 999rpx;
   background: rgba(255, 255, 255, 0.72);
-  font-size: 18rpx;
   letter-spacing: 0.2rpx;
   line-height: 1;
 }
 
 .content-action-text {
-  font-size: 20rpx;
+  font-size: 18rpx;
   line-height: 1;
+}
+
+.content-toggle {
+  min-width: 50rpx;
+  min-height: 50rpx;
+  padding: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14rpx;
+  border: 1rpx dashed rgba(61, 43, 24, 0.14);
+  background: rgba(255, 255, 255, 0.58);
+  color: #6c645a;
+  box-sizing: border-box;
+}
+
+.content-toggle-icon {
+  min-width: 24rpx;
+  height: 20rpx;
+  font-size: 14rpx;
+  padding: 0 6rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  background: rgba(61, 43, 24, 0.06);
+  color: #3c342c;
+  line-height: 1;
+}
+
+.content-toggle-close {
+  background: rgba(61, 43, 24, 0.04);
 }
 
 .action-heading {
