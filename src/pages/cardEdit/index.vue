@@ -83,7 +83,7 @@ import { onLoad } from '@dcloudio/uni-app';
 import { getCategories } from '@/services/categoryService';
 import { getCardById, updateCard, addCard, deleteCard } from '@/services/cardService';
 import type { Category } from '@/types/card';
-import MarkdownToolbar from '@/componets/MarkdownToolbar.vue';
+import MarkdownToolbar from '@/components/MarkdownToolbar.vue';
 
 const cardId = ref<string | null>(null);
 const categoryOptions = ref<Category[]>([]);
