@@ -45,6 +45,8 @@
     <textarea
       :value="localContent"
       @input="onInput"
+      @focus="onFocus"
+      @blur="onBlur"
       class="form-textarea form-textarea-content"
       placeholder="补充更完整的解释、例子或笔记内容。"
       placeholder-class="input-placeholder"
@@ -56,6 +58,10 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+
+// 维护光标位置，确保插入内容后光标能正确定位
+const cursorPosition = ref(0);
+const lockInsertPosition = ref(false);
 
 const props = defineProps<{
   modelValue: string;
@@ -76,18 +82,45 @@ watch(
   },
 );
 
-const onInput = (event: Event | { detail?: { value?: string } }) => {
-  const detailValue = 'detail' in event ? event.detail?.value : undefined;
-  const targetValue = 'target' in event && event.target instanceof HTMLTextAreaElement ? event.target.value : undefined;
-  const value = detailValue ?? targetValue ?? '';
+const onInput = (event: Event | { detail?: { value?: string; cursor?: number } }) => {
+  const eventTarget = 'target' in event && event.target instanceof HTMLTextAreaElement ? event.target : undefined;
+  const eventDetail = 'detail' in event ? event.detail : undefined;
+  const value = eventDetail?.value ?? eventTarget?.value ?? '';
+
+  // 更新光标位置
+  const pos = eventDetail?.cursor ?? eventTarget?.selectionStart ?? value.length;
+  cursorPosition.value = pos;
+  lockInsertPosition.value = false;
+
   localContent.value = value;
   emit('update:modelValue', value);
 };
 
+const onFocus = () => {
+  lockInsertPosition.value = false;
+};
+
+// 失去焦点时确保更新光标
+const onBlur = (event: Event | { detail?: { value?: string; cursor?: number } }) => {
+  if (lockInsertPosition.value) {
+    return;
+  }
+
+  const eventTarget = 'target' in event && event.target instanceof HTMLTextAreaElement ? event.target : undefined;
+  const eventDetail = 'detail' in event ? event.detail : undefined;
+  const value = eventDetail?.value ?? eventTarget?.value ?? '';
+  const pos = eventDetail?.cursor ?? eventTarget?.selectionStart ?? value.length;
+  cursorPosition.value = pos;
+};
+
 // 插入内容
 function appendContent(text: string) {
-  const newValue = `${localContent.value}${localContent.value ? '\n\n' : ''}${text}`;
+  const pos = cursorPosition.value;
+  const newValue = localContent.value.slice(0, pos) + text + localContent.value.slice(pos);
   localContent.value = newValue;
+  // 更新光标位置到插入内容后
+  cursorPosition.value = pos + text.length;
+  lockInsertPosition.value = true;
   emit('update:modelValue', newValue);
 }
 
@@ -284,5 +317,28 @@ function insertImageTemplate() {
   background: rgba(92, 104, 118, 0.1);
   border-color: rgba(92, 104, 118, 0.14);
   color: #5c6876;
+}
+
+.form-textarea {
+  margin-top: 12rpx;
+  width: 100%;
+  min-height: 180rpx;
+  padding: 22rpx 24rpx;
+  border-radius: 22rpx;
+  border: 1rpx solid rgba(61, 43, 24, 0.08);
+  background: rgba(255, 255, 255, 0.88);
+  color: #1e1c18;
+  font-size: 28rpx;
+  line-height: 1.7;
+  box-sizing: border-box;
+}
+
+.form-textarea-content {
+  min-height: 280rpx;
+}
+
+.input-placeholder {
+  color: #9d9487;
+  font-size: 28rpx;
 }
 </style>

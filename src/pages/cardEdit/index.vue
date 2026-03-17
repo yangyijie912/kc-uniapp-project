@@ -389,10 +389,6 @@ onLoad((options) => {
   min-height: 140rpx;
 }
 
-.form-textarea-content {
-  min-height: 280rpx;
-}
-
 .picker-placeholder,
 .input-placeholder {
   color: #9d9487;
