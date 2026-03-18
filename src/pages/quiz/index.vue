@@ -3,17 +3,26 @@
     <view class="progress-card">
       <view class="progress-top">
         <view class="progress-label">今日测验</view>
-        <view class="progress-count">2 / 10</view>
+        <view class="progress-count">{{ cardIndex + 1 }} / {{ cardQueue.length }}</view>
       </view>
       <view class="progress-track">
-        <view class="progress-bar"></view>
+        <view class="progress-bar" :style="{ width: ((cardIndex + 1) / cardQueue.length) * 100 + '%' }"></view>
       </view>
     </view>
 
     <view class="question-card">
-      <view class="question-tag">React / Hooks</view>
-      <view class="question-title">为什么 useEffect 不能直接写成 async？</view>
-      <view class="question-desc">先想返回值，再想副作用执行时机。</view>
+      <view class="question-top">
+        <view class="question-category">
+          {{ currentCard?.categoryName }}
+        </view>
+
+        <text class="question-tag">
+          {{ Array.isArray(currentCard?.tags) && currentCard?.tags?.length > 0 ? '/ ' : '' }}
+          {{ currentCard?.tags?.join('•') }}
+        </text>
+      </view>
+      <view class="question-title">{{ currentCard?.question }}</view>
+      <!-- <view class="question-desc">{{ currentCard?.description }}</view> -->
       <view class="reveal-btn" @click="toggleAnswer">
         {{ showAnswer ? '收起答案' : '展开查看答案' }}
       </view>
@@ -21,39 +30,113 @@
 
     <view v-if="showAnswer" class="answer-panel">
       <view class="answer-label">参考答案</view>
-      <view class="answer-text"
-        >因为 async 会返回 Promise，不符合 effect 对 cleanup 函数的预期。effect
-        期望返回的是清理函数，或者不返回内容。</view
-      >
-      <view class="answer-tip">记忆点：先想 useEffect 的返回值，再判断 async 会不会破坏这个约定。</view>
+      <view class="answer-text">{{ currentCard?.answer }}</view>
+      <!-- <view class="answer-tip">记忆点：先想 useEffect 的返回值，再判断 async 会不会破坏这个约定。</view> -->
 
       <view class="content-block">
         <view class="content-label">补充笔记</view>
-        <rich-text class="content-rich" :nodes="content"></rich-text>
+        <MarkdownContent :content="content" />
       </view>
     </view>
 
     <view class="bottom-row">
-      <view class="status-btn status-unknown">不会</view>
-      <view class="status-btn status-fuzzy">模糊</view>
-      <view class="status-btn status-mastered">掌握</view>
+      <view class="status-btn status-unknown" @click="onQuiz(cardStatusTextMap.unknown)">不会</view>
+      <view class="status-btn status-fuzzy" @click="onQuiz(cardStatusTextMap.fuzzy)">模糊</view>
+      <view class="status-btn status-mastered" @click="onQuiz(cardStatusTextMap.mastered)">掌握</view>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
+import MarkdownContent from '@/components/MarkdownContent.vue';
+import useCardListView from '@/composables/useCardListView';
+import { onShow, onLoad } from '@dcloudio/uni-app';
+import { cardStatusTextMap } from '@/constants/cardStatus';
+
+const { cardViewList, loadAllData, setQueryParams } = useCardListView();
+
+// 当前队列的卡片列表，后续再调整
+const cardQueue = ref(cardViewList);
+const cardIndex = ref(0); // 当前卡片索引，初始为0
+const currentCard = computed(() => cardQueue.value[cardIndex.value] || null);
 
 const showAnswer = ref(false);
-const content = `
-  <h3>补充理解</h3>
-  <p>useEffect 的返回值只能是 cleanup 函数，或者什么都不返回。</p>
-  <p>如果直接写成 async，返回值会变成 Promise，语义就错了。</p>
-`;
+const content = `# 一级标题
+
+**重点内容**
+
+---
+
+> 在这里写引用内容
+
+- 第一项
+- 第二项
+- 第三项
+
+[链接文字](https://example.com)
+
+![图片描述](https://example.com/image.jpg)
+
+| Header 1 | Header 2 | Header 3 |
+| --- | --- | --- |
+| Cell 1-1 | Cell 1-2 | Cell 1-3 |
+| Cell 2-1 | Cell 2-2 | Cell 2-3 |
+| Cell 3-1 | Cell 3-2 | Cell 3-3 |
+
+---`;
 
 const toggleAnswer = () => {
   showAnswer.value = !showAnswer.value;
 };
+
+const changeStatus = (cardId: string | undefined, status: string) => {
+  if (!cardId) return;
+
+  // 后续处理状态更新的逻辑，比如调用接口更新状态等
+  console.log(`卡片ID: ${cardId}, 新状态: ${status}`);
+};
+
+// 进入下一题
+const nextQuestion = () => {
+  if (cardIndex.value < cardQueue.value.length - 1) {
+    cardIndex.value += 1;
+    showAnswer.value = false; // 切换到下一题时默认隐藏答案
+  } else {
+    uni.showToast({
+      title: '已经是最后一张了',
+      icon: 'none',
+    });
+  }
+};
+
+// 选择状态后进入下一题
+const onQuiz = (status: string) => {
+  switch (status) {
+    case cardStatusTextMap.unknown:
+      changeStatus(currentCard.value?.id, 'unknown');
+      nextQuestion();
+      break;
+    case cardStatusTextMap.fuzzy:
+      changeStatus(currentCard.value?.id, 'fuzzy');
+      nextQuestion();
+      break;
+    case cardStatusTextMap.mastered:
+      changeStatus(currentCard.value?.id, 'mastered');
+      nextQuestion();
+      break;
+  }
+};
+
+onLoad(() => {
+  setQueryParams({
+    categoryId: '2', // 默认先加载一个分类的卡片，后续再改
+  });
+});
+
+onShow(() => {
+  loadAllData();
+});
 </script>
 
 <style scoped>
@@ -85,14 +168,32 @@ const toggleAnswer = () => {
 }
 
 .progress-label,
-.progress-count,
-.question-tag {
+.progress-count {
   font-size: 24rpx;
 }
 
-.progress-label,
-.question-tag {
+.progress-label {
   color: #127a72;
+}
+
+.question-top {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.question-category {
+  color: #127a72;
+  font-size: 22rpx;
+}
+
+.question-tag {
+  color: #9d9487;
+  font-size: 22rpx;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .progress-count {
@@ -108,7 +209,6 @@ const toggleAnswer = () => {
 }
 
 .progress-bar {
-  width: 20%;
   height: 100%;
   border-radius: inherit;
   background: linear-gradient(90deg, #1f5eff, #5e93ff);
@@ -126,11 +226,11 @@ const toggleAnswer = () => {
   font-weight: 700;
 }
 
-.question-desc {
+/* .question-desc {
   margin-top: 14rpx;
   color: #6c645a;
   font-size: 26rpx;
-}
+} */
 
 .reveal-btn {
   margin-top: 22rpx;
@@ -167,12 +267,12 @@ const toggleAnswer = () => {
   line-height: 1.7;
 }
 
-.answer-tip {
+/* .answer-tip {
   margin-top: 14rpx;
   color: #6c645a;
   font-size: 24rpx;
   line-height: 1.7;
-}
+} */
 
 .content-block {
   margin-top: 24rpx;
