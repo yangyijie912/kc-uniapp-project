@@ -34,7 +34,10 @@
         <view class="card-top">
           <view class="card-title">
             <view class="card-category">{{ value.categoryName }}</view>
-            <view class="card-tag">/ {{ value.tags?.join('•') }}</view>
+            <view class="card-tag">
+              {{ Array.isArray(value.tags) && value.tags.length > 0 ? '/ ' : ''
+              }}{{ Array.isArray(value.tags) ? value.tags.join('•') : '' }}</view
+            >
           </view>
           <view class="card-status" :class="`status-${value.status}`">{{ value.statusName ?? '新' }}</view>
         </view>
