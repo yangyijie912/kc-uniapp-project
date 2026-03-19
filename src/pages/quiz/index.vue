@@ -35,7 +35,7 @@
 
       <view class="content-block">
         <view class="content-label">补充笔记</view>
-        <MarkdownContent :content="content" />
+        <MarkdownContent :content="currentCard?.content || ''" />
       </view>
     </view>
 
@@ -53,48 +53,52 @@ import MarkdownContent from '@/components/MarkdownContent.vue';
 import useCardListView from '@/composables/useCardListView';
 import { onShow, onLoad } from '@dcloudio/uni-app';
 import { cardStatusTextMap } from '@/constants/cardStatus';
+import type { CardView, CardStatus } from '@/types/card';
+import { updateCard } from '@/services/cardService';
 
 const { cardViewList, loadAllData, setQueryParams } = useCardListView();
 
 // 当前队列的卡片列表，后续再调整
-const cardQueue = ref(cardViewList);
+const cardQueue = ref<CardView[]>([]);
 const cardIndex = ref(0); // 当前卡片索引，初始为0
 const currentCard = computed(() => cardQueue.value[cardIndex.value] || null);
 
 const showAnswer = ref(false);
-const content = `# 一级标题
-
-**重点内容**
-
----
-
-> 在这里写引用内容
-
-- 第一项
-- 第二项
-- 第三项
-
-[链接文字](https://example.com)
-
-![图片描述](https://example.com/image.jpg)
-
-| Header 1 | Header 2 | Header 3 |
-| --- | --- | --- |
-| Cell 1-1 | Cell 1-2 | Cell 1-3 |
-| Cell 2-1 | Cell 2-2 | Cell 2-3 |
-| Cell 3-1 | Cell 3-2 | Cell 3-3 |
-
----`;
 
 const toggleAnswer = () => {
   showAnswer.value = !showAnswer.value;
 };
 
-const changeStatus = (cardId: string | undefined, status: string) => {
-  if (!cardId) return;
+// 洗牌算法
+function shuffle<T>(list: T[]): T[] {
+  const result = [...list];
+  // 从后往前遍历数组，每次随机选一个前面的元素交换位置
+  for (let index = result.length - 1; index > 0; index--) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    // 交换元素位置（ES6 解构赋值，左边是当前元素，右边是随机选中的元素）
+    [result[index], result[randomIndex]] = [result[randomIndex], result[index]];
+  }
 
-  // 后续处理状态更新的逻辑，比如调用接口更新状态等
-  console.log(`卡片ID: ${cardId}, 新状态: ${status}`);
+  return result;
+}
+
+// 构建测验队列
+function buildQueue() {
+  const list = [...cardViewList.value].filter((card) => card.status !== 'mastered'); // 只抽取非掌握状态的卡片进入测验队列
+  cardQueue.value = shuffle(list.length > 20 ? list.slice(0, 20) : list); // 先简单限制在20张，后续再优化抽题逻辑
+  cardIndex.value = 0; // 每次重建队列时重置索引
+}
+
+// 状态更新接口
+const changeStatus = (cardId: string | undefined, status: CardStatus) => {
+  if (!cardId) return;
+  const res = updateCard({ id: cardId, status });
+  if (!res.success) {
+    uni.showToast({
+      title: res.message || '状态更新失败',
+      icon: 'none',
+    });
+  }
 };
 
 // 进入下一题
@@ -110,7 +114,7 @@ const nextQuestion = () => {
   }
 };
 
-// 选择状态后进入下一题
+// 选择状态
 const onQuiz = (status: string) => {
   switch (status) {
     case cardStatusTextMap.unknown:
@@ -129,13 +133,12 @@ const onQuiz = (status: string) => {
 };
 
 onLoad(() => {
-  setQueryParams({
-    categoryId: '2', // 默认先加载一个分类的卡片，后续再改
-  });
+  loadAllData();
 });
 
 onShow(() => {
   loadAllData();
+  buildQueue();
 });
 </script>
 
