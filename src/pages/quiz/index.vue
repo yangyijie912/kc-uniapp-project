@@ -59,7 +59,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import MarkdownContent from '@/components/MarkdownContent.vue';
 import useCardListView from '@/composables/useCardListView';
 import { onShow, onLoad } from '@dcloudio/uni-app';
@@ -73,6 +73,12 @@ const { cardViewList, loadAllData, setQueryParams } = useCardListView();
 const cardQueue = ref<CardView[]>([]);
 const cardIndex = ref(0); // 当前卡片索引，初始为0
 const currentCard = computed(() => cardQueue.value[cardIndex.value] || null);
+const quizResult = {
+  total: 0,
+  unknown: 0,
+  fuzzy: 0,
+  mastered: 0,
+};
 
 const showAnswer = ref(false);
 
@@ -118,9 +124,10 @@ const nextQuestion = () => {
     cardIndex.value += 1;
     showAnswer.value = false; // 切换到下一题时默认隐藏答案
   } else {
-    uni.showToast({
-      title: '已经是最后一张了',
-      icon: 'none',
+    quizResult.total = quizResult.unknown + quizResult.fuzzy + quizResult.mastered;
+    uni.setStorageSync('quizResult', JSON.stringify(quizResult));
+    uni.redirectTo({
+      url: '/pages/quizResult/index',
     });
   }
 };
@@ -130,14 +137,17 @@ const onQuiz = (status: string) => {
   switch (status) {
     case cardStatusTextMap.unknown:
       changeStatus(currentCard.value?.id, 'unknown');
+      quizResult.unknown += 1;
       nextQuestion();
       break;
     case cardStatusTextMap.fuzzy:
       changeStatus(currentCard.value?.id, 'fuzzy');
+      quizResult.fuzzy += 1;
       nextQuestion();
       break;
     case cardStatusTextMap.mastered:
       changeStatus(currentCard.value?.id, 'mastered');
+      quizResult.mastered += 1;
       nextQuestion();
       break;
   }

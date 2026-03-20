@@ -41,6 +41,12 @@
       "style": {
         "navigationBarTitleText": "测验"
       }
+    },
+    {
+      "path": "pages/quizResult/index",
+      "style": {
+        "navigationBarTitleText": "测验结果"
+      }
     }
   ],
   "globalStyle": {
