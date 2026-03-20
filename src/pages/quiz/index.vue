@@ -1,48 +1,59 @@
 <template>
   <view class="page">
-    <view class="progress-card">
-      <view class="progress-top">
-        <view class="progress-label">今日测验</view>
-        <view class="progress-count">{{ cardIndex + 1 }} / {{ cardQueue.length }}</view>
-      </view>
-      <view class="progress-track">
-        <view class="progress-bar" :style="{ width: ((cardIndex + 1) / cardQueue.length) * 100 + '%' }"></view>
-      </view>
-    </view>
-
-    <view class="question-card">
-      <view class="question-top">
-        <view class="question-category">
-          {{ currentCard?.categoryName }}
+    <view v-if="cardQueue.length > 0" class="quiz-container">
+      <view class="progress-card">
+        <view class="progress-top">
+          <view class="progress-label">今日测验</view>
+          <view class="progress-count">{{ cardIndex + 1 }} / {{ cardQueue.length }}</view>
         </view>
-
-        <text class="question-tag">
-          {{ Array.isArray(currentCard?.tags) && currentCard?.tags?.length > 0 ? '/ ' : '' }}
-          {{ currentCard?.tags?.join('•') }}
-        </text>
+        <view class="progress-track">
+          <view class="progress-bar" :style="{ width: ((cardIndex + 1) / cardQueue.length) * 100 + '%' }"></view>
+        </view>
       </view>
-      <view class="question-title">{{ currentCard?.question }}</view>
-      <!-- <view class="question-desc">{{ currentCard?.description }}</view> -->
-      <view class="reveal-btn" @click="toggleAnswer">
-        {{ showAnswer ? '收起答案' : '展开查看答案' }}
+
+      <view class="question-card">
+        <view class="question-top">
+          <view class="question-category">
+            {{ currentCard?.categoryName }}
+          </view>
+
+          <text class="question-tag">
+            {{ Array.isArray(currentCard?.tags) && currentCard?.tags?.length > 0 ? '/ ' : '' }}
+            {{ currentCard?.tags?.join('•') }}
+          </text>
+        </view>
+        <view class="question-title">{{ currentCard?.question }}</view>
+        <!-- <view class="question-desc">{{ currentCard?.description }}</view> -->
+        <view class="reveal-btn" @click="toggleAnswer">
+          {{ showAnswer ? '收起答案' : '展开查看答案' }}
+        </view>
+      </view>
+
+      <view v-if="showAnswer" class="answer-panel">
+        <view class="answer-label">参考答案</view>
+        <view class="answer-text">{{ currentCard?.answer }}</view>
+        <!-- <view class="answer-tip">记忆点：先想 useEffect 的返回值，再判断 async 会不会破坏这个约定。</view> -->
+
+        <view class="content-block">
+          <view class="content-label">补充笔记</view>
+          <MarkdownContent :content="currentCard?.content || ''" />
+        </view>
+      </view>
+
+      <view class="bottom-row">
+        <view class="status-btn status-unknown" @click="onQuiz(cardStatusTextMap.unknown)">不会</view>
+        <view class="status-btn status-fuzzy" @click="onQuiz(cardStatusTextMap.fuzzy)">模糊</view>
+        <view class="status-btn status-mastered" @click="onQuiz(cardStatusTextMap.mastered)">掌握</view>
       </view>
     </view>
 
-    <view v-if="showAnswer" class="answer-panel">
-      <view class="answer-label">参考答案</view>
-      <view class="answer-text">{{ currentCard?.answer }}</view>
-      <!-- <view class="answer-tip">记忆点：先想 useEffect 的返回值，再判断 async 会不会破坏这个约定。</view> -->
-
-      <view class="content-block">
-        <view class="content-label">补充笔记</view>
-        <MarkdownContent :content="currentCard?.content || ''" />
+    <view v-else class="no-card-container">
+      <view class="empty-card">
+        <view class="empty-badge">Quiz</view>
+        <view class="empty-title">没有待测验的卡片了</view>
+        <view class="empty-text">当前条件下还没有可用题目。</view>
+        <view class="empty-text">去看看其他分类，或者新增一些卡片再回来测验。</view>
       </view>
-    </view>
-
-    <view class="bottom-row">
-      <view class="status-btn status-unknown" @click="onQuiz(cardStatusTextMap.unknown)">不会</view>
-      <view class="status-btn status-fuzzy" @click="onQuiz(cardStatusTextMap.fuzzy)">模糊</view>
-      <view class="status-btn status-mastered" @click="onQuiz(cardStatusTextMap.mastered)">掌握</view>
     </view>
   </view>
 </template>
@@ -144,10 +155,14 @@ onShow(() => {
 
 <style scoped>
 .page {
-  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+  background: linear-gradient(180deg, #f8f2e8 0%, #efe5d5 100%);
+}
+
+.quiz-container {
   padding: 24rpx 28rpx 48rpx;
   box-sizing: border-box;
-  background: linear-gradient(180deg, #f8f2e8 0%, #efe5d5 100%);
 }
 
 .progress-card,
@@ -318,5 +333,53 @@ onShow(() => {
 .status-mastered {
   background: #ef7d42;
   color: #fff7ed;
+}
+
+.no-card-container {
+  padding: 24rpx 28rpx 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.empty-card {
+  width: 100%;
+  padding: 44rpx 36rpx;
+  border-radius: 32rpx;
+  border: 1rpx solid rgba(61, 43, 24, 0.12);
+  background:
+    radial-gradient(circle at top right, rgba(31, 94, 255, 0.1), transparent 34%),
+    radial-gradient(circle at bottom left, rgba(18, 122, 114, 0.1), transparent 30%), rgba(255, 252, 247, 0.88);
+  box-shadow: 0 18rpx 44rpx rgba(80, 55, 25, 0.08);
+  text-align: center;
+}
+
+.empty-badge {
+  width: fit-content;
+  min-width: 110rpx;
+  margin: 0 auto;
+  padding: 10rpx 18rpx;
+  border-radius: 999rpx;
+  background: rgba(31, 94, 255, 0.1);
+  color: #1f5eff;
+  font-size: 22rpx;
+  font-weight: 700;
+  letter-spacing: 1rpx;
+}
+
+.empty-title {
+  margin-top: 24rpx;
+  color: #1e1c18;
+  font-size: 38rpx;
+  line-height: 1.4;
+  font-weight: 700;
+}
+
+.empty-text {
+  margin-top: 14rpx;
+  color: #6c645a;
+  font-size: 26rpx;
+  line-height: 1.8;
 }
 </style>

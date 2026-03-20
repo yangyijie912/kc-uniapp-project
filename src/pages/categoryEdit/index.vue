@@ -122,7 +122,6 @@ const cancel = () => {
 
 <style scoped>
 .page {
-  min-height: 100vh;
   padding: 24rpx 28rpx 48rpx;
   box-sizing: border-box;
   background: linear-gradient(180deg, #f8f2e8 0%, #efe5d5 100%);

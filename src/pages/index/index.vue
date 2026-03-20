@@ -149,7 +149,6 @@ const goToCategoryManage = () => {
   --accent-orange: #ef7d42;
   --accent-teal: #127a72;
   --accent-blue: #1f5eff;
-  min-height: 100vh;
   padding: 40rpx 28rpx 56rpx;
   box-sizing: border-box;
   display: flex;
