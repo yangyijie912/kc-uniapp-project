@@ -1,0 +1,308 @@
+<template>
+  <view v-if="props.open" class="quiz-setup-mask" @click="closeQuizSetup"></view>
+
+  <view v-if="props.open" class="quiz-setup-sheet">
+    <view class="quiz-setup-handle"></view>
+
+    <view class="quiz-setup-head">
+      <view>
+        <view class="quiz-setup-title">开始测验</view>
+        <view class="quiz-setup-subtitle">先把入口样式和选项结构定下来，后续再把参数真正接入。</view>
+      </view>
+      <view class="quiz-setup-close" @click="closeQuizSetup">×</view>
+    </view>
+
+    <view class="quiz-setup-section">
+      <view class="quiz-setup-label">测验类型</view>
+      <view class="quiz-option-row">
+        <view class="quiz-option active">
+          <view class="quiz-option-title">自由测验</view>
+          <view class="quiz-option-desc">每次进入都重新开始，适合随手练习。</view>
+        </view>
+        <view class="quiz-option quiz-option-disabled">
+          <view class="quiz-option-title">每日测验</view>
+          <view class="quiz-option-desc">后续支持按天固定题集和中断恢复。</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="quiz-setup-section">
+      <view class="quiz-setup-label">练习模式</view>
+      <view class="quiz-chip-row">
+        <view
+          class="quiz-chip"
+          :class="{ active: selectedPracticeMode === 'review' }"
+          @click="selectedPracticeMode = 'review'"
+        >
+          复习模式
+        </view>
+        <view
+          class="quiz-chip"
+          :class="{ active: selectedPracticeMode === 'unknown' }"
+          @click="selectedPracticeMode = 'unknown'"
+        >
+          只测不会
+        </view>
+        <view
+          class="quiz-chip"
+          :class="{ active: selectedPracticeMode === 'all' }"
+          @click="selectedPracticeMode = 'all'"
+        >
+          全部随机
+        </view>
+      </view>
+    </view>
+
+    <view class="quiz-setup-note">
+      <view class="quiz-setup-note-label">当前预览</view>
+      <view class="quiz-setup-note-text">首页入口默认针对全部卡片启动自由测验，当前选择：{{ practiceModeText }}。</view>
+    </view>
+
+    <view class="quiz-setup-actions">
+      <view class="quiz-setup-btn quiz-setup-btn-secondary" @click="closeQuizSetup">稍后再说</view>
+      <view class="quiz-setup-btn quiz-setup-btn-primary" @click="startQuizWithCurrentUI">按当前样式开始</view>
+    </view>
+  </view>
+</template>
+
+<script setup lang="ts">
+import { computed, ref } from 'vue';
+
+const props = defineProps<{
+  open: boolean;
+}>();
+
+const emit = defineEmits<{
+  (e: 'close'): void;
+  (e: 'start', mode: 'review' | 'unknown' | 'all'): void;
+}>();
+
+const selectedPracticeMode = ref<'review' | 'unknown' | 'all'>('review');
+
+const practiceModeText = computed(() => {
+  if (selectedPracticeMode.value === 'unknown') {
+    return '只测不会';
+  }
+
+  if (selectedPracticeMode.value === 'all') {
+    return '全部随机';
+  }
+
+  return '复习模式';
+});
+
+const openQuizSetup = () => {
+  emit('start', selectedPracticeMode.value);
+};
+
+const closeQuizSetup = () => {
+  emit('close');
+};
+
+const startQuizWithCurrentUI = () => {
+  emit('start', selectedPracticeMode.value);
+};
+</script>
+
+<style scoped>
+.quiz-setup-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(30, 28, 24, 0.3);
+  backdrop-filter: blur(8rpx);
+  z-index: 20;
+}
+
+.quiz-setup-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 18rpx 28rpx 36rpx;
+  border-radius: 36rpx 36rpx 0 0;
+  background:
+    radial-gradient(circle at top right, rgba(31, 94, 255, 0.12), transparent 30%),
+    linear-gradient(180deg, rgba(255, 252, 247, 0.98), rgba(248, 242, 232, 0.98));
+  box-shadow: 0 -18rpx 48rpx rgba(80, 55, 25, 0.12);
+  box-sizing: border-box;
+  z-index: 21;
+}
+
+.quiz-setup-handle {
+  width: 96rpx;
+  height: 8rpx;
+  margin: 0 auto 18rpx;
+  border-radius: 999rpx;
+  background: rgba(61, 43, 24, 0.12);
+}
+
+.quiz-setup-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18rpx;
+}
+
+.quiz-setup-title {
+  color: var(--text-main);
+  font-size: 36rpx;
+  font-weight: 700;
+}
+
+.quiz-setup-subtitle {
+  margin-top: 10rpx;
+  color: var(--text-muted);
+  font-size: 24rpx;
+  line-height: 1.7;
+}
+
+.quiz-setup-close {
+  width: 56rpx;
+  height: 56rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.84);
+  color: var(--text-muted);
+  font-size: 36rpx;
+  line-height: 1;
+}
+
+.quiz-setup-section {
+  margin-top: 24rpx;
+}
+
+.quiz-setup-label {
+  color: var(--text-main);
+  font-size: 26rpx;
+  font-weight: 700;
+}
+
+.quiz-option-row {
+  margin-top: 16rpx;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16rpx;
+}
+
+.quiz-option {
+  min-height: 154rpx;
+  padding: 24rpx 22rpx;
+  border-radius: 24rpx;
+  border: 1rpx solid rgba(31, 94, 255, 0.14);
+  background: rgba(255, 255, 255, 0.78);
+  box-sizing: border-box;
+}
+
+.quiz-option.active {
+  background: linear-gradient(135deg, rgba(31, 94, 255, 0.12), rgba(255, 255, 255, 0.82));
+  box-shadow: 0 12rpx 28rpx rgba(31, 94, 255, 0.1);
+}
+
+.quiz-option-disabled {
+  border-color: rgba(61, 43, 24, 0.08);
+  background: rgba(244, 239, 231, 0.88);
+  opacity: 0.76;
+}
+
+.quiz-option-title {
+  color: var(--text-main);
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.quiz-option-desc {
+  margin-top: 12rpx;
+  color: var(--text-muted);
+  font-size: 22rpx;
+  line-height: 1.7;
+}
+
+.quiz-chip-row {
+  margin-top: 16rpx;
+  display: flex;
+  gap: 14rpx;
+  flex-wrap: wrap;
+}
+
+.quiz-chip {
+  min-width: 164rpx;
+  height: 72rpx;
+  padding: 0 24rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  border: 1rpx solid rgba(61, 43, 24, 0.08);
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--text-muted);
+  font-size: 24rpx;
+  font-weight: 600;
+  box-sizing: border-box;
+}
+
+.quiz-chip.active {
+  border-color: rgba(31, 94, 255, 0.16);
+  background: rgba(31, 94, 255, 0.12);
+  color: var(--accent-blue);
+}
+
+.quiz-setup-note {
+  margin-top: 22rpx;
+  padding: 22rpx 24rpx;
+  border-radius: 24rpx;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1rpx dashed rgba(61, 43, 24, 0.12);
+}
+
+.quiz-setup-note-label {
+  color: var(--accent-teal);
+  font-size: 22rpx;
+  font-weight: 700;
+}
+
+.quiz-setup-note-text {
+  margin-top: 10rpx;
+  color: var(--text-muted);
+  font-size: 24rpx;
+  line-height: 1.7;
+}
+
+.quiz-setup-actions {
+  margin-top: 24rpx;
+  display: flex;
+  gap: 16rpx;
+}
+
+.quiz-setup-btn {
+  flex: 1;
+  height: 84rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.quiz-setup-btn-secondary {
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--text-muted);
+}
+
+.quiz-setup-btn-primary {
+  background: linear-gradient(135deg, #1f5eff, #3b82ff);
+  color: #fff;
+  box-shadow: 0 16rpx 32rpx rgba(31, 94, 255, 0.22);
+}
+
+@media (max-width: 320px) {
+  .quiz-option-row {
+    grid-template-columns: 1fr;
+  }
+  .quiz-setup-actions {
+    flex-direction: column;
+  }
+}
+</style>

@@ -6,7 +6,7 @@
       <view class="hero-desc"> 用抽题、分类和检索把前端知识点串起来，适合日常复习和面试前冲刺。 </view>
 
       <view class="hero-actions">
-        <view class="quiz-btn" @click="onQuiz">开始抽题</view>
+        <view class="quiz-btn" @click="openQuizSetup">开始抽题</view>
         <view class="secondary-btn" @click="goToCardListbyAll">查看卡库</view>
       </view>
 
@@ -80,6 +80,8 @@
         </view>
       </view>
     </view>
+
+    <QuizSetupSheet :open="showQuizSetup" @close="closeQuizSetup" @start="startQuizWithCurrentUI" />
   </view>
 </template>
 
@@ -88,9 +90,11 @@ import { onShow } from '@dcloudio/uni-app';
 import { getCategoryTheme } from '@/utils/categoryTheme';
 import useCategoryView from '@/composables/useCategoryView';
 import { ref } from 'vue';
+import QuizSetupSheet from '@/components/QuizSetupSheet.vue';
 
 const { categoryViewList, cardList, loadAllData } = useCategoryView();
 const searchQuery = ref('');
+const showQuizSetup = ref(false);
 
 onShow(() => {
   loadAllData(); // 加载分类数据
@@ -115,6 +119,19 @@ const onQuiz = () => {
   uni.navigateTo({
     url: '/pages/quiz/index',
   });
+};
+
+const openQuizSetup = () => {
+  showQuizSetup.value = true;
+};
+
+const closeQuizSetup = () => {
+  showQuizSetup.value = false;
+};
+
+const startQuizWithCurrentUI = () => {
+  closeQuizSetup();
+  onQuiz();
 };
 
 // 进入卡片列表
