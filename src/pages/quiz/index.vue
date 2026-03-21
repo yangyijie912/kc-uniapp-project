@@ -80,6 +80,15 @@ const quizResult = {
   mastered: 0,
 };
 
+type quizQuery = {
+  categoryId: string;
+  mode: 'review' | 'unknown' | 'all';
+  type: 'today' | 'freedom';
+  limit: number;
+};
+
+const quizOptions = reactive<Partial<quizQuery>>({});
+
 const showAnswer = ref(false);
 
 const toggleAnswer = () => {
@@ -101,9 +110,17 @@ function shuffle<T>(list: T[]): T[] {
 
 // 构建测验队列
 function buildQueue() {
-  const list = [...cardViewList.value].filter((card) => card.status !== 'mastered'); // 只抽取非掌握状态的卡片进入测验队列
-  cardQueue.value = shuffle(list.length > 20 ? list.slice(0, 20) : list); // 先简单限制在20张，后续再优化抽题逻辑
-  cardIndex.value = 0; // 每次重建队列时重置索引
+  let list = [...cardViewList.value];
+  //   if (quizOptions.categoryId) {
+  //     list = list.filter((card) => card.categoryId === quizOptions.categoryId);
+  //   }
+  if (quizOptions.mode === 'review') {
+    list = list.filter((card) => card.status === 'unknown' || card.status === 'fuzzy');
+  } else if (quizOptions.mode === 'unknown') {
+    list = list.filter((card) => card.status === 'unknown');
+  }
+  cardQueue.value = shuffle(list).slice(0, quizOptions.limit);
+  cardIndex.value = 0;
 }
 
 // 状态更新接口
@@ -153,7 +170,22 @@ const onQuiz = (status: string) => {
   }
 };
 
-onLoad(() => {
+onLoad((options) => {
+  if (options?.categoryId) {
+    quizOptions.categoryId = options.categoryId;
+    setQueryParams({
+      categoryId: quizOptions.categoryId,
+    });
+  }
+  if (options?.mode) {
+    quizOptions.mode = options.mode as 'review' | 'unknown' | 'all';
+  }
+  if (options?.type) {
+    quizOptions.type = options.type as 'today' | 'freedom';
+  }
+  if (options?.limit) {
+    quizOptions.limit = Number(options.limit);
+  }
   loadAllData();
 });
 

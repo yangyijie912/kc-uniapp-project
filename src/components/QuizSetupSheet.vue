@@ -7,7 +7,7 @@
     <view class="quiz-setup-head">
       <view>
         <view class="quiz-setup-title">开始测验</view>
-        <view class="quiz-setup-subtitle">先把入口样式和选项结构定下来，后续再把参数真正接入。</view>
+        <view class="quiz-setup-subtitle"> 选择测验类型和练习模式，开启刷题之旅！ </view>
       </view>
       <view class="quiz-setup-close" @click="closeQuizSetup">×</view>
     </view>
@@ -15,11 +15,15 @@
     <view class="quiz-setup-section">
       <view class="quiz-setup-label">测验类型</view>
       <view class="quiz-option-row">
-        <view class="quiz-option active">
+        <view
+          class="quiz-option"
+          :class="{ active: selectedQuizType === 'freedom' }"
+          @click="selectedQuizType = 'freedom'"
+        >
           <view class="quiz-option-title">自由测验</view>
           <view class="quiz-option-desc">每次进入都重新开始，适合随手练习。</view>
         </view>
-        <view class="quiz-option quiz-option-disabled">
+        <view class="quiz-option" :class="{ active: selectedQuizType === 'today' }" @click="selectedQuizType = 'today'">
           <view class="quiz-option-title">每日测验</view>
           <view class="quiz-option-desc">后续支持按天固定题集和中断恢复。</view>
         </view>
@@ -60,7 +64,7 @@
 
     <view class="quiz-setup-actions">
       <view class="quiz-setup-btn quiz-setup-btn-secondary" @click="closeQuizSetup">稍后再说</view>
-      <view class="quiz-setup-btn quiz-setup-btn-primary" @click="startQuizWithCurrentUI">按当前样式开始</view>
+      <view class="quiz-setup-btn quiz-setup-btn-primary" @click="startQuizWithCurrentUI">按当前条件开始</view>
     </view>
   </view>
 </template>
@@ -74,7 +78,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'close'): void;
-  (e: 'start', mode: 'review' | 'unknown' | 'all'): void;
+  (e: 'start', mode: 'review' | 'unknown' | 'all', type: 'today' | 'freedom'): void;
 }>();
 
 const selectedPracticeMode = ref<'review' | 'unknown' | 'all'>('review');
@@ -91,16 +95,14 @@ const practiceModeText = computed(() => {
   return '复习模式';
 });
 
-const openQuizSetup = () => {
-  emit('start', selectedPracticeMode.value);
-};
+const selectedQuizType = ref<'today' | 'freedom'>('freedom');
 
 const closeQuizSetup = () => {
   emit('close');
 };
 
 const startQuizWithCurrentUI = () => {
-  emit('start', selectedPracticeMode.value);
+  emit('start', selectedPracticeMode.value, selectedQuizType.value);
 };
 </script>
 
@@ -199,12 +201,12 @@ const startQuizWithCurrentUI = () => {
   background: linear-gradient(135deg, rgba(31, 94, 255, 0.12), rgba(255, 255, 255, 0.82));
   box-shadow: 0 12rpx 28rpx rgba(31, 94, 255, 0.1);
 }
-
+/* 
 .quiz-option-disabled {
   border-color: rgba(61, 43, 24, 0.08);
   background: rgba(244, 239, 231, 0.88);
   opacity: 0.76;
-}
+} */
 
 .quiz-option-title {
   color: var(--text-main);

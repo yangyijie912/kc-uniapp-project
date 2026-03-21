@@ -115,9 +115,14 @@ const searchCard = () => {
 };
 
 // 抽题
-const onQuiz = () => {
+const onQuiz = (options?: { mode: 'review' | 'unknown' | 'all'; type: 'today' | 'freedom' }) => {
+  let url = '/pages/quiz/index';
+  if (options) {
+    const { mode, type } = options;
+    url += `?mode=${mode}&type=${type}`;
+  }
   uni.navigateTo({
-    url: '/pages/quiz/index',
+    url,
   });
 };
 
@@ -129,9 +134,9 @@ const closeQuizSetup = () => {
   showQuizSetup.value = false;
 };
 
-const startQuizWithCurrentUI = () => {
+const startQuizWithCurrentUI = (mode: 'review' | 'unknown' | 'all', type: 'today' | 'freedom') => {
   closeQuizSetup();
-  onQuiz();
+  onQuiz({ mode, type });
 };
 
 // 进入卡片列表
