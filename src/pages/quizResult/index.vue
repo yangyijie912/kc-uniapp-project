@@ -63,19 +63,20 @@
 </template>
 
 <script setup lang="ts">
+import { reactive } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
 
-let quizResult = {
+const quizResult = reactive({
   total: 0,
   unknown: 0,
   fuzzy: 0,
   mastered: 0,
-};
+});
 
 onShow(() => {
   const resultStr = uni.getStorageSync('quizResult');
   if (resultStr) {
-    quizResult = JSON.parse(resultStr);
+    Object.assign(quizResult, JSON.parse(resultStr));
   }
 });
 
