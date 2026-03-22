@@ -79,7 +79,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'close'): void;
-  (e: 'start', mode: quizQuery['mode'], type: quizQuery['type']): void;
+  (e: 'start', query: quizQuery): void;
 }>();
 
 const selectedPracticeMode = ref<quizQuery['mode']>('review');
@@ -103,7 +103,10 @@ const closeQuizSetup = () => {
 };
 
 const startQuizWithCurrentUI = () => {
-  emit('start', selectedPracticeMode.value, selectedQuizType.value);
+  emit('start', {
+    mode: selectedPracticeMode.value,
+    type: selectedQuizType.value,
+  } as quizQuery);
 };
 </script>
 

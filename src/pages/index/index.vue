@@ -135,9 +135,9 @@ const closeQuizSetup = () => {
   showQuizSetup.value = false;
 };
 
-const startQuizWithCurrentUI = (mode: quizQuery['mode'], type: quizQuery['type']) => {
+const startQuizWithCurrentUI = (query: quizQuery) => {
   closeQuizSetup();
-  onQuiz({ mode, type });
+  onQuiz(query);
 };
 
 // 进入卡片列表

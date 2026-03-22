@@ -23,8 +23,11 @@
       </view>
 
       <view class="page-actions">
-        <view class="icon-btn add-btn" @click="goToAddCard">
-          <text class="icon-mark">+</text>
+        <view v-if="showQuizAction" class="action-tool quiz-btn" @click="openQuizSetup">
+          <text class="action-tool-icon">▷</text>
+        </view>
+        <view class="action-tool add-btn" @click="goToAddCard">
+          <text class="action-tool-icon">+</text>
         </view>
       </view>
     </view>
@@ -50,6 +53,8 @@
         <view class="result-keyword">试试调整搜索关键词或筛选条件？</view>
       </view>
     </view>
+
+    <QuizSetupSheet :open="showQuizSetup" @close="closeQuizSetup" @start="startQuizWithCurrentUI" />
   </view>
 </template>
 
@@ -57,11 +62,14 @@
 import { onLoad, onShow } from '@dcloudio/uni-app';
 import { computed, reactive, ref } from 'vue';
 import useCardListView from '@/composables/useCardListView';
+import QuizSetupSheet from '@/components/QuizSetupSheet.vue';
 import type { CardStatus } from '@/types/card';
+import type { quizQuery } from '@/types/quiz';
 
 const { cardViewList, loadAllData, setQueryParams } = useCardListView();
 
 const inputKeyword = ref('');
+const showQuizSetup = ref(false);
 
 const statusTabs = [
   { label: '全部', value: undefined },
@@ -88,6 +96,10 @@ const queryParams = reactive<PageOptions>({});
 
 const isSearchResultMode = computed(() => {
   return Boolean(queryParams.keyword?.trim());
+});
+
+const showQuizAction = computed(() => {
+  return Boolean(queryParams.categoryId) && !isSearchResultMode.value;
 });
 
 // 解析状态参数，确保它是合法的 CardStatus 值
@@ -120,6 +132,28 @@ const goToAddCard = () => {
 
   uni.navigateTo({
     url: `/pages/cardEdit/index${query}`,
+  });
+};
+
+const openQuizSetup = () => {
+  showQuizSetup.value = true;
+};
+
+const closeQuizSetup = () => {
+  showQuizSetup.value = false;
+};
+
+const startQuizWithCurrentUI = (query: quizQuery) => {
+  closeQuizSetup();
+  goToQuizByCategory(query);
+};
+
+const goToQuizByCategory = (query: quizQuery) => {
+  if (!queryParams.categoryId) {
+    return;
+  }
+  uni.navigateTo({
+    url: `/pages/quiz/index?categoryId=${queryParams.categoryId}&mode=${query.mode}&type=${query.type}`,
   });
 };
 
@@ -230,29 +264,38 @@ onShow(() => {
 
 .page-actions {
   display: flex;
+  gap: 12rpx;
   justify-content: flex-end;
+  flex-shrink: 0;
 }
 
-.icon-btn {
-  width: 60rpx;
-  height: 60rpx;
+.action-tool {
+  width: 64rpx;
+  height: 64rpx;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
+  border-radius: 999rpx;
   border: 1rpx solid rgba(61, 43, 24, 0.08);
-  box-shadow: 0 12rpx 24rpx rgba(80, 55, 25, 0.08);
+  box-shadow: 0 10rpx 22rpx rgba(80, 55, 25, 0.06);
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
-.icon-mark {
-  font-size: 38rpx;
+.action-tool-icon {
+  font-size: 32rpx;
   line-height: 1;
   font-weight: 600;
 }
 
 .add-btn {
-  background: rgba(18, 122, 114, 0.12);
+  background: rgba(18, 122, 114, 0.1);
   color: #127a72;
+}
+
+.quiz-btn {
+  background: rgba(31, 94, 255, 0.1);
+  color: #1f5eff;
 }
 
 .filter-row {
@@ -260,6 +303,7 @@ onShow(() => {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  gap: 14rpx;
   justify-content: space-between;
 }
 
@@ -267,6 +311,7 @@ onShow(() => {
   display: flex;
   align-items: center;
   gap: 14rpx;
+  flex-wrap: wrap;
 }
 
 .filter-chip {
