@@ -111,6 +111,17 @@ const startQuizWithCurrentUI = () => {
 </script>
 
 <style scoped>
+.quiz-setup-mask,
+.quiz-setup-sheet {
+  --quiz-sheet-text-main: #1e1c18;
+  --quiz-sheet-text-muted: #6c645a;
+  --quiz-sheet-accent-teal: #127a72;
+  --quiz-sheet-accent-blue: #1f5eff;
+  --quiz-sheet-surface: rgba(255, 252, 247, 0.84);
+  --quiz-sheet-surface-strong: rgba(255, 255, 255, 0.78);
+  --quiz-sheet-line-soft: rgba(61, 43, 24, 0.12);
+}
+
 .quiz-setup-mask {
   position: fixed;
   inset: 0;
@@ -150,14 +161,14 @@ const startQuizWithCurrentUI = () => {
 }
 
 .quiz-setup-title {
-  color: var(--text-main);
+  color: var(--quiz-sheet-text-main);
   font-size: 36rpx;
   font-weight: 700;
 }
 
 .quiz-setup-subtitle {
   margin-top: 10rpx;
-  color: var(--text-muted);
+  color: var(--quiz-sheet-text-muted);
   font-size: 24rpx;
   line-height: 1.7;
 }
@@ -170,7 +181,7 @@ const startQuizWithCurrentUI = () => {
   justify-content: center;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.84);
-  color: var(--text-muted);
+  color: var(--quiz-sheet-text-muted);
   font-size: 36rpx;
   line-height: 1;
 }
@@ -180,7 +191,7 @@ const startQuizWithCurrentUI = () => {
 }
 
 .quiz-setup-label {
-  color: var(--text-main);
+  color: var(--quiz-sheet-text-main);
   font-size: 26rpx;
   font-weight: 700;
 }
@@ -213,14 +224,14 @@ const startQuizWithCurrentUI = () => {
 } */
 
 .quiz-option-title {
-  color: var(--text-main);
+  color: var(--quiz-sheet-text-main);
   font-size: 28rpx;
   font-weight: 700;
 }
 
 .quiz-option-desc {
   margin-top: 12rpx;
-  color: var(--text-muted);
+  color: var(--quiz-sheet-text-muted);
   font-size: 22rpx;
   line-height: 1.7;
 }
@@ -241,8 +252,8 @@ const startQuizWithCurrentUI = () => {
   justify-content: center;
   border-radius: 999rpx;
   border: 1rpx solid rgba(61, 43, 24, 0.08);
-  background: rgba(255, 255, 255, 0.78);
-  color: var(--text-muted);
+  background: var(--quiz-sheet-surface-strong);
+  color: var(--quiz-sheet-text-muted);
   font-size: 24rpx;
   font-weight: 600;
   box-sizing: border-box;
@@ -251,7 +262,7 @@ const startQuizWithCurrentUI = () => {
 .quiz-chip.active {
   border-color: rgba(31, 94, 255, 0.16);
   background: rgba(31, 94, 255, 0.12);
-  color: var(--accent-blue);
+  color: var(--quiz-sheet-accent-blue);
 }
 
 .quiz-setup-note {
@@ -259,18 +270,18 @@ const startQuizWithCurrentUI = () => {
   padding: 22rpx 24rpx;
   border-radius: 24rpx;
   background: rgba(255, 255, 255, 0.7);
-  border: 1rpx dashed rgba(61, 43, 24, 0.12);
+  border: 1rpx dashed var(--quiz-sheet-line-soft);
 }
 
 .quiz-setup-note-label {
-  color: var(--accent-teal);
+  color: var(--quiz-sheet-accent-teal);
   font-size: 22rpx;
   font-weight: 700;
 }
 
 .quiz-setup-note-text {
   margin-top: 10rpx;
-  color: var(--text-muted);
+  color: var(--quiz-sheet-text-muted);
   font-size: 24rpx;
   line-height: 1.7;
 }
@@ -293,8 +304,8 @@ const startQuizWithCurrentUI = () => {
 }
 
 .quiz-setup-btn-secondary {
-  background: rgba(255, 255, 255, 0.78);
-  color: var(--text-muted);
+  background: var(--quiz-sheet-surface-strong);
+  color: var(--quiz-sheet-text-muted);
 }
 
 .quiz-setup-btn-primary {
