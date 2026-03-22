@@ -3,7 +3,7 @@
     <view v-if="cardQueue.length > 0" class="quiz-container">
       <view class="progress-card">
         <view class="progress-top">
-          <view class="progress-label">今日测验</view>
+          <view class="progress-label">开始测验</view>
           <view class="progress-count">{{ cardIndex + 1 }} / {{ cardQueue.length }}</view>
         </view>
         <view class="progress-track">
@@ -64,8 +64,10 @@ import MarkdownContent from '@/components/MarkdownContent.vue';
 import useCardListView from '@/composables/useCardListView';
 import { onShow, onLoad } from '@dcloudio/uni-app';
 import { cardStatusTextMap } from '@/constants/cardStatus';
-import type { CardView, CardStatus } from '@/types/card';
 import { updateCard } from '@/services/cardService';
+import { jsonToUrlParam } from '@/utils/jsonToUrl';
+import type { CardView, CardStatus } from '@/types/card';
+import type { quizQuery } from '@/types/quiz';
 
 const { cardViewList, loadAllData, setQueryParams } = useCardListView();
 
@@ -78,13 +80,6 @@ const quizResult = {
   unknown: 0,
   fuzzy: 0,
   mastered: 0,
-};
-
-type quizQuery = {
-  categoryId: string;
-  mode: 'review' | 'unknown' | 'all';
-  type: 'today' | 'freedom';
-  limit: number;
 };
 
 const quizOptions = reactive<Partial<quizQuery>>({});
@@ -144,7 +139,7 @@ const nextQuestion = () => {
     quizResult.total = quizResult.unknown + quizResult.fuzzy + quizResult.mastered;
     uni.setStorageSync('quizResult', JSON.stringify(quizResult));
     uni.redirectTo({
-      url: '/pages/quizResult/index',
+      url: `/pages/quizResult/index?${jsonToUrlParam(quizOptions)}`,
     });
   }
 };
@@ -178,10 +173,10 @@ onLoad((options) => {
     });
   }
   if (options?.mode) {
-    quizOptions.mode = options.mode as 'review' | 'unknown' | 'all';
+    quizOptions.mode = options.mode as quizQuery['mode'];
   }
   if (options?.type) {
-    quizOptions.type = options.type as 'today' | 'freedom';
+    quizOptions.type = options.type as quizQuery['type'];
   }
   if (options?.limit) {
     quizOptions.limit = Number(options.limit);

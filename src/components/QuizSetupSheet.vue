@@ -59,7 +59,7 @@
 
     <view class="quiz-setup-note">
       <view class="quiz-setup-note-label">当前预览</view>
-      <view class="quiz-setup-note-text">首页入口默认针对全部卡片启动自由测验，当前选择：{{ practiceModeText }}。</view>
+      <view class="quiz-setup-note-text">当前选择：{{ practiceModeText }}。</view>
     </view>
 
     <view class="quiz-setup-actions">
@@ -71,6 +71,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import type { quizQuery } from '@/types/quiz';
 
 const props = defineProps<{
   open: boolean;
@@ -78,10 +79,10 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'close'): void;
-  (e: 'start', mode: 'review' | 'unknown' | 'all', type: 'today' | 'freedom'): void;
+  (e: 'start', mode: quizQuery['mode'], type: quizQuery['type']): void;
 }>();
 
-const selectedPracticeMode = ref<'review' | 'unknown' | 'all'>('review');
+const selectedPracticeMode = ref<quizQuery['mode']>('review');
 
 const practiceModeText = computed(() => {
   if (selectedPracticeMode.value === 'unknown') {

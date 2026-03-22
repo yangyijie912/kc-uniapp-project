@@ -64,7 +64,9 @@
 
 <script setup lang="ts">
 import { reactive } from 'vue';
-import { onShow } from '@dcloudio/uni-app';
+import { onLoad, onShow } from '@dcloudio/uni-app';
+import { jsonToUrlParam } from '@/utils/jsonToUrl';
+import type { quizQuery } from '@/types/quiz';
 
 const quizResult = reactive({
   total: 0,
@@ -72,6 +74,8 @@ const quizResult = reactive({
   fuzzy: 0,
   mastered: 0,
 });
+
+const quizOptions = reactive<Partial<quizQuery>>({});
 
 onShow(() => {
   const resultStr = uni.getStorageSync('quizResult');
@@ -88,9 +92,24 @@ const toHome = () => {
 
 const restartQuiz = () => {
   uni.redirectTo({
-    url: '/pages/quiz/index',
+    url: `/pages/quiz/index?${jsonToUrlParam(quizOptions)}`,
   });
 };
+
+onLoad((options) => {
+  if (options?.categoryId) {
+    quizOptions.categoryId = options.categoryId;
+  }
+  if (options?.mode) {
+    quizOptions.mode = options.mode as quizQuery['mode'];
+  }
+  if (options?.type) {
+    quizOptions.type = options.type as quizQuery['type'];
+  }
+  if (options?.limit) {
+    quizOptions.limit = Number(options.limit);
+  }
+});
 </script>
 
 <style scoped>

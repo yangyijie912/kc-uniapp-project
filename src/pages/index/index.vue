@@ -88,9 +88,10 @@
 <script setup lang="ts">
 import { onShow } from '@dcloudio/uni-app';
 import { getCategoryTheme } from '@/utils/categoryTheme';
-import useCategoryView from '@/composables/useCategoryView';
 import { ref } from 'vue';
+import useCategoryView from '@/composables/useCategoryView';
 import QuizSetupSheet from '@/components/QuizSetupSheet.vue';
+import type { quizQuery } from '@/types/quiz';
 
 const { categoryViewList, cardList, loadAllData } = useCategoryView();
 const searchQuery = ref('');
@@ -115,7 +116,7 @@ const searchCard = () => {
 };
 
 // 抽题
-const onQuiz = (options?: { mode: 'review' | 'unknown' | 'all'; type: 'today' | 'freedom' }) => {
+const onQuiz = (options?: { mode: quizQuery['mode']; type: quizQuery['type'] }) => {
   let url = '/pages/quiz/index';
   if (options) {
     const { mode, type } = options;
@@ -134,7 +135,7 @@ const closeQuizSetup = () => {
   showQuizSetup.value = false;
 };
 
-const startQuizWithCurrentUI = (mode: 'review' | 'unknown' | 'all', type: 'today' | 'freedom') => {
+const startQuizWithCurrentUI = (mode: quizQuery['mode'], type: quizQuery['type']) => {
   closeQuizSetup();
   onQuiz({ mode, type });
 };
