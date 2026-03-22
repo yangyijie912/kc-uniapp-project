@@ -56,7 +56,7 @@
     </view>
 
     <view class="action-row">
-      <view class="action-btn action-btn-secondary" @click="toHome">返回列表</view>
+      <view class="action-btn action-btn-secondary" @click="toHome">返回</view>
       <view class="action-btn action-btn-primary" @click="restartQuiz">再来一轮</view>
     </view>
   </view>
@@ -85,8 +85,8 @@ onShow(() => {
 });
 
 const toHome = () => {
-  uni.redirectTo({
-    url: '/pages/index/index',
+  uni.navigateBack({
+    delta: 1,
   });
 };
 
