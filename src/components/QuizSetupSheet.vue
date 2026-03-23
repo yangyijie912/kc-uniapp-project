@@ -57,6 +57,31 @@
       </view>
     </view>
 
+    <view class="quiz-setup-section">
+      <view class="quiz-setup-label">练习数量</view>
+      <view class="quiz-chip-row quiz-limit-row">
+        <view class="quiz-chip quiz-limit-chip" :class="{ active: selectedLimit === 10 }" @click="onSelectLimit(10)"
+          >10</view
+        >
+        <view class="quiz-chip quiz-limit-chip" :class="{ active: selectedLimit === 20 }" @click="onSelectLimit(20)"
+          >20</view
+        >
+        <view class="quiz-chip quiz-limit-chip" :class="{ active: selectedLimit === 30 }" @click="onSelectLimit(30)"
+          >30</view
+        >
+        <view class="quiz-limit-custom">
+          <input
+            class="quiz-limit-input"
+            type="number"
+            min="1"
+            placeholder="自定义数量"
+            :value="customLimit"
+            @input="onCustomLimitInput"
+          />
+        </view>
+      </view>
+    </view>
+
     <view class="quiz-setup-note">
       <view class="quiz-setup-note-label">当前预览</view>
       <view class="quiz-setup-note-text">当前选择：{{ practiceModeText }}。</view>
@@ -97,6 +122,8 @@ const practiceModeText = computed(() => {
 });
 
 const selectedQuizType = ref<'today' | 'freedom'>('freedom');
+const selectedLimit = ref<number>(10);
+const customLimit = ref<number | null>(null);
 
 const closeQuizSetup = () => {
   emit('close');
@@ -106,7 +133,25 @@ const startQuizWithCurrentUI = () => {
   emit('start', {
     mode: selectedPracticeMode.value,
     type: selectedQuizType.value,
+    limit: selectedLimit.value,
   } as quizQuery);
+};
+
+const onSelectLimit = (num?: number) => {
+  selectedLimit.value = num || 10;
+};
+
+const onCustomLimitInput = (event: Event | { detail?: { value?: string; cursor?: number } }) => {
+  const eventTarget = 'target' in event && event.target instanceof HTMLTextAreaElement ? event.target : undefined;
+  const eventDetail = 'detail' in event ? event.detail : undefined;
+  const value = eventDetail?.value ?? eventTarget?.value ?? '';
+  const numericValue = parseInt(value, 10);
+  if (!isNaN(numericValue) && numericValue > 0) {
+    customLimit.value = numericValue;
+    selectedLimit.value = numericValue;
+  } else {
+    customLimit.value = null;
+  }
 };
 </script>
 
@@ -263,6 +308,50 @@ const startQuizWithCurrentUI = () => {
   border-color: rgba(31, 94, 255, 0.16);
   background: rgba(31, 94, 255, 0.12);
   color: var(--quiz-sheet-accent-blue);
+}
+
+.quiz-limit-row {
+  gap: 12rpx;
+}
+
+.quiz-limit-chip {
+  min-width: 108rpx;
+  padding: 0 28rpx;
+}
+
+.quiz-limit-custom {
+  flex: 1;
+  min-width: 0;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  padding: 0 24rpx;
+  border-radius: 999rpx;
+  border: 1rpx solid rgba(61, 43, 24, 0.08);
+  background: var(--quiz-sheet-surface-strong);
+  box-sizing: border-box;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.quiz-limit-custom:focus-within {
+  border-color: rgba(31, 94, 255, 0.55);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 0 0 6rpx rgba(31, 94, 255, 0.12);
+}
+
+.quiz-limit-input {
+  width: 100%;
+  height: 100%;
+  color: var(--quiz-sheet-text-main);
+  font-size: 24rpx;
+  caret-color: var(--quiz-sheet-accent-blue);
+}
+
+.quiz-limit-input:focus {
+  outline: none;
 }
 
 .quiz-setup-note {

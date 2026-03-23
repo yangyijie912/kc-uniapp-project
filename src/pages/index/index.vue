@@ -116,11 +116,11 @@ const searchCard = () => {
 };
 
 // 抽题
-const onQuiz = (options?: { mode: quizQuery['mode']; type: quizQuery['type'] }) => {
+const onQuiz = (options?: quizQuery) => {
   let url = '/pages/quiz/index';
   if (options) {
-    const { mode, type } = options;
-    url += `?mode=${mode}&type=${type}`;
+    const { mode, type, limit } = options;
+    url += `?mode=${mode}&type=${type}&limit=${limit}`;
   }
   uni.navigateTo({
     url,

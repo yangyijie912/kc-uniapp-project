@@ -61,6 +61,7 @@
 <script setup lang="ts">
 import { onLoad, onShow } from '@dcloudio/uni-app';
 import { computed, reactive, ref } from 'vue';
+import { jsonToUrlParam } from '@/utils/jsonToUrl';
 import useCardListView from '@/composables/useCardListView';
 import QuizSetupSheet from '@/components/QuizSetupSheet.vue';
 import type { CardStatus } from '@/types/card';
@@ -153,7 +154,7 @@ const goToQuizByCategory = (query: quizQuery) => {
     return;
   }
   uni.navigateTo({
-    url: `/pages/quiz/index?categoryId=${queryParams.categoryId}&mode=${query.mode}&type=${query.type}`,
+    url: `/pages/quiz/index?${jsonToUrlParam({ ...query, categoryId: queryParams.categoryId })}`,
   });
 };
 
