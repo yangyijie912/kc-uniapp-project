@@ -60,16 +60,14 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue';
-import MarkdownContent from '@/components/MarkdownContent.vue';
-import useCardListView from '@/composables/useCardListView';
 import { onShow, onLoad } from '@dcloudio/uni-app';
 import { cardStatusTextMap } from '@/constants/cardStatus';
 import { updateCard } from '@/services/cardService';
+import { getFreedomQuizQuestions, getDailyQuizQuestions } from '@/services/quizService';
 import { jsonToUrlParam } from '@/utils/jsonToUrl';
-import type { CardView, CardStatus } from '@/types/card';
+import MarkdownContent from '@/components/MarkdownContent.vue';
+import type { CardStatus, Card, CardView } from '@/types/card';
 import type { quizQuery } from '@/types/quiz';
-
-const { cardViewList, loadAllData, setQueryParams } = useCardListView();
 
 // 当前队列的卡片列表，后续再调整
 const cardQueue = ref<CardView[]>([]);
@@ -90,31 +88,30 @@ const toggleAnswer = () => {
   showAnswer.value = !showAnswer.value;
 };
 
-// 洗牌算法
-function shuffle<T>(list: T[]): T[] {
-  const result = [...list];
-  // 从后往前遍历数组，每次随机选一个前面的元素交换位置
-  for (let index = result.length - 1; index > 0; index--) {
-    const randomIndex = Math.floor(Math.random() * (index + 1));
-    // 交换元素位置（ES6 解构赋值，左边是当前元素，右边是随机选中的元素）
-    [result[index], result[randomIndex]] = [result[randomIndex], result[index]];
-  }
-
-  return result;
-}
-
 // 构建测验队列
 function buildQueue() {
-  let list = [...cardViewList.value];
-  //   if (quizOptions.categoryId) {
-  //     list = list.filter((card) => card.categoryId === quizOptions.categoryId);
-  //   }
-  if (quizOptions.mode === 'review') {
-    list = list.filter((card) => card.status === 'unknown' || card.status === 'fuzzy');
-  } else if (quizOptions.mode === 'unknown') {
-    list = list.filter((card) => card.status === 'unknown');
+  if (quizOptions.type === 'today') {
+    const res = getDailyQuizQuestions();
+    if (res.success) {
+      cardQueue.value = res.data;
+    } else {
+      uni.showToast({
+        title: res.message || '测验题目加载失败',
+        icon: 'none',
+      });
+    }
+  } else {
+    const res = getFreedomQuizQuestions(quizOptions);
+    if (res.success) {
+      cardQueue.value = res.data;
+    } else {
+      uni.showToast({
+        title: res.message || '测验题目加载失败',
+        icon: 'none',
+      });
+    }
   }
-  cardQueue.value = shuffle(list).slice(0, quizOptions.limit);
+
   cardIndex.value = 0;
 }
 
@@ -168,9 +165,6 @@ const onQuiz = (status: string) => {
 onLoad((options) => {
   if (options?.categoryId) {
     quizOptions.categoryId = options.categoryId;
-    setQueryParams({
-      categoryId: quizOptions.categoryId,
-    });
   }
   if (options?.mode) {
     quizOptions.mode = options.mode as quizQuery['mode'];
@@ -181,11 +175,9 @@ onLoad((options) => {
   if (options?.limit) {
     quizOptions.limit = Number(options.limit);
   }
-  loadAllData();
 });
 
 onShow(() => {
-  loadAllData();
   buildQueue();
 });
 </script>
