@@ -7,6 +7,9 @@ import type { DailyQuizSession, quizQuery, QuizResultSummary } from '@/types/qui
 import { getCategories } from './categoryService';
 import { toCardViews } from '@/utils/cardView';
 
+// 每日测验的题目数量限制，默认值为10
+export const dailyQuizLimit = 10;
+
 // 获取当天的日期键，用于存储和比较每日测验数据
 export function getDateKey(date: Date): string {
   const year = date.getFullYear();
@@ -58,7 +61,7 @@ function filterQuizCards(cardList: Card[], quizOptions: Partial<quizQuery>, igno
 // 构建测验题目队列，先根据测验选项过滤卡片列表，然后随机打乱并限制数量，最后转换为卡片视图
 function buildQueue(quizOptions: Partial<quizQuery>, ignoreMode = false): CardView[] {
   const filteredList = filterQuizCards(loadCardList(), quizOptions, ignoreMode);
-  const limit = normalizeLimit(quizOptions.limit);
+  const limit = normalizeLimit(quizOptions.type === 'today' ? dailyQuizLimit : quizOptions.limit);
   return toCardViews(shuffle(filteredList).slice(0, limit), getCategoryList());
 }
 
@@ -92,7 +95,10 @@ function saveDailyQuizSession(session: DailyQuizSession) {
 
 // 判断是否可以重用现有的每日测验进度数据，条件是日期键和题目数量都匹配
 function shouldReuseDailySession(session: DailyQuizSession, quizOptions: Partial<quizQuery>, dateKey: string): boolean {
-  return session.dateKey === dateKey && session.limit === normalizeLimit(quizOptions.limit);
+  return (
+    session.dateKey === dateKey &&
+    session.limit === normalizeLimit(quizOptions.type === 'today' ? dailyQuizLimit : quizOptions.limit)
+  );
 }
 
 // 获取每日测验进度数据
@@ -109,7 +115,7 @@ export function getDailyQuizSession(quizOptions: Partial<quizQuery>): ServiceRes
   }
   const session: DailyQuizSession = {
     dateKey: todayKey,
-    limit: normalizeLimit(quizOptions.limit),
+    limit: normalizeLimit(dailyQuizLimit),
     queue,
     currentIndex: 0,
     result: createEmptyQuizResult(queue.length),

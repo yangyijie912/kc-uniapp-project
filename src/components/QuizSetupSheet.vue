@@ -23,14 +23,19 @@
           <view class="quiz-option-title">自由测验</view>
           <view class="quiz-option-desc">每次进入都重新开始，适合随手练习。</view>
         </view>
-        <view class="quiz-option" :class="{ active: selectedQuizType === 'today' }" @click="selectedQuizType = 'today'">
+        <view
+          class="quiz-option"
+          v-if="!props.categoryId"
+          :class="{ active: selectedQuizType === 'today' }"
+          @click="selectedQuizType = 'today'"
+        >
           <view class="quiz-option-title">每日测验</view>
           <view class="quiz-option-desc">后续支持按天固定题集和中断恢复。</view>
         </view>
       </view>
     </view>
 
-    <view class="quiz-setup-section">
+    <view class="quiz-setup-section" v-show="selectedQuizType !== 'today'">
       <view class="quiz-setup-label">练习模式</view>
       <view class="quiz-chip-row">
         <view
@@ -57,7 +62,7 @@
       </view>
     </view>
 
-    <view class="quiz-setup-section">
+    <view class="quiz-setup-section" v-show="selectedQuizType !== 'today'">
       <view class="quiz-setup-label">练习数量</view>
       <view class="quiz-chip-row quiz-limit-row">
         <view class="quiz-chip quiz-limit-chip" :class="{ active: selectedLimit === 10 }" @click="onSelectLimit(10)"
@@ -84,7 +89,11 @@
 
     <view class="quiz-setup-note">
       <view class="quiz-setup-note-label">当前预览</view>
-      <view class="quiz-setup-note-text">当前选择：{{ practiceModeText }}。</view>
+      <view class="quiz-setup-note-text"
+        >当前选择：{{ selectedQuizType === 'today' ? '每日测验' : '自由测验' }}。
+        {{ selectedQuizType !== 'today' ? practiceModeText + '，' : '' }}
+        数量：{{ selectedQuizType !== 'today' ? selectedLimit : '固定' + dailyQuizLimit }}</view
+      >
     </view>
 
     <view class="quiz-setup-actions">
@@ -97,9 +106,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import type { quizQuery } from '@/types/quiz';
+import { dailyQuizLimit } from '@/services/quizService';
 
 const props = defineProps<{
   open: boolean;
+  categoryId?: string;
 }>();
 
 const emit = defineEmits<{

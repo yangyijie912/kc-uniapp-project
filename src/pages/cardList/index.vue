@@ -54,7 +54,12 @@
       </view>
     </view>
 
-    <QuizSetupSheet :open="showQuizSetup" @close="closeQuizSetup" @start="startQuizWithCurrentUI" />
+    <QuizSetupSheet
+      :open="showQuizSetup"
+      :categoryId="queryParams.categoryId"
+      @close="closeQuizSetup"
+      @start="startQuizWithCurrentUI"
+    />
   </view>
 </template>
 
