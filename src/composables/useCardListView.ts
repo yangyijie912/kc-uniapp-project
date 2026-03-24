@@ -6,7 +6,7 @@ import { ref, computed } from 'vue';
 import { getCards } from '@/services/cardService';
 import { getCategories } from '@/services/categoryService';
 import type { Card, Category, CardView } from '@/types/card';
-import { cardStatusTextMap } from '@/constants/cardStatus';
+import { toCardViews } from '@/utils/cardView';
 
 type CardQueryParams = Partial<Card> & {
   keyword?: string;
@@ -16,10 +16,6 @@ export default function useCardListView() {
   const cardList = ref<Card[]>([]);
   const categoryList = ref<Category[]>([]);
   const queryParams = ref<CardQueryParams>({});
-
-  const categoryNameById = computed(() => {
-    return new Map(categoryList.value.map((category) => [category.id, category.name]));
-  });
 
   function setQueryParams(params: Partial<CardQueryParams>) {
     // 更新查询参数，合并新的参数到现有的查询参数中
@@ -61,11 +57,7 @@ export default function useCardListView() {
   }
 
   const cardViewList = computed<CardView[]>(() => {
-    return cardList.value.map((card) => ({
-      ...card,
-      categoryName: categoryNameById.value.get(card.categoryId),
-      statusName: card.status ? cardStatusTextMap[card.status] : undefined,
-    }));
+    return toCardViews(cardList.value, categoryList.value);
   });
 
   return {

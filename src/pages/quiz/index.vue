@@ -63,22 +63,22 @@ import { computed, reactive, ref } from 'vue';
 import { onShow, onLoad } from '@dcloudio/uni-app';
 import { cardStatusTextMap } from '@/constants/cardStatus';
 import { updateCard } from '@/services/cardService';
-import { getFreedomQuizQuestions, getDailyQuizQuestions } from '@/services/quizService';
+import { getFreedomQuizQuestions, getDailyQuizSession, updateDailyQuizSessionProgress } from '@/services/quizService';
 import { jsonToUrlParam } from '@/utils/jsonToUrl';
 import MarkdownContent from '@/components/MarkdownContent.vue';
-import type { CardStatus, Card, CardView } from '@/types/card';
-import type { quizQuery } from '@/types/quiz';
+import type { CardStatus, CardView } from '@/types/card';
+import type { quizQuery, QuizResultSummary } from '@/types/quiz';
 
 // 当前队列的卡片列表，后续再调整
 const cardQueue = ref<CardView[]>([]);
 const cardIndex = ref(0); // 当前卡片索引，初始为0
 const currentCard = computed(() => cardQueue.value[cardIndex.value] || null);
-const quizResult = {
+const quizResult = reactive<QuizResultSummary>({
   total: 0,
   unknown: 0,
   fuzzy: 0,
   mastered: 0,
-};
+});
 
 const quizOptions = reactive<Partial<quizQuery>>({});
 
@@ -88,31 +88,82 @@ const toggleAnswer = () => {
   showAnswer.value = !showAnswer.value;
 };
 
+// 重置测验结果统计
+const resetQuizResult = (total = 0) => {
+  quizResult.total = total;
+  quizResult.unknown = 0;
+  quizResult.fuzzy = 0;
+  quizResult.mastered = 0;
+};
+
+// 同步每日测验进度到本地存储，供其他页面使用
+const syncDailyProgress = (finished = false) => {
+  if (quizOptions.type !== 'today') {
+    return;
+  }
+  updateDailyQuizSessionProgress({
+    currentIndex: cardIndex.value,
+    result: { ...quizResult, total: cardQueue.value.length },
+    finished,
+  });
+};
+
+// 测验结束，保存结果并跳转到结果页
+const finishQuiz = () => {
+  quizResult.total = cardQueue.value.length;
+  // 如果是每日测验，确保最后一次进度同步，标记为已完成
+  if (quizOptions.type === 'today') {
+    syncDailyProgress(true);
+  }
+  uni.setStorageSync('quizResult', JSON.stringify(quizResult));
+  uni.redirectTo({
+    url: `/pages/quizResult/index?${jsonToUrlParam(quizOptions)}`,
+  });
+};
+
 // 构建测验队列
 function buildQueue() {
+  // 每日测验
   if (quizOptions.type === 'today') {
-    const res = getDailyQuizQuestions();
-    if (res.success) {
-      cardQueue.value = res.data;
-    } else {
+    const res = getDailyQuizSession(quizOptions);
+    if (!res.success || !res.data) {
       uni.showToast({
         title: res.message || '测验题目加载失败',
         icon: 'none',
       });
+      cardQueue.value = [];
+      return;
     }
-  } else {
-    const res = getFreedomQuizQuestions(quizOptions);
-    if (res.success) {
-      cardQueue.value = res.data;
-    } else {
-      uni.showToast({
-        title: res.message || '测验题目加载失败',
-        icon: 'none',
-      });
+    // 加载已有的每日测验进度，继续未完成的测验
+    cardQueue.value = res.data.queue;
+    cardIndex.value = res.data.currentIndex;
+    Object.assign(quizResult, res.data.result);
+    // 如果测验已经完成，直接跳转到结果页
+    if (res.data.finished) {
+      finishQuiz();
+      return;
     }
+    // 否则继续测验，显示当前题目
+    showAnswer.value = false;
+    return;
   }
 
-  cardIndex.value = 0;
+  // 自由测验，直接获取题目列表
+  const res = getFreedomQuizQuestions(quizOptions);
+  if (res.success && res.data) {
+    cardQueue.value = res.data;
+    cardIndex.value = 0;
+    resetQuizResult(cardQueue.value.length);
+    showAnswer.value = false;
+    return;
+  }
+  // 加载失败，清空队列并提示错误
+  cardQueue.value = [];
+  resetQuizResult(0);
+  uni.showToast({
+    title: res.message || '测验题目加载失败',
+    icon: 'none',
+  });
 }
 
 // 状态更新接口
@@ -132,12 +183,9 @@ const nextQuestion = () => {
   if (cardIndex.value < cardQueue.value.length - 1) {
     cardIndex.value += 1;
     showAnswer.value = false; // 切换到下一题时默认隐藏答案
+    syncDailyProgress(false);
   } else {
-    quizResult.total = quizResult.unknown + quizResult.fuzzy + quizResult.mastered;
-    uni.setStorageSync('quizResult', JSON.stringify(quizResult));
-    uni.redirectTo({
-      url: `/pages/quizResult/index?${jsonToUrlParam(quizOptions)}`,
-    });
+    finishQuiz();
   }
 };
 
