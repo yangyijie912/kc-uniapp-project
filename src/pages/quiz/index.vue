@@ -7,7 +7,10 @@
           <view class="progress-count">{{ cardIndex + 1 }} / {{ cardQueue.length }}</view>
         </view>
         <view class="progress-track">
-          <view class="progress-bar" :style="{ width: ((cardIndex + 1) / cardQueue.length) * 100 + '%' }"></view>
+          <view
+            class="progress-bar"
+            :style="{ width: ((cardIndex + 1) / cardQueue.length) * 100 + '%' }"
+          ></view>
         </view>
       </view>
 
@@ -24,8 +27,8 @@
         </view>
         <view class="question-title">{{ currentCard?.question }}</view>
         <!-- <view class="question-desc">{{ currentCard?.description }}</view> -->
-        <view class="reveal-btn" @click="toggleAnswer">
-          {{ showAnswer ? '收起答案' : '展开查看答案' }}
+        <view @click="toggleAnswer">
+          <view class="reveal-btn" v-if="!showAnswer"> 展开查看答案 </view>
         </view>
       </view>
 
@@ -41,9 +44,13 @@
       </view>
 
       <view class="bottom-row">
-        <view class="status-btn status-unknown" @click="onQuiz(cardStatusTextMap.unknown)">不会</view>
+        <view class="status-btn status-unknown" @click="onQuiz(cardStatusTextMap.unknown)"
+          >不会</view
+        >
         <view class="status-btn status-fuzzy" @click="onQuiz(cardStatusTextMap.fuzzy)">模糊</view>
-        <view class="status-btn status-mastered" @click="onQuiz(cardStatusTextMap.mastered)">掌握</view>
+        <view class="status-btn status-mastered" @click="onQuiz(cardStatusTextMap.mastered)"
+          >掌握</view
+        >
       </view>
     </view>
 
@@ -63,7 +70,11 @@ import { computed, reactive, ref } from 'vue';
 import { onShow, onLoad } from '@dcloudio/uni-app';
 import { cardStatusTextMap } from '@/constants/cardStatus';
 import { updateCard } from '@/services/cardService';
-import { getFreedomQuizQuestions, getDailyQuizSession, updateDailyQuizSessionProgress } from '@/services/quizService';
+import {
+  getFreedomQuizQuestions,
+  getDailyQuizSession,
+  updateDailyQuizSessionProgress,
+} from '@/services/quizService';
 import { jsonToUrlParam } from '@/utils/jsonToUrl';
 import MarkdownContent from '@/components/MarkdownContent.vue';
 import type { CardStatus, CardView } from '@/types/card';
@@ -85,7 +96,8 @@ const quizOptions = reactive<Partial<quizQuery>>({});
 const showAnswer = ref(false);
 
 const toggleAnswer = () => {
-  showAnswer.value = !showAnswer.value;
+  // 答案只能展示一次
+  showAnswer.value = true;
 };
 
 // 重置测验结果统计
@@ -427,7 +439,8 @@ onShow(() => {
   border: 1rpx solid rgba(61, 43, 24, 0.12);
   background:
     radial-gradient(circle at top right, rgba(31, 94, 255, 0.1), transparent 34%),
-    radial-gradient(circle at bottom left, rgba(18, 122, 114, 0.1), transparent 30%), rgba(255, 252, 247, 0.88);
+    radial-gradient(circle at bottom left, rgba(18, 122, 114, 0.1), transparent 30%),
+    rgba(255, 252, 247, 0.88);
   box-shadow: 0 18rpx 44rpx rgba(80, 55, 25, 0.08);
   text-align: center;
 }
