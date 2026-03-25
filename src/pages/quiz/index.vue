@@ -66,8 +66,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue';
-import { onShow, onLoad } from '@dcloudio/uni-app';
+import { computed, onMounted, reactive, ref } from 'vue';
+import { onLoad } from '@dcloudio/uni-app';
 import { cardStatusTextMap } from '@/constants/cardStatus';
 import { updateCard } from '@/services/cardService';
 import {
@@ -237,7 +237,8 @@ onLoad((options) => {
   }
 });
 
-onShow(() => {
+onMounted(() => {
+  // 组件加载时构建测验队列，不放在onShow里是为了避免每次切换后台返回这个页面时都重置测验进度
   buildQueue();
 });
 </script>
