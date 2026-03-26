@@ -3,11 +3,13 @@
     <view class="hero-card">
       <view class="hero-badge">Knowledge Card</view>
       <view class="hero-title">把零散知识，练成稳定记忆</view>
-      <view class="hero-desc"> 用抽题、分类和检索把前端知识点串起来，适合日常复习和面试前冲刺。 </view>
+      <view class="hero-desc">
+        用抽题、分类和检索把前端知识点串起来，适合日常复习和面试前冲刺。
+      </view>
 
       <view class="hero-actions">
         <view class="quiz-btn" @click="openQuizSetup">开始抽题</view>
-        <view class="secondary-btn" @click="goToCardListbyAll">查看卡库</view>
+        <view class="secondary-btn" @click="goToCardListByAll">查看卡库</view>
       </view>
 
       <view class="hero-metrics">
@@ -20,7 +22,9 @@
           <view class="metric-label">分类</view>
         </view>
         <view class="metric-item">
-          <view class="metric-value">{{ cardList.filter((card) => card.status !== 'mastered').length }}</view>
+          <view class="metric-value">{{
+            cardList.filter((card) => card.status !== 'mastered').length
+          }}</view>
           <view class="metric-label">未掌握</view>
         </view>
       </view>
@@ -54,7 +58,10 @@
           v-for="c in categoryViewList"
           :key="c.id"
           class="category-item"
-          :style="{ background: getCategoryTheme(c.name).background, color: getCategoryTheme(c.name).color }"
+          :style="{
+            background: getCategoryTheme(c.name).background,
+            color: getCategoryTheme(c.name).color,
+          }"
           @click="goToCardList(c.id)"
         >
           <text class="category-name">{{ c.name }}</text>
@@ -78,6 +85,10 @@
           <view class="manage-item-title">数据导入</view>
           <view class="manage-item-desc">后续接 Word 导入流程</view>
         </view>
+        <view class="manage-item manage-item-export" @click="exportData">
+          <view class="manage-item-title">数据导出</view>
+          <view class="manage-item-desc">导出当前数据为 JSON 文件</view>
+        </view>
       </view>
     </view>
 
@@ -89,6 +100,7 @@
 import { onShow } from '@dcloudio/uni-app';
 import { getCategoryTheme } from '@/utils/categoryTheme';
 import { ref } from 'vue';
+import { buildExportJson, exportToJsonApp, exportToJsonH5 } from '@/services/exportService';
 import useCategoryView from '@/composables/useCategoryView';
 import QuizSetupSheet from '@/components/QuizSetupSheet.vue';
 import type { quizQuery } from '@/types/quiz';
@@ -141,7 +153,7 @@ const startQuizWithCurrentUI = (query: quizQuery) => {
 };
 
 // 进入卡片列表
-const goToCardListbyAll = () => {
+const goToCardListByAll = () => {
   uni.navigateTo({
     url: '/pages/cardList/index',
   });
@@ -159,6 +171,19 @@ const goToCategoryManage = () => {
   uni.navigateTo({
     url: '/pages/categoryManage/index',
   });
+};
+
+// 导出数据
+const exportData = async () => {
+  const json = await buildExportJson();
+
+  // #ifdef H5
+  exportToJsonH5();
+  // #endif
+
+  // #ifndef APP-PLUS
+  exportToJsonApp(json);
+  // #endif
 };
 </script>
 
@@ -401,6 +426,11 @@ const goToCategoryManage = () => {
 .manage-item-muted {
   border-color: rgba(61, 43, 24, 0.08);
   background: linear-gradient(135deg, rgba(239, 125, 66, 0.08), rgba(255, 255, 255, 0.72));
+}
+
+.manage-item-export {
+  border-color: rgba(239, 125, 66, 0.12);
+  background: linear-gradient(135deg, rgba(7, 147, 5, 0.12), rgba(255, 255, 255, 0.72));
 }
 
 .manage-item-title {
