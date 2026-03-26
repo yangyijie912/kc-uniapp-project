@@ -65,13 +65,22 @@
     <view class="quiz-setup-section" v-show="selectedQuizType !== 'today'">
       <view class="quiz-setup-label">练习数量</view>
       <view class="quiz-chip-row quiz-limit-row">
-        <view class="quiz-chip quiz-limit-chip" :class="{ active: selectedLimit === 10 }" @click="onSelectLimit(10)"
+        <view
+          class="quiz-chip quiz-limit-chip"
+          :class="{ active: selectedLimit === 10 }"
+          @click="onSelectLimit(10)"
           >10</view
         >
-        <view class="quiz-chip quiz-limit-chip" :class="{ active: selectedLimit === 20 }" @click="onSelectLimit(20)"
+        <view
+          class="quiz-chip quiz-limit-chip"
+          :class="{ active: selectedLimit === 20 }"
+          @click="onSelectLimit(20)"
           >20</view
         >
-        <view class="quiz-chip quiz-limit-chip" :class="{ active: selectedLimit === 30 }" @click="onSelectLimit(30)"
+        <view
+          class="quiz-chip quiz-limit-chip"
+          :class="{ active: selectedLimit === 30 }"
+          @click="onSelectLimit(30)"
           >30</view
         >
         <view class="quiz-limit-custom">
@@ -98,7 +107,9 @@
 
     <view class="quiz-setup-actions">
       <view class="quiz-setup-btn quiz-setup-btn-secondary" @click="closeQuizSetup">稍后再说</view>
-      <view class="quiz-setup-btn quiz-setup-btn-primary" @click="startQuizWithCurrentUI">按当前条件开始</view>
+      <view class="quiz-setup-btn quiz-setup-btn-primary" @click="startQuizWithCurrentUI"
+        >按当前条件开始</view
+      >
     </view>
   </view>
 </template>
@@ -153,7 +164,8 @@ const onSelectLimit = (num?: number) => {
 };
 
 const onCustomLimitInput = (event: Event | { detail?: { value?: string; cursor?: number } }) => {
-  const eventTarget = 'target' in event && event.target instanceof HTMLTextAreaElement ? event.target : undefined;
+  const eventTarget =
+    'target' in event && event.target instanceof HTMLTextAreaElement ? event.target : undefined;
   const eventDetail = 'detail' in event ? event.detail : undefined;
   const value = eventDetail?.value ?? eventTarget?.value ?? '';
   const numericValue = parseInt(value, 10);
@@ -190,14 +202,16 @@ const onCustomLimitInput = (event: Event | { detail?: { value?: string; cursor?:
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
-  padding: 18rpx 28rpx 36rpx;
+  bottom: var(--window-bottom);
+  max-height: calc(100vh - var(--window-top) - var(--window-bottom) - 24rpx);
+  padding: 18rpx 28rpx calc(24rpx + env(safe-area-inset-bottom));
   border-radius: 36rpx 36rpx 0 0;
   background:
     radial-gradient(circle at top right, rgba(31, 94, 255, 0.12), transparent 30%),
     linear-gradient(180deg, rgba(255, 252, 247, 0.98), rgba(248, 242, 232, 0.98));
   box-shadow: 0 -18rpx 48rpx rgba(80, 55, 25, 0.12);
   box-sizing: border-box;
+  overflow-y: auto;
   z-index: 21;
 }
 
@@ -272,7 +286,7 @@ const onCustomLimitInput = (event: Event | { detail?: { value?: string; cursor?:
   background: linear-gradient(135deg, rgba(31, 94, 255, 0.12), rgba(255, 255, 255, 0.82));
   box-shadow: 0 12rpx 28rpx rgba(31, 94, 255, 0.1);
 }
-/* 
+/*
 .quiz-option-disabled {
   border-color: rgba(61, 43, 24, 0.08);
   background: rgba(244, 239, 231, 0.88);
