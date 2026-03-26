@@ -47,6 +47,12 @@
       "style": {
         "navigationBarTitleText": "测验结果"
       }
+    },
+    {
+      "path": "pages/mine/index",
+      "style": {
+        "navigationBarTitleText": "我的"
+      }
     }
   ],
   "globalStyle": {
@@ -54,5 +60,31 @@
     "navigationBarTitleText": "知识卡",
     "navigationBarBackgroundColor": "#F8F2E8",
     "backgroundColor": "#F8F2E8"
+  },
+  "tabBar": {
+    "color": "#8C8479",
+    "selectedColor": "#1F5EFF",
+    "backgroundColor": "#FFF8EE",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "src/static/tabbar/home.svg",
+        "selectedIconPath": "src/static/tabbar/home-active.svg"
+      },
+      {
+        "pagePath": "pages/categoryManage/index",
+        "text": "分类",
+        "iconPath": "src/static/tabbar/category.svg",
+        "selectedIconPath": "src/static/tabbar/category-active.svg"
+      },
+      {
+        "pagePath": "pages/mine/index",
+        "text": "我的",
+        "iconPath": "src/static/tabbar/mine.svg",
+        "selectedIconPath": "src/static/tabbar/mine-active.svg"
+      }
+    ]
   }
 }

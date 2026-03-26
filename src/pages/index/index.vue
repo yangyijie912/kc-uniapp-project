@@ -70,28 +70,6 @@
       </view>
     </view>
 
-    <view class="manage-panel">
-      <view class="section-head">
-        <view class="section-title">管理入口</view>
-        <view class="section-tip">维护分类和后续导入内容，入口收在次级区域</view>
-      </view>
-
-      <view class="manage-grid">
-        <view class="manage-item" @click="goToCategoryManage">
-          <view class="manage-item-title">分类管理</view>
-          <view class="manage-item-desc">新增、修改和整理分类</view>
-        </view>
-        <view class="manage-item manage-item-muted">
-          <view class="manage-item-title">数据导入</view>
-          <view class="manage-item-desc">后续接 Word 导入流程</view>
-        </view>
-        <view class="manage-item manage-item-export" @click="exportData">
-          <view class="manage-item-title">数据导出</view>
-          <view class="manage-item-desc">导出当前数据为 JSON 文件</view>
-        </view>
-      </view>
-    </view>
-
     <QuizSetupSheet :open="showQuizSetup" @close="closeQuizSetup" @start="startQuizWithCurrentUI" />
   </view>
 </template>
@@ -100,7 +78,6 @@
 import { onShow } from '@dcloudio/uni-app';
 import { getCategoryTheme } from '@/utils/categoryTheme';
 import { ref } from 'vue';
-import { buildExportJson, exportToJsonApp, exportToJsonH5 } from '@/services/exportService';
 import useCategoryView from '@/composables/useCategoryView';
 import QuizSetupSheet from '@/components/QuizSetupSheet.vue';
 import type { quizQuery } from '@/types/quiz';
@@ -165,26 +142,6 @@ const goToCardList = (categoryId: string) => {
     url: `/pages/cardList/index?categoryId=${categoryId}`,
   });
 };
-
-// 进入分类管理
-const goToCategoryManage = () => {
-  uni.navigateTo({
-    url: '/pages/categoryManage/index',
-  });
-};
-
-// 导出数据
-const exportData = async () => {
-  const json = await buildExportJson();
-
-  // #ifdef H5
-  exportToJsonH5();
-  // #endif
-
-  // #ifndef APP-PLUS
-  exportToJsonApp(json);
-  // #endif
-};
 </script>
 
 <style scoped>
@@ -210,8 +167,7 @@ const exportData = async () => {
 
 .hero-card,
 .search-panel,
-.category-panel,
-.manage-panel {
+.category-panel {
   position: relative;
   overflow: hidden;
   border: 1rpx solid var(--line-soft);
@@ -325,8 +281,7 @@ const exportData = async () => {
 }
 
 .search-panel,
-.category-panel,
-.manage-panel {
+.category-panel {
   padding: 30rpx 28rpx;
 }
 
@@ -405,51 +360,6 @@ const exportData = async () => {
   margin-top: 8rpx;
   font-size: 24rpx;
   opacity: 0.88;
-}
-
-.manage-grid {
-  margin-top: 24rpx;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18rpx;
-}
-
-.manage-item {
-  min-height: 160rpx;
-  padding: 24rpx;
-  border-radius: 26rpx;
-  border: 1rpx solid rgba(31, 94, 255, 0.12);
-  background: linear-gradient(135deg, rgba(31, 94, 255, 0.09), rgba(255, 255, 255, 0.72));
-  box-sizing: border-box;
-}
-
-.manage-item-muted {
-  border-color: rgba(61, 43, 24, 0.08);
-  background: linear-gradient(135deg, rgba(239, 125, 66, 0.08), rgba(255, 255, 255, 0.72));
-}
-
-.manage-item-export {
-  border-color: rgba(239, 125, 66, 0.12);
-  background: linear-gradient(135deg, rgba(7, 147, 5, 0.12), rgba(255, 255, 255, 0.72));
-}
-
-.manage-item-title {
-  color: var(--text-main);
-  font-size: 30rpx;
-  font-weight: 700;
-}
-
-.manage-item-desc {
-  margin-top: 12rpx;
-  color: var(--text-muted);
-  font-size: 24rpx;
-  line-height: 1.7;
-}
-
-@media (max-width: 320px) {
-  .manage-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 .category-count {
