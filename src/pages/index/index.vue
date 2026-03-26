@@ -154,7 +154,7 @@ const goToCardList = (categoryId: string) => {
   --accent-orange: #ef7d42;
   --accent-teal: #127a72;
   --accent-blue: #1f5eff;
-  padding: 40rpx 28rpx 56rpx;
+  padding: 40rpx 28rpx max(12rpx, env(safe-area-inset-bottom));
   box-sizing: border-box;
   display: flex;
   flex-direction: column;

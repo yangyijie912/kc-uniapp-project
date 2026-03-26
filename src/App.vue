@@ -31,7 +31,8 @@ uni-page-body {
 }
 
 uni-page-body {
-  min-height: calc(100vh - var(--window-top) - var(--window-bottom));
+  min-height: auto;
+  height: auto;
   box-sizing: border-box;
 }
 </style>

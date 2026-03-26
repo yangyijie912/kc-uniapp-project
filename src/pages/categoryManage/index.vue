@@ -19,7 +19,10 @@
         </view>
         <view class="row-actions">
           <view class="row-btn" @click="goToEdit(category.id)" v-if="category.canEdit">编辑</view>
-          <view class="row-btn row-btn-danger" @click="removeCategory(category.id)" v-if="category.canDelete"
+          <view
+            class="row-btn row-btn-danger"
+            @click="removeCategory(category.id)"
+            v-if="category.canDelete"
             >删除</view
           >
         </view>
@@ -84,7 +87,7 @@ onShow(() => {
 
 <style scoped>
 .page {
-  padding: 24rpx 28rpx 48rpx;
+  padding: 24rpx 28rpx max(12rpx, env(safe-area-inset-bottom));
   box-sizing: border-box;
   background: linear-gradient(180deg, #f8f2e8 0%, #efe5d5 100%);
 }
