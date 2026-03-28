@@ -7,8 +7,6 @@ import type { ServiceResult } from '@/types/service';
 import { success, fail } from './serviceHelper';
 import { generateUUID } from '@/utils/uuid';
 
-const uncategorizedId = UNCATEGORIZED_ID;
-
 // 定义一个类型来表示原始的卡片数据结构
 type RawCard = {
   id: string;
@@ -28,7 +26,7 @@ function getCurrentCategories(): Category[] {
   const saved = uni.getStorageSync(CATEGORY_STORAGE_KEY);
   const fallbackList = (categories as Category[]).map((category) => ({ ...category }));
   const categoryList = saved ? (JSON.parse(saved) as Category[]) : fallbackList;
-  if (categoryList.findIndex((category) => category.id === uncategorizedId) === -1) {
+  if (categoryList.findIndex((category) => category.id === UNCATEGORIZED_ID) === -1) {
     categoryList.push(UNCATEGORIZED_CATEGORY);
   }
   return categoryList.map((category) => ({ ...category }));
@@ -98,7 +96,7 @@ function resolveCategoryId(rawCard: RawCard): string {
   }
 
   // 5. 其余情况，移入未分类
-  return uncategorizedId;
+  return UNCATEGORIZED_ID;
 }
 
 // 清洗标签数据，去除空字符串和重复项

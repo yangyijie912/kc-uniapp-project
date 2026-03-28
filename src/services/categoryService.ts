@@ -8,11 +8,12 @@ import { success, fail } from './serviceHelper';
 import { getCards, updateCard } from './cardService';
 
 // 固定的未分类ID，确保在任何情况下都存在一个未分类
-export const uncategorizedId = UNCATEGORIZED_ID;
 const uncategorizedCategory: Category = UNCATEGORIZED_CATEGORY;
 
 // 默认分类列表，从静态数据文件加载
-const defaultCategories: Category[] = (categories as Category[]).map((category) => ({ ...category }));
+const defaultCategories: Category[] = (categories as Category[]).map((category) => ({
+  ...category,
+}));
 
 // 当前的分类列表，后续会从本地存储加载或使用默认分类
 let categoryList: Category[] = [];
@@ -24,7 +25,9 @@ function cloneCategory(category: Category): Category {
 
 // 对分类列表进行排序，首先按照 sort 字段升序排序，如果 sort 相同则按照 name 字段的字母顺序排序
 function normalizeCategories(list: Category[]): Category[] {
-  return list.map(cloneCategory).sort((left, right) => left.sort - right.sort || left.name.localeCompare(right.name));
+  return list
+    .map(cloneCategory)
+    .sort((left, right) => left.sort - right.sort || left.name.localeCompare(right.name));
 }
 
 // 从本地存储加载分类列表，如果没有则使用默认分类，并保存到本地存储
@@ -40,7 +43,7 @@ function loadCategoriesFromStorage(): Category[] {
 
   const savedList = JSON.parse(saved) as Category[];
   // 如果有数据，判断是否包含未分类，如果没有则添加一个
-  if (savedList.findIndex((category) => category.id === uncategorizedId) === -1) {
+  if (savedList.findIndex((category) => category.id === UNCATEGORIZED_ID) === -1) {
     savedList.push(uncategorizedCategory);
   }
   categoryList = normalizeCategories(savedList);
@@ -68,7 +71,9 @@ export function getCategories(params?: Partial<Category>): ServiceResult<Categor
   return success(
     currentList
       .filter((category) => {
-        return (Object.keys(params) as Array<keyof Category>).every((key) => category[key] === params[key]);
+        return (Object.keys(params) as Array<keyof Category>).every(
+          (key) => category[key] === params[key],
+        );
       })
       .map(cloneCategory),
   );
@@ -113,7 +118,7 @@ export function updateCategory(updates: Partial<Category>): ServiceResult<Catego
 
 // 删除分类
 export function deleteCategory(id: string): ServiceResult<null> {
-  if (id === uncategorizedId) {
+  if (id === UNCATEGORIZED_ID) {
     return fail('未分类不能删除');
   }
   const currentList = loadCategoriesFromStorage();
@@ -127,7 +132,7 @@ export function deleteCategory(id: string): ServiceResult<null> {
     res.data.forEach((card) => {
       updateCard({
         id: card.id,
-        categoryId: uncategorizedId,
+        categoryId: UNCATEGORIZED_ID,
       });
     });
   }

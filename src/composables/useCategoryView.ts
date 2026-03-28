@@ -1,8 +1,9 @@
 // 分类页展示逻辑
 import type { Card, Category, CategoryView } from '@/types/card';
 import { getCards } from '@/services/cardService';
-import { getCategories, uncategorizedId } from '@/services/categoryService';
+import { getCategories } from '@/services/categoryService';
 import { ref, computed } from 'vue';
+import { UNCATEGORIZED_ID } from '@/constants/category';
 
 export default function useCategoryView() {
   const categoryList = ref<Category[]>([]);
@@ -59,7 +60,7 @@ export default function useCategoryView() {
     return categoryList.value
       .map((category) => {
         const cardCount = cardCountMap.value[category.id] ?? 0;
-        const isUncategorized = category.id === uncategorizedId;
+        const isUncategorized = category.id === UNCATEGORIZED_ID;
 
         return {
           ...category,
