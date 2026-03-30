@@ -1,7 +1,12 @@
 <template>
   <view class="page">
     <view v-if="!isSearchResultMode" class="toolbar">
-      <input v-model="inputKeyword" class="search-input" placeholder="搜索问题或答案" placeholder-class="placeholder" />
+      <input
+        v-model="inputKeyword"
+        class="search-input"
+        placeholder="搜索问题或答案"
+        placeholder-class="placeholder"
+      />
       <view class="filter-btn" @click="searchCard">筛选</view>
     </view>
 
@@ -33,7 +38,12 @@
     </view>
 
     <view class="card-list">
-      <view v-for="value in cardViewList" :key="value.id" class="card-item" @click="goToDetail(value.id)">
+      <view
+        v-for="value in cardViewList"
+        :key="value.id"
+        class="card-item"
+        @click="goToDetail(value.id)"
+      >
         <view class="card-top">
           <view class="card-title">
             <view class="card-category">{{ value.categoryName }}</view>
@@ -42,7 +52,9 @@
               }}{{ Array.isArray(value.tags) ? value.tags.join('•') : '' }}</view
             >
           </view>
-          <view class="card-status" :class="`status-${value.status}`">{{ value.statusName ?? '新' }}</view>
+          <view class="card-status" :class="`status-${value.status}`">{{
+            value.statusName ?? '新'
+          }}</view>
         </view>
         <view class="card-question">{{ value.question }}</view>
         <view class="card-answer">{{ value.answer }}</view>
@@ -100,9 +112,7 @@ type PageOptions = {
 
 const queryParams = reactive<PageOptions>({});
 
-const isSearchResultMode = computed(() => {
-  return Boolean(queryParams.keyword?.trim());
-});
+const isSearchResultMode = ref(false);
 
 const showQuizAction = computed(() => {
   return Boolean(queryParams.categoryId) && !isSearchResultMode.value;
@@ -165,20 +175,12 @@ const goToQuizByCategory = (query: quizQuery) => {
 
 // 搜索/筛选卡片
 const searchCard = () => {
-  if (!inputKeyword.value?.trim()) {
-    uni.showToast({
-      title: '请输入搜索关键词',
-      icon: 'none',
-    });
-    return;
-  }
-
-  queryParams.keyword = inputKeyword.value.trim();
-
+  const keyword = inputKeyword.value?.trim();
+  queryParams.keyword = keyword;
   setQueryParams({
     categoryId: queryParams.categoryId,
     status: parseStatus(queryParams.status),
-    keyword: queryParams.keyword,
+    keyword: keyword ? keyword : undefined,
   });
   loadAllData();
 };
@@ -197,6 +199,9 @@ const toggleStatusFilter = (status?: CardStatus) => {
 onLoad((options) => {
   const p = parseParams(options as PageOptions);
   Object.assign(queryParams, p);
+  if (p.keyword) {
+    isSearchResultMode.value = true;
+  }
   setQueryParams(p);
 });
 
