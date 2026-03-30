@@ -14,8 +14,10 @@
             cardData?.status ? cardStatusTextMap[cardData.status] : '新'
           }}</view>
           <view class="detail-tag">
-            {{ Array.isArray(cardData?.tags) && cardData?.tags?.length > 0 ? '/ ' : '' }}
-            {{ cardData?.tags?.join('•') }}
+            {{
+              (Array.isArray(cardData?.tags) && cardData?.tags?.length > 0 ? '/ ' : '') +
+              cardData?.tags?.join('•')
+            }}
           </view>
         </view>
       </view>

@@ -150,6 +150,7 @@ function toCard(rawCard: RawCard): Card {
 
 // 默认的卡片列表，从静态数据文件加载
 const defaultCards: Card[] = (cards as RawCard[]).map((rawCard) => toCard(rawCard));
+const defaultCardById = new Map(defaultCards.map((card) => [card.id, cloneCard(card)]));
 
 // 当前的卡片列表，后续会从本地存储加载或使用默认卡片
 let cardList: Card[] = [];
@@ -162,12 +163,26 @@ function cloneCard(card: Card): Card {
   };
 }
 
+// 对已经存在于本地 storage 的旧卡片做轻量迁移：只补齐缺失的 tags，避免覆盖用户自行编辑过的数据。
+function mergeMissingCardFields(card: Card): Card {
+  const defaultCard = defaultCardById.get(card.id);
+
+  if (!defaultCard) {
+    return normalizeCard(card);
+  }
+
+  return normalizeCard({
+    ...card,
+    tags: card.tags && card.tags.length > 0 ? card.tags : defaultCard.tags,
+  });
+}
+
 // 从本地存储加载卡片列表，如果没有则使用默认卡片，并保存到本地存储
 function loadCardsFromStorage(): Card[] {
   const saved = uni.getStorageSync(CARD_STORAGE_KEY);
   if (saved) {
     const savedCards = JSON.parse(saved) as Card[];
-    const normalizedCards = savedCards.map(normalizeCard);
+    const normalizedCards = savedCards.map(mergeMissingCardFields);
     saveCardsToStorage(normalizedCards);
     return normalizedCards.map(cloneCard);
   } else {
