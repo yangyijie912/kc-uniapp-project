@@ -4,9 +4,10 @@
       <view class="hero-badge">Quiz</view>
       <view class="title">测验结果</view>
       <view class="subtitle">
-        {{ quizResult.total }} 道题，{{ quizResult.unknown }} 道不会，{{ quizResult.fuzzy }} 道模糊，{{
-          quizResult.mastered
+        {{ quizResult.total }} 道题，{{ quizResult.unknown }} 道不会，{{
+          quizResult.fuzzy
         }}
+        道模糊，{{ quizResult.mastered }}
         道掌握。
       </view>
     </view>
@@ -57,7 +58,12 @@
 
     <view class="action-row">
       <view class="action-btn action-btn-secondary" @click="toHome">返回</view>
-      <view class="action-btn action-btn-primary" @click="restartQuiz">再来一轮</view>
+      <view
+        v-if="quizOptions.type === 'freedom'"
+        class="action-btn action-btn-primary"
+        @click="restartQuiz"
+        >再来一轮</view
+      >
     </view>
   </view>
 </template>
@@ -130,7 +136,9 @@ onLoad((options) => {
   padding: 36rpx 32rpx;
   border-radius: 32rpx;
   border: 1rpx solid rgba(61, 43, 24, 0.12);
-  background: linear-gradient(135deg, rgba(255, 252, 247, 0.96), rgba(255, 247, 239, 0.9)), rgba(255, 252, 247, 0.9);
+  background:
+    linear-gradient(135deg, rgba(255, 252, 247, 0.96), rgba(255, 247, 239, 0.9)),
+    rgba(255, 252, 247, 0.9);
   box-shadow: 0 18rpx 44rpx rgba(80, 55, 25, 0.08);
 }
 
