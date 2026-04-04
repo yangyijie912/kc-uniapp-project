@@ -1,6 +1,6 @@
 import { getCategories } from './categoryService';
 import { getCards } from './cardService';
-import type { ExportData } from '@/types/exports';
+import type { ExportData } from '@/types/migration';
 
 // 导出的数据结构
 export const buildExportData = async (): Promise<ExportData> => {
@@ -40,7 +40,7 @@ export const exportToJsonH5 = async () => {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `quiz_export_${new Date()}.json`;
+  link.download = `quiz_export_${Date.now()}.json`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -48,25 +48,45 @@ export const exportToJsonH5 = async () => {
 };
 
 // 导出为 JSON 文件( app 端 )
-export const exportToJsonApp = async (json: string) => {
-  const fileName = `quiz_export_${new Date()}.json`;
+export const exportToJsonApp = (json: string) => {
+  return new Promise<void>((resolve, reject) => {
+    const fileName = `quiz_export_${Date.now()}.json`;
+    plus.io.requestFileSystem(
+      plus.io.PUBLIC_DOCUMENTS,
+      (fs) => {
+        if (!fs.root) {
+          plus.nativeUI.toast('导出失败');
+          reject(new Error('Failed to access file system'));
+          return;
+        }
+        fs.root.getFile(
+          fileName,
+          { create: true },
+          (fileEntry) => {
+            fileEntry.createWriter((writer) => {
+              writer.onwriteend = () => {
+                plus.nativeUI.toast('导出成功');
+                resolve();
+              };
 
-  plus.io.requestFileSystem(plus.io.PUBLIC_DOCUMENTS, (fs) => {
-    if (!fs.root) {
-      console.error('Failed to access file system');
-      plus.nativeUI.toast('导出失败');
-      return;
-    } else {
-      fs.root.getFile(fileName, { create: true }, (fileEntry) => {
-        fileEntry.createWriter((writer) => {
-          writer.write(json);
-          writer.onwriteend = () => {
-            plus.nativeUI.toast('导出成功');
-            // 打开文件所在目录
-            plus.runtime.openFile(fileEntry.toLocalURL());
-          };
-        });
-      });
-    }
+              writer.onerror = (error) => {
+                plus.nativeUI.toast('导出失败');
+                reject(error);
+              };
+
+              writer.write(json);
+            });
+          },
+          (error) => {
+            plus.nativeUI.toast('导出失败');
+            reject(error);
+          },
+        );
+      },
+      (error) => {
+        plus.nativeUI.toast('导出失败');
+        reject(error);
+      },
+    );
   });
 };

@@ -7,7 +7,7 @@
       <view class="action-grid">
         <view class="action-card action-card-import" @click="importData">
           <view class="action-title">数据导入</view>
-          <view class="action-desc">支持从 JSON 文件恢复卡片与分类（开发中）</view>
+          <view class="action-desc">支持从 JSON 文件恢复卡片与分类</view>
         </view>
 
         <view class="action-card action-card-export" @click="exportData">
@@ -21,12 +21,51 @@
 
 <script setup lang="ts">
 import { buildExportJson, exportToJsonApp, exportToJsonH5 } from '@/services/exportService';
+import { pickImportDataApp, pickImportDataH5, importFromJsonFile } from '@/services/importService';
 
-const importData = () => {
+function showImportResult(result: Awaited<ReturnType<typeof importFromJsonFile>>) {
+  if (result.success && result.data) {
+    const { categroryCount, cardCount } = result.data;
+    uni.showToast({
+      title: `成功导入 ${categroryCount} 个分类和 ${cardCount} 张卡片`,
+      icon: 'success',
+    });
+    return;
+  }
+
   uni.showToast({
-    title: '导入功能开发中',
+    title: result.message || '导入失败',
     icon: 'none',
   });
+}
+
+const importData = async () => {
+  try {
+    // #ifdef H5
+    {
+      const jsonStrH5 = await pickImportDataH5();
+      const importResultH5 = await importFromJsonFile(jsonStrH5);
+      showImportResult(importResultH5);
+    }
+    // #endif
+
+    // #ifdef APP-PLUS
+    {
+      uni.showLoading({ title: '导入中' });
+      const jsonStrApp = await pickImportDataApp();
+      const importResultApp = await importFromJsonFile(jsonStrApp);
+      showImportResult(importResultApp);
+      uni.hideLoading();
+    }
+    // #endif
+  } catch (e) {
+    uni.hideLoading();
+    console.error('导入失败', e);
+    uni.showToast({
+      title: e instanceof Error ? e.message : '导入失败',
+      icon: 'none',
+    });
+  }
 };
 
 const exportData = async () => {
