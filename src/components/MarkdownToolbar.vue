@@ -5,27 +5,31 @@
       <view class="content-toolbar-hint">常用格式快捷插入</view>
     </view>
     <view class="content-actions">
-      <view class="content-action action-image" @click="insertImageTemplate()">
-        <view class="content-action-icon">IMG</view>
-        <view class="content-action-text">图片</view>
-      </view>
       <view class="content-action action-code" @click="insertCodeBlock('示例代码')">
         <view class="content-action-icon">&lt;/&gt;</view>
         <view class="content-action-text">代码块</view>
       </view>
-      <view class="content-action action-list" @click="insertList()">
+      <view class="content-action action-list" @click="openContentDialog('插入列表', 'list')">
         <view class="content-action-icon">•</view>
         <view class="content-action-text">列表</view>
       </view>
-      <view class="content-action action-table" @click="insertTable()">
+      <view class="content-action action-table" @click="openContentDialog('插入表格', 'table')">
         <view class="content-action-icon">TBL</view>
         <view class="content-action-text">表格</view>
+      </view>
+      <view class="content-action action-divider" @click="insertDivider()">
+        <view class="content-action-icon">---</view>
+        <view class="content-action-text">分割线</view>
       </view>
       <view v-show="!isMore" class="content-toggle" @click="isMore = !isMore">
         <view class="content-toggle-icon">+</view>
       </view>
 
-      <view v-show="isMore" class="content-action action-heading" @click="insertHeading()">
+      <view
+        v-show="isMore"
+        class="content-action action-heading"
+        @click="openContentDialog('插入标题', 'title')"
+      >
         <view class="content-action-icon">H</view>
         <view class="content-action-text">标题</view>
       </view>
@@ -41,11 +45,10 @@
         <view class="content-action-icon">@</view>
         <view class="content-action-text">链接</view>
       </view>
-      <view v-show="isMore" class="content-action action-divider" @click="insertDivider()">
-        <view class="content-action-icon">---</view>
-        <view class="content-action-text">分割线</view>
+      <view v-show="isMore" class="content-action action-image" @click="insertImageTemplate()">
+        <view class="content-action-icon">IMG</view>
+        <view class="content-action-text">图片</view>
       </view>
-
       <view v-show="isMore" class="content-toggle content-toggle-close" @click="isMore = !isMore">
         <view class="content-toggle-icon">−</view>
       </view>
@@ -62,12 +65,112 @@
       auto-height
     />
   </view>
+
+  <BaseDialog
+    :open="dialogState.visible"
+    :title="dialogState.title"
+    @confirm="onContentConfirm"
+    @close="closeContentDialog"
+  >
+    <view class="dialog-config">
+      <view v-if="dialogState.type === 'table'" class="dialog-section">
+        <view class="dialog-section-tip">设置表格的行列数，确认后会自动插入模板。</view>
+        <view class="dialog-field-row">
+          <view class="dialog-field">
+            <view class="dialog-field-label">行数</view>
+            <input
+              class="dialog-field-input"
+              type="number"
+              :value="tableRows"
+              placeholder="默认 3 行"
+              placeholder-class="dialog-input-placeholder"
+              @input="onTableRowsInput"
+            />
+          </view>
+          <view class="dialog-field">
+            <view class="dialog-field-label">列数</view>
+            <input
+              class="dialog-field-input"
+              type="number"
+              :value="tableColumns"
+              placeholder="默认 3 列"
+              placeholder-class="dialog-input-placeholder"
+              @input="onTableColumnsInput"
+            />
+          </view>
+        </view>
+      </view>
+
+      <view v-if="dialogState.type === 'title'" class="dialog-section">
+        <view class="dialog-section-tip">选择标题级别后，确认会插入对应层级的 Markdown 标题。</view>
+        <view class="chip-grid chip-grid-title">
+          <view
+            v-for="level in titleLevels"
+            :key="level.value"
+            class="dialog-chip"
+            :class="{ active: titleLevel === level.value }"
+            @click="titleLevel = level.value"
+          >
+            {{ level.label }}
+          </view>
+        </view>
+      </view>
+
+      <view v-if="dialogState.type === 'list'" class="dialog-section">
+        <view class="dialog-section-tip">选择列表类型后，确认将快速插入对应列表模板。</view>
+        <view class="chip-grid chip-grid-list">
+          <view
+            class="dialog-chip"
+            :class="{ active: listType === 'unordered' }"
+            @click="listType = 'unordered'"
+          >
+            无序列表
+          </view>
+          <view
+            class="dialog-chip"
+            :class="{ active: listType === 'ordered' }"
+            @click="listType = 'ordered'"
+          >
+            有序列表
+          </view>
+        </view>
+      </view>
+    </view>
+  </BaseDialog>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { reactive, ref, watch } from 'vue';
+import BaseDialog from './BaseDialog.vue';
+
+type DialogType = 'table' | 'title' | 'list' | null;
+type ListType = 'ordered' | 'unordered';
+
+const titleLevels = [
+  { label: '一级标题', value: 1 },
+  { label: '二级标题', value: 2 },
+  { label: '三级标题', value: 3 },
+  { label: '四级标题', value: 4 },
+  { label: '五级标题', value: 5 },
+  { label: '六级标题', value: 6 },
+] as const;
 
 const isMore = ref(false);
+
+const tableRows = ref<number>(3);
+const tableColumns = ref<number>(3);
+const titleLevel = ref<number>(1);
+const listType = ref<ListType>('unordered');
+
+const dialogState = reactive<{
+  visible: boolean;
+  title: string;
+  type: DialogType;
+}>({
+  visible: false,
+  title: '标题',
+  type: null,
+});
 
 // 维护光标位置，确保插入内容后光标能正确定位
 const cursorPosition = ref(0);
@@ -93,7 +196,8 @@ watch(
 );
 
 const onInput = (event: Event | { detail?: { value?: string; cursor?: number } }) => {
-  const eventTarget = 'target' in event && event.target instanceof HTMLTextAreaElement ? event.target : undefined;
+  const eventTarget =
+    'target' in event && event.target instanceof HTMLTextAreaElement ? event.target : undefined;
   const eventDetail = 'detail' in event ? event.detail : undefined;
   const value = eventDetail?.value ?? eventTarget?.value ?? '';
 
@@ -116,7 +220,8 @@ const onBlur = (event: Event | { detail?: { value?: string; cursor?: number } })
     return;
   }
 
-  const eventTarget = 'target' in event && event.target instanceof HTMLTextAreaElement ? event.target : undefined;
+  const eventTarget =
+    'target' in event && event.target instanceof HTMLTextAreaElement ? event.target : undefined;
   const eventDetail = 'detail' in event ? event.detail : undefined;
   const value = eventDetail?.value ?? eventTarget?.value ?? '';
   const pos = eventDetail?.cursor ?? eventTarget?.selectionStart ?? value.length;
@@ -135,7 +240,7 @@ function appendContent(text: string) {
 }
 
 // 插入标题
-function insertHeading(level = 1, text = '一级标题') {
+function insertHeading(level = 1, text = '默认标题') {
   appendContent(`${'#'.repeat(level)} ${text}`);
 }
 
@@ -150,7 +255,11 @@ function insertQuote(text = '在这里写引用内容') {
 }
 
 // 插入列表
-function insertList() {
+function insertList(type: ListType = 'unordered') {
+  if (type === 'ordered') {
+    appendContent('1. 第一项\n2. 第二项\n3. 第三项');
+    return;
+  }
   appendContent('- 第一项\n- 第二项\n- 第三项');
 }
 
@@ -201,6 +310,66 @@ function insertDivider() {
 function insertImageTemplate() {
   appendContent('![图片描述](https://example.com/image.jpg)');
 }
+
+// 打开内容编辑对话框
+function openContentDialog(title: string, type: DialogType = null) {
+  dialogState.title = title;
+  dialogState.type = type;
+
+  // 每次打开都回到默认值
+  if (type === 'table') {
+    tableRows.value = 3;
+    tableColumns.value = 3;
+  } else if (type === 'title') {
+    titleLevel.value = 1;
+  } else if (type === 'list') {
+    listType.value = 'unordered';
+  }
+
+  dialogState.visible = true;
+}
+
+// 关闭内容编辑对话框
+function closeContentDialog() {
+  dialogState.visible = false;
+}
+
+// 根据对话框类型确认插入内容
+function onContentConfirm() {
+  switch (dialogState.type) {
+    case 'table':
+      insertTable(tableRows.value, tableColumns.value);
+      break;
+    case 'title':
+      insertHeading(
+        titleLevel.value,
+        titleLevels.find((l) => l.value === titleLevel.value)?.label ?? '默认标题',
+      );
+      break;
+    case 'list':
+      insertList(listType.value);
+      break;
+    default:
+      break;
+  }
+  closeContentDialog();
+}
+
+const onTableRowsInput = (event: Event | { detail?: { value?: string } }) => {
+  const detailValue = 'detail' in event ? event.detail?.value : undefined;
+  const targetValue =
+    'target' in event && event.target instanceof HTMLInputElement ? event.target.value : undefined;
+  const numericValue = Number.parseInt(detailValue ?? targetValue ?? '', 10);
+  tableRows.value = Number.isFinite(numericValue) && numericValue > 0 ? numericValue : 3;
+};
+
+const onTableColumnsInput = (event: Event | { detail?: { value?: string } }) => {
+  const detailValue = 'detail' in event ? event.detail?.value : undefined;
+  const targetValue =
+    'target' in event && event.target instanceof HTMLInputElement ? event.target.value : undefined;
+  const numericValue = Number.parseInt(detailValue ?? targetValue ?? '', 10);
+  tableColumns.value = Number.isFinite(numericValue) && numericValue > 0 ? numericValue : 3;
+};
 </script>
 <style lang="css" scoped>
 .content-toolbar {
@@ -385,5 +554,106 @@ function insertImageTemplate() {
 .input-placeholder {
   color: #9d9487;
   font-size: 28rpx;
+}
+
+.dialog-config {
+  display: flex;
+  flex-direction: column;
+  gap: 22rpx;
+}
+
+.dialog-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.dialog-section-tip {
+  color: #6c645a;
+  font-size: 24rpx;
+  line-height: 1.7;
+}
+
+.dialog-field-row {
+  display: flex;
+  gap: 16rpx;
+}
+
+.dialog-field {
+  flex: 1;
+}
+
+.dialog-field-label {
+  margin-bottom: 10rpx;
+  color: #3c342c;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+.dialog-field-input {
+  width: 100%;
+  height: 84rpx;
+  padding: 0 20rpx;
+  border-radius: 18rpx;
+  border: 1rpx solid rgba(61, 43, 24, 0.1);
+  background: rgba(255, 255, 255, 0.86);
+  color: #1e1c18;
+  font-size: 28rpx;
+  box-sizing: border-box;
+}
+
+.dialog-input-placeholder {
+  color: #9d9487;
+  font-size: 26rpx;
+}
+
+.chip-grid {
+  display: grid;
+  flex-wrap: wrap;
+  gap: 10rpx;
+}
+
+.chip-grid-title {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.chip-grid-list {
+  grid-template-columns: repeat(1, 1fr);
+}
+
+.dialog-chip {
+  min-height: 70rpx;
+  padding: 0 18rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18rpx;
+  border: 1rpx solid rgba(61, 43, 24, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+  color: #6c645a;
+  font-size: 24rpx;
+  font-weight: 600;
+  box-sizing: border-box;
+}
+
+.dialog-chip.active {
+  border-color: rgba(31, 94, 255, 0.18);
+  background: linear-gradient(135deg, rgba(18, 122, 114, 0.12), rgba(31, 94, 255, 0.12));
+  color: #1f5eff;
+}
+
+.dialog-chip:active {
+  transform: scale(0.98);
+  opacity: 0.92;
+}
+
+@media (max-width: 360px) {
+  .dialog-field-row {
+    flex-direction: column;
+  }
+
+  .content-action {
+    min-width: 74rpx;
+  }
 }
 </style>
