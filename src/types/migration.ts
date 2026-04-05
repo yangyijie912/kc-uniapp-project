@@ -18,6 +18,7 @@ export interface ImportData {
 }
 
 export interface ImportResult {
-  categroryCount: number;
+  categoryCount: number;
+  categoryViewCount: number;
   cardCount: number;
 }

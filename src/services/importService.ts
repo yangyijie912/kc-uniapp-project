@@ -2,7 +2,7 @@ import { getCategories, saveAllCategories } from './categoryService';
 import { getCards, saveAllCards } from './cardService';
 import { fail, success } from './serviceHelper';
 import { generateUUID } from '@/utils/uuid';
-import { UNCATEGORIZED_ID } from '@/constants/category';
+import { UNCATEGORIZED_ID, UNCATEGORIZED_NAME } from '@/constants/category';
 import type { ImportData, ImportResult } from '@/types/migration';
 import type { RawCard, Card, Category } from '@/types/card';
 import type { ServiceResult } from '@/types/service';
@@ -245,6 +245,12 @@ function mergeCategories(
       continue; // 跳过名称为空的分类
     }
 
+    // 未分类是系统保留分类，直接跳过
+    if (importedId === UNCATEGORIZED_ID || importedName === UNCATEGORIZED_NAME) {
+      importedCategoryMap.set(importedId, UNCATEGORIZED_ID); // 无论ID还是名称匹配，都映射到系统的未分类ID
+      continue;
+    }
+
     const nameMatch = nameMap.get(importedName);
     const idMatch = idMap.get(importedId);
 
@@ -293,12 +299,12 @@ function transformImportedCategoryId(rawCard: RawCard, mergeResult: MergeCategor
   const rawCategoryName = rawCard.category?.trim();
   const rawCategoryId = rawCard.categoryId;
 
-  // 1. 如果卡片的 categoryId 在导入分类ID映射中，说明这个分类在合并后被保留或新建了，直接使用映射后的系统分类ID
+  // 1、如果卡片的 categoryId 在导入分类ID映射中，说明这个分类在合并后被保留或新建了，直接使用映射后的系统分类ID
   if (rawCategoryId && importedCategoryMap.has(rawCategoryId)) {
     return importedCategoryMap.get(rawCategoryId)!;
   }
 
-  // 2. 按原始卡片名称获取匹配的分类，优先按名称匹配
+  // 2、按原始卡片名称获取匹配的分类，优先按名称匹配
   if (rawCategoryName) {
     const matched = mergedCategories.find((category) => category.name === rawCategoryName);
     if (matched) {
@@ -306,7 +312,7 @@ function transformImportedCategoryId(rawCard: RawCard, mergeResult: MergeCategor
     }
   }
 
-  // 3. 其余情况，返回未分类
+  // 3、其余情况，返回未分类
   return UNCATEGORIZED_ID;
 }
 
@@ -351,16 +357,16 @@ function mergeCards(
 // 最终导入流程
 export async function importFromJsonFile(jsonStr: string): Promise<ServiceResult<ImportResult>> {
   try {
-    //解析数据
+    // 1、解析数据
     const importData = parseImportData(jsonStr);
-    // 2. 获取当前系统数据
+    // 2、获取当前系统数据
     const currentCategories = getCategories().data || [];
     const currentCards = getCards().data || [];
-    // 3. 合并分类和卡片数据，并处理分类ID映射关系
+    // 3、合并分类和卡片数据，并处理分类ID映射关系
     const mergeResult = mergeCategories(importData.categories, currentCategories);
     const mergedCategories = mergeResult.mergedCategories;
     const mergedCards = mergeCards(importData.cards, currentCards, mergeResult);
-    // 4. 批量保存合并后的分类和卡片
+    // 4、批量保存合并后的分类和卡片
     const cardRes = saveAllCards(mergedCards);
     if (!cardRes.success) {
       return fail(cardRes.message || '导入卡片失败');
@@ -369,12 +375,25 @@ export async function importFromJsonFile(jsonStr: string): Promise<ServiceResult
     if (!categoryRes.success) {
       return fail(categoryRes.message || '导入分类失败');
     }
-    // 5. 返回导入结果
+    // 5、返回导入结果
     return success({
-      categroryCount: mergedCategories.length,
+      categoryCount: mergedCategories.length,
+      categoryViewCount: getVisibleCategoryCount(mergedCategories, mergedCards),
       cardCount: mergedCards.length,
     });
   } catch (error: unknown) {
     return fail(error instanceof Error ? error.message : '导入失败');
   }
+}
+
+// 未分类处理：如果导入的卡片数据没有未分类，categoryCount不计算未分类，有则计算
+function getVisibleCategoryCount(categories: Category[], cards: Card[]): number {
+  // 判断是否有未分类的卡片
+  const hasUncategorizedCards = cards.some((card) => card.categoryId === UNCATEGORIZED_ID);
+  return categories.filter((cat) => {
+    if (cat.id === UNCATEGORIZED_ID) {
+      return hasUncategorizedCards; // 只有当有未分类卡片时，才显示未分类
+    }
+    return true; // 其他分类正常显示
+  }).length;
 }

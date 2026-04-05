@@ -25,9 +25,9 @@ import { pickImportDataApp, pickImportDataH5, importFromJsonFile } from '@/servi
 
 function showImportResult(result: Awaited<ReturnType<typeof importFromJsonFile>>) {
   if (result.success && result.data) {
-    const { categroryCount, cardCount } = result.data;
+    const { categoryViewCount, cardCount } = result.data;
     uni.showToast({
-      title: `成功导入 ${categroryCount} 个分类和 ${cardCount} 张卡片`,
+      title: `成功导入 ${categoryViewCount} 个分类和 ${cardCount} 张卡片`,
       icon: 'success',
     });
     return;

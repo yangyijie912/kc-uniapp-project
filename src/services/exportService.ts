@@ -40,7 +40,7 @@ export const exportToJsonH5 = async () => {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `quiz_export_${Date.now()}.json`;
+  link.download = `export_${Date.now()}.json`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -50,7 +50,7 @@ export const exportToJsonH5 = async () => {
 // 导出为 JSON 文件( app 端 )
 export const exportToJsonApp = (json: string) => {
   return new Promise<void>((resolve, reject) => {
-    const fileName = `quiz_export_${Date.now()}.json`;
+    const fileName = `export_${Date.now()}.json`;
     plus.io.requestFileSystem(
       plus.io.PUBLIC_DOCUMENTS,
       (fs) => {

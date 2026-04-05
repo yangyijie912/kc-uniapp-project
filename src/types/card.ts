@@ -4,6 +4,7 @@ export interface Category {
   id: string;
   name: string;
   sort: number;
+  isSystem?: boolean;
 }
 
 // 定义一个类型来表示原始的卡片数据结构
