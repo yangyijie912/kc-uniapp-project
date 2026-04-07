@@ -1,70 +1,77 @@
 <template>
   <view class="page">
-    <view v-if="!isSearchResultMode" class="toolbar">
-      <input
-        v-model="inputKeyword"
-        class="search-input"
-        placeholder="搜索问题或答案"
-        placeholder-class="placeholder"
-      />
-      <view class="filter-btn" @click="searchCard">筛选</view>
-    </view>
-
-    <view v-if="isSearchResultMode" class="result-banner">
-      <view class="result-title">搜索结果</view>
-      <view class="result-keyword">关键词：{{ queryParams.keyword }}</view>
-    </view>
-
-    <view v-if="!isSearchResultMode" class="filter-row">
-      <view class="filter-status">
-        <view
-          v-for="value in statusTabs"
-          :key="value.value"
-          class="filter-chip"
-          :class="{ active: queryParams.status === value.value }"
-          @click="toggleStatusFilter(value.value)"
-          >{{ value.label }}</view
-        >
+    <scroll-view class="page-scroll" scroll-y @scrolltolower="handleScrollToLower">
+      <view v-if="!isSearchResultMode" class="toolbar">
+        <input
+          v-model="inputKeyword"
+          class="search-input"
+          placeholder="搜索问题或答案"
+          placeholder-class="placeholder"
+        />
+        <view class="filter-btn" @click="searchCard">筛选</view>
       </view>
 
-      <view class="page-actions">
-        <view v-if="showQuizAction" class="action-tool quiz-btn" @click="openQuizSetup">
-          <text class="action-tool-icon">▷</text>
-        </view>
-        <view class="action-tool add-btn" @click="goToAddCard">
-          <text class="action-tool-icon">+</text>
-        </view>
+      <view v-if="isSearchResultMode" class="result-banner">
+        <view class="result-title">搜索结果</view>
+        <view class="result-keyword">关键词：{{ queryParams.keyword }}</view>
       </view>
-    </view>
 
-    <view class="card-list">
-      <view
-        v-for="value in cardViewList"
-        :key="value.id"
-        class="card-item"
-        @click="goToDetail(value.id)"
-      >
-        <view class="card-top">
-          <view class="card-title">
-            <view class="card-category">{{ value.categoryName }}</view>
-            <view class="card-tag">
-              {{ Array.isArray(value.tags) && value.tags.length > 0 ? '/ ' : ''
-              }}{{ Array.isArray(value.tags) ? value.tags.join('•') : '' }}</view
-            >
+      <view v-if="!isSearchResultMode" class="filter-row">
+        <view class="filter-status">
+          <view
+            v-for="value in statusTabs"
+            :key="value.value"
+            class="filter-chip"
+            :class="{ active: queryParams.status === value.value }"
+            @click="toggleStatusFilter(value.value)"
+            >{{ value.label }}</view
+          >
+        </view>
+
+        <view class="page-actions">
+          <view v-if="showQuizAction" class="action-tool quiz-btn" @click="openQuizSetup">
+            <text class="action-tool-icon">▷</text>
           </view>
-          <view class="card-status" :class="`status-${value.status}`">{{
-            value.statusName ?? '新'
-          }}</view>
+          <view class="action-tool add-btn" @click="goToAddCard">
+            <text class="action-tool-icon">+</text>
+          </view>
         </view>
-        <view class="card-question">{{ value.question }}</view>
-        <view class="card-answer">{{ value.answer }}</view>
       </view>
 
-      <view v-if="cardViewList.length === 0" class="result-banner">
-        <view class="result-title">没有找到相关卡片</view>
-        <view class="result-keyword">试试调整搜索关键词或筛选条件？</view>
+      <view class="card-list">
+        <view
+          v-for="value in cardViewList"
+          :key="value.id"
+          class="card-item"
+          @click="goToDetail(value.id)"
+        >
+          <view class="card-top">
+            <view class="card-title">
+              <view class="card-category">{{ value.categoryName }}</view>
+              <view class="card-tag">
+                {{ Array.isArray(value.tags) && value.tags.length > 0 ? '/ ' : ''
+                }}{{ Array.isArray(value.tags) ? value.tags.join('•') : '' }}</view
+              >
+            </view>
+            <view class="card-status" :class="`status-${value.status}`">{{
+              value.statusName ?? '新'
+            }}</view>
+          </view>
+          <view class="card-question">{{ value.question }}</view>
+          <view class="card-answer">{{ value.answer }}</view>
+        </view>
+
+        <view v-if="cardViewList.length === 0" class="result-banner">
+          <view class="result-title">没有找到相关卡片</view>
+          <view class="result-keyword">试试调整搜索关键词或筛选条件？</view>
+        </view>
       </view>
-    </view>
+
+      <view v-if="cardViewList.length > 0" class="list-footer">
+        <view v-if="loading" class="list-footer-text is-loading">正在加载更多...</view>
+        <view v-else-if="!hasMore" class="list-footer-text">没有更多了</view>
+      </view>
+    </scroll-view>
 
     <QuizSetupSheet
       :open="showQuizSetup"
@@ -84,7 +91,8 @@ import QuizSetupSheet from '@/components/QuizSetupSheet.vue';
 import type { CardStatus } from '@/types/card';
 import type { quizQuery } from '@/types/quiz';
 
-const { cardViewList, loadAllData, setQueryParams } = useCardListView();
+const { cardViewList, loading, hasMore, loadAllData, setQueryParams, loadNextPage } =
+  useCardListView();
 
 const inputKeyword = ref('');
 const showQuizSetup = ref(false);
@@ -173,6 +181,12 @@ const goToQuizByCategory = (query: quizQuery) => {
   });
 };
 
+const handleScrollToLower = () => {
+  if (!loading.value && hasMore.value) {
+    loadNextPage();
+  }
+};
+
 // 搜索/筛选卡片
 const searchCard = () => {
   const keyword = inputKeyword.value?.trim();
@@ -181,6 +195,7 @@ const searchCard = () => {
     categoryId: queryParams.categoryId,
     status: parseStatus(queryParams.status),
     keyword: keyword ? keyword : undefined,
+    page: 1,
   });
   loadAllData();
 };
@@ -192,6 +207,7 @@ const toggleStatusFilter = (status?: CardStatus) => {
     categoryId: queryParams.categoryId,
     keyword: queryParams.keyword,
     status,
+    page: 1,
   });
   loadAllData();
 };
@@ -212,9 +228,14 @@ onShow(() => {
 
 <style scoped>
 .page {
+  height: 100vh;
   padding: 24rpx 28rpx 48rpx;
   box-sizing: border-box;
   background: linear-gradient(180deg, #f8f2e8 0%, #efe5d5 100%);
+}
+
+.page-scroll {
+  height: 100%;
 }
 
 .toolbar {
@@ -343,6 +364,27 @@ onShow(() => {
   display: flex;
   flex-direction: column;
   gap: 18rpx;
+}
+
+.list-footer {
+  padding: 20rpx 0 8rpx;
+  display: flex;
+  justify-content: center;
+}
+
+.list-footer-text {
+  padding: 10rpx 22rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 252, 247, 0.88);
+  border: 1rpx solid rgba(61, 43, 24, 0.1);
+  color: #6c645a;
+  font-size: 24rpx;
+  box-shadow: 0 10rpx 24rpx rgba(80, 55, 25, 0.05);
+}
+
+.list-footer-text.is-loading {
+  color: #1f5eff;
+  background: rgba(31, 94, 255, 0.08);
 }
 
 .card-item {

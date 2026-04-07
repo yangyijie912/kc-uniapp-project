@@ -12,7 +12,7 @@ export default function useCategoryView() {
   function loadCards() {
     const res = getCards();
     if (res.success && res.data) {
-      cardList.value = res.data;
+      cardList.value = res.data.list;
     } else {
       cardList.value = [];
       uni.showToast({
