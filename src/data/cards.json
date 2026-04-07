@@ -1,306 +1,1417 @@
 [
   {
     "id": "1",
-    "category": "Vue",
-    "question": "Vue是什么？",
+    "category": "浏览器",
+    "question": "浏览器渲染流程？",
     "answer": "待补充",
-    "content": "Vue是一个渐进式框架，基于标准 HTML、CSS 和 JavaScript 构建，并提供了一套声明式的、组件化的编程模型。Vue 有两个核心功能：\n(1)声明式渲染：Vue 基于标准 HTML 拓展了一套模板语法\n(2)响应式：Vue 会自动跟踪 JavaScript 状态并在其发生变化时响应式地更新 DOM",
-    "tags": [
-      "响应式原理"
-    ]
+    "content": "从输入 URL 到页面显示，核心流程是：\n（1）HTML 解析 → 构建 DOM，生成节点树\n（2）CSS 解析 → 构建 CSSOM，生成样式规则树\n（3）合成 Render Tree（只包含“可见节点”，比如 display: none 不会进 Render Tree）\n（4）Layout（布局）\n（5）Paint（绘制）\n（6）Composite（合成）\n简化版：\n浏览器渲染分三阶段：\nLayout（布局）、Paint（绘制）、Composite（合成）"
   },
   {
     "id": "2",
-    "category": "Vue",
-    "question": "Vue和React的区别？",
+    "category": "浏览器",
+    "question": "怎么理解回流（重排）和重绘？",
     "answer": "待补充",
-    "content": "相同点：\n(1)都是组件化思想\n(2)都有Virtual DOM（虚拟dom）这个概念\n(3)数据驱动视图，开发时只需要关注数据的变化\n(4)都提倡单向数据流\n不同点：\n(1)核心思想不同。React推崇函数式编程（纯组件），数据不可变以及单向数据流。Vue是以数据可变的、细粒度的响应性系统为基础，属性可直接修改，它对侦测数据的变化更敏感、更精确。\n(2)对于视图描述这块，它们的方案不一样。React用的是jsx，可以直接用 js 来写逻辑。Vue基于标准 HTML 拓展了一套模板语法vue template。\n(3) diff算法不同。react主要使用diff队列保存需要更新哪些DOM，得到patch树，再统一操作批量更新DOM。Vue 使用双向指针，边对比，边更新DOM。\n(4)响应式原理不同。React是在state和props的值改变后通过diff算法算出更改的部分，再渲染页面，Vue2是通过Object.defineProperty()来劫持各个属性的setter，getter，在数据变动时发布消息给订阅者，触发相应的监听回调。Vue3用的是Proxy。\n拓展：\n(1)vue template 是受限制的，只能访问 data，prop、method，可以静态的分析和优化，而 react 的 jsx 因为直接是 js 的语法，动态逻辑比较多，没法静态的做分析和优化。\n(2)react的jsx本来就是和 js 同一个上下文，结合 typescript 就很自然。但是vue template和 js 上下文割裂开来，引入 typescript 做类型推导的时候就比较困难，需要单独把所有 prop、method、data 的类型声明一遍才行。",
-    "tags": [
-      "响应式原理"
-    ]
+    "content": "在HTML中，每个元素都可以理解成一个盒子，在浏览器解析过程中，会涉及到回流与重绘：\n回流：当渲染树中部分或者全部元素的尺寸、结构或者属性发生变化时，浏览器会重新渲染部分或者全部文档的过程就称为回流。比如：改宽高、改字体大小、改 margin / padding、改元素位置、添加删除 DOM。重排一定会导致重绘。\n重绘：当页面中某些元素的样式发生变化，但是不会影响其在文档流中的位置时，浏览器就会对元素进行重新绘制，这个过程就是重绘。只改变视觉样式，不影响布局。比如：改 color、改 background、改 visibility。\n简单来说，元素颜色的改变等会触发重绘，位置和布局的改变就会触发回流。触发回流一定会触发重绘，回流会消耗更多的浏览器性能（操作DOM性能变低就是因为触发了回流）。在触发回流（重排）的时候，由于浏览器渲染页面是基于流式布局的，所以当触发回流时，会导致周围的 DOM 元素重新排列，有全局渲染和局部渲染。\n优化方式："
   },
   {
     "id": "3",
-    "category": "Vue",
-    "question": "都运用了虚拟DOM，React和Vue有什么区别？",
-    "answer": "待补充",
-    "content": "React：重新渲染 + diff\nVue：依赖追踪 + 精确更新\n两者都有 虚拟 DOM 和 diff，但触发更新的方式完全不同。\nReact 的思路是：\nstate 改变 -> 组件函数重新执行 -> 生成新的 virtual DOM -> diff -> 更新真实 DOM\n所以 React 的特点是：组件级重新执行。它不知道哪个变量影响哪个节点，所以选择重新算一遍再diff。\n再看 Vue 的更新模型：\nVue 有一个核心东西叫：响应式系统。它会做一件事：依赖收集。\n流程是：数据变化 -> 找到依赖 -> 更新对应组件\nReact 的 diff：组件重新 render -> VDOM diff\nVue 的 diff：只在依赖触发时 diff ，所以 Vue 的更新范围通常更小。",
-    "tags": [
-      "响应式原理"
-    ]
+    "category": "浏览器",
+    "question": "JS 和CSS 为什么会阻塞渲染？ 如何避免？",
+    "answer": "待补充"
   },
   {
     "id": "4",
-    "category": "Vue",
-    "question": "Vue2和Vue3的响应式数据原理分别是什么？",
+    "category": "浏览器",
+    "question": "一个经典问题：什么建议把 JS 放在 body 底部？",
     "answer": "待补充",
-    "content": "Vue2用的是Object.defineProperty，通过set和get重新定义和修改属性，属性变化会通知相关依赖进行更新操作。\n缺点：\n(1)检测不到对象属性的添加和删除\n(2)数组API方法无法监听到\n(3)需要对每个属性进行遍历监听，如果嵌套对象，需要深层监听，造成性能问题。\nVue3用的Proxy，Proxy 是 ES6 中提供的功能，其作用为：实现基本操作的拦截和自定义（如属性查找、赋值、枚举、函数调用等）。可以监听整个对象。",
-    "tags": [
-      "还有一个很经典的区别是列表diff。"
-    ]
+    "content": "答案：避免阻塞 HTML 解析，提高首屏渲染速度。"
   },
   {
     "id": "5",
-    "category": "Vue",
-    "question": "为什么vue2中对象添加新属性不会刷新页面？",
+    "category": "浏览器",
+    "question": "浏览器里的事件循环？",
     "answer": "待补充",
-    "content": "vue2是用过Object.defineProperty实现数据响应式，最开始的对象属性被设置成响应式数据，后面新加的属性无法触发事件属性的拦截变成响应式数据。\n解决方式：Vue.set()、Object.assign()、$forcecUpdated()",
-    "tags": [
-      "还有一个很经典的区别是列表diff。"
-    ]
+    "content": "浏览器中：JS 主线程负责执行代码，渲染在同一线程，每一帧大约 16ms（60fps）。渲染不会发生在 JS 执行过程中。只有当 JS 执行完，浏览器才会进行渲染。"
   },
   {
     "id": "6",
-    "category": "Vue",
-    "question": "Vue3 的 reactive / ref 区别",
+    "category": "浏览器",
+    "question": "谈谈对浏览器内核的理解？",
     "answer": "待补充",
-    "content": "都可以用来声明响应式状态，reactive 用于创建对象的响应式数据，而 ref 用于创建基本类型的响应式数据。因为 Proxy 只能代理对象，无法直接代理基本类型，所以 Vue3 使用 ref 通过 value 属性包装基本类型实现响应式。为什么模板又不用 .value，因为Vue 在 template 里会自动帮你解包，这就是ref auto unwrapping（ref自动解包）。\nreactive() API 有一些局限性：\n(1)、声明的值类型有限，它只能用于对象类型 (对象、数组和如 Map、Set 这样的集合类型)，不能持有如 string、number 或 boolean 这样的原始类型。\n(2)、不能替换整个对象。state = reactive({ count: 1 })会导致丢失响应性连接，应该写成state.count = 1;\n(3)、对解构操作不友好。对属性进行解构操作也会丢失响应性连接。\nconst user = reactive({\nage: 18",
-    "tags": [
-      "还有一个很经典的区别是列表diff。"
-    ]
+    "content": "主要分为两部分：渲染引擎和JS引擎\n渲染引擎负责渲染，JS引擎负责解析和执行JavaScript代码\n后面JS引擎越来越独立，内核就只倾向于表示渲染引擎。"
   },
   {
     "id": "7",
-    "category": "Vue",
-    "question": "Vue 的双向绑定是怎么实现的？",
-    "answer": "待补充",
-    "content": "Vue 的双向绑定是通过 v-model 实现的，本质上是数据绑定和事件监听的结合。数据变化会更新视图，而用户输入时通过事件修改数据，从而实现数据和视图的同步。\n注意：Vue 的数据流是单向的，v-model 本质是 value 绑定和 input 事件的语法糖（或者说本质是 props 和 emit 的语法糖），通过事件修改数据，从而形成类似双向绑定的效果。Vue2 默认使用 value 和 input 事件，Vue3 改为 modelValue 和 update:modelValue，从而支持多个 v-model。",
-    "tags": [
-      "这里 响应式会丢失。"
-    ]
+    "category": "浏览器",
+    "question": "主流浏览器内核是什么？",
+    "answer": "待补充"
   },
   {
     "id": "8",
-    "category": "Vue",
-    "question": "created / mounted 区别",
+    "category": "浏览器",
+    "question": "一个页面从输入URL到页面加载显示完成，这个过程中发生了什么？",
     "answer": "待补充",
-    "content": "created：数据已经初始化完成，可以访问 data、methods、computed 等，但DOM还没渲染，常见用途是初始化数据、发请求。\nmounted：组件已经完成渲染，DOM 已经挂载到页面。常见用途：操作 DOM、获取元素尺寸、初始化第三方库。\n如果数据不依赖DOM，Vue2请求接口可以在created也可以在mounted，但是服务端渲染不支持mounted，这时候要放在created。放在mounted请求有可能导致页面闪动（页面dom结构已经生成），但如果在页面加载前完成则不会，出现此情况建议：放在created生命周期当中。Vue3推荐onMounted，不要放在setup。",
-    "tags": [
-      "的生命周期"
-    ]
+    "content": "(1)、DNS解析；\n(2)、建立TCP连接；（如果是 HTTP： TCP 三次握手。如果是 HTTPS： TCP + TLS 握手。HTTPS 比 HTTP 多一步加密协商）\n(3)、发送HTTP请求；（带请求头：Host、Cookie、User-Agent、If-None-Match 等）\n(4)、服务器处理并响应请求；（返回状态码）\n(5)、浏览器浏览器开始解析 HTML、渲染并展示页面。"
   },
   {
     "id": "9",
-    "category": "Vue",
-    "question": "updated / beforeUpdate 的区别",
+    "category": "浏览器",
+    "question": "HTTP 和 HTTPS 的区别？",
     "answer": "待补充",
-    "content": "beforeUpdate：数据更新了，但 DOM 还没更新。\nupdated：DOM 已经更新完成。一般不建议在 updated 里再修改数据，可能造成无限更新循环。",
-    "tags": [
-      "的生命周期"
-    ]
+    "content": "HTTP是超文本运输协议，是实现网络通信的一种规范。HTTPS是HTTP协议的安全版本，HTTP协议的数据传输是明文的，是不安全的，HTTPS使用了SSL/TLS协议进行了加密处理，相对更安全。HTTPS 由于需要设计加密以及多次握手，性能方面不如 HTTP。（现在性能和速度其实也没差那么大了）"
   },
   {
     "id": "10",
-    "category": "Vue",
-    "question": "setup是什么？",
+    "category": "浏览器",
+    "question": "http状态码有哪些？",
     "answer": "待补充",
-    "content": "setup 是 Vue3 Composition API 的入口函数，在组件创建时执行。开发者可以在里面声明响应式状态、计算属性、监听以及生命周期，并将需要暴露给模板的数据 return 出去。\nsetup 执行时机：setup → beforeCreate → created\n也就是说：setup 比 Vue2 生命周期还早。\n所以在 setup 里 没有 this，因为组件实例还没创建。这也是 Vue3 不再推荐 this.xxx 的原因。",
-    "tags": [
-      "的生命周期"
-    ]
+    "content": "1xx，信息\n2xx，成功\n200：请求成功\n201：请求成功同时新的资源被创建\n3xx，重定向\n302：所请求的页面已经临时转移至新的url\n4xx，客户端错误\n400：服务器未能理解请求或是请求参数有误\n404：请求的资源不存在\n5xx，服务器错误\n500：内部服务器错误"
   },
   {
     "id": "11",
-    "category": "Vue",
-    "question": "说说keep-alive？",
+    "category": "浏览器",
+    "question": "web开发中会话跟踪的方法有哪些？",
     "answer": "待补充",
-    "content": "keep-alive 用于缓存组件实例，避免组件被销毁。当组件被缓存时不会触发 destroy 生命周期，而是触发 activated 和 deactivated（Vue3对应onActivated、onDeactivated）。常用于路由页面缓存，比如列表页返回时保留状态和滚动位置。",
-    "tags": [
-      "的生命周期"
-    ]
+    "content": "会话跟踪：主要解决HTTP的无状态问题。当用户在同一网站的多个页面之间转换时，根本无法确定是否是同一个客户，会话跟踪技术就可以解决这个问题。当一个客户在多个页面间切换时，服务器会保存该用户的信息。"
   },
   {
     "id": "12",
-    "category": "Vue",
-    "question": "keep-alive 缓存的组件，第一次进入页面会触发 mounted 还是 activated？",
+    "category": "浏览器",
+    "question": "对浏览器缓存机制的理解？",
     "answer": "待补充",
-    "content": "答：mounted\nkeep-alive 会缓存组件实例，当组件切换时不会销毁，而是进入 activated 和 deactivated 状态。默认会缓存访问过的组件，但可以通过 include、exclude、max 控制缓存策略。\nerrorCaptured？（onErrorCaptured）\nVue 提供 errorCaptured 生命周期用于捕获子组件运行时错误，常用于错误监控或降级处理。如果返回 false，可以阻止错误继续向父组件传播。\n触发时机：当子组件发生错误时，父组件的 errorCaptured 会被触发。",
-    "tags": [
-      "的生命周期"
-    ]
+    "content": "浏览器缓存主要分：\n1、强缓存\n2、协商缓存"
   },
   {
     "id": "13",
-    "category": "Vue",
-    "question": "return false 的作用：",
+    "category": "浏览器",
+    "question": "如果强缓存过期：浏览器会发请求问：这个资源有没有变？",
     "answer": "待补充",
-    "content": "如果返回false，错误就不会继续向上冒泡。",
-    "tags": [
-      "的生命周期"
-    ]
+    "content": "服务器可能返回：304 Not Modified\n表示：没变，继续用缓存。\n协商缓存两种机制：\n1、基于时间：Last-Modified / If-Modified-Since\n2、基于文件hash：ETag / If-None-Match\n优先级：ETag > Last-Modified"
   },
   {
     "id": "14",
-    "category": "Vue",
-    "question": "父组件生命周期和子组件生命周期的执行顺序是什么？",
+    "category": "浏览器",
+    "question": "问：强缓存和协商缓存区别？",
     "answer": "待补充",
-    "content": "父子组件生命周期执行顺序是：created 阶段父组件先执行，子组件后执行；mounted 阶段子组件先执行，父组件最后执行。",
-    "tags": [
-      "如果不返回，错误会继续往父组件传播。"
-    ]
+    "content": "答：强缓存不发请求，协商缓存会发请求但可能返回 304。"
   },
   {
     "id": "15",
-    "category": "Vue",
-    "question": "Vue组件之间的通信方式都有哪些？",
+    "category": "浏览器",
+    "question": "问：Cache-Control 和 ETag 有什么区别？",
     "answer": "待补充",
-    "content": "(1)父向子通信：props\n(2)子向父通信：$emit\n触发自定义事件，this.$emit('事件名', 参数)。父组件接收到后，由父组件\n修改，子组件本身是不能修改父组件的数据的。\n(3)兄弟组件之间的通信：EventBus\n创建一个中央事件总线EventBus，兄弟组件通过$emit触发自定义事件，$emit第二个参数为传递的数值，另一个兄弟组件通过$on监听自定义事件。\n(4)祖孙与后代组件之间的通信：provide 与 inject\n在祖先组件定义provide属性，返回传递的值。在后代组件通过inject接收组件传递过来的值。\n(5)非关系组件间之间的通信：Vuex / Pinia",
-    "tags": [
-      "组件通信"
-    ]
+    "content": "答：Cache-Control 控制是否直接使用缓存；ETag 用于协商资源是否变更。"
   },
   {
     "id": "16",
-    "category": "Vue",
-    "question": "EventBus 为什么很少推荐了？",
+    "category": "浏览器",
+    "question": "三、项目中怎么用？",
     "answer": "待补充",
-    "content": "第一，数据流不清晰。你只看到某个组件在 $on，但到底是谁 $emit 的，要到处找。项目一大就很痛苦。\n第二，难维护。事件名全靠字符串，改名、重构都不安全。\n第三，容易内存泄漏。如果组件销毁时忘记 `$off``，监听还在，就会有问题。\n第四，调试困难。不像 Vuex / Pinia 那样有明确的状态流和 devtools 支持，EventBus 经常是“消息飞来飞去”。",
-    "tags": [
-      "组件通信"
-    ]
+    "content": "静态资源：强缓存 + 文件名 hash\nHTML：不缓存或短缓存\nAPI：通常不强缓存"
   },
   {
     "id": "17",
-    "category": "Vue",
-    "question": "Vue3的composable是什么？",
-    "answer": "待补充",
-    "content": "composable 是 Vue3 Composition API 中用于抽离和复用逻辑的函数，通常以 useXxx 命名。它可以把状态、方法、计算属性、监听等逻辑封装起来，在多个组件中复用，作用类似 React 自定义 Hook，但更贴近 Vue 的响应式体系。",
-    "tags": [
-      "组件通信"
-    ]
+    "category": "浏览器",
+    "question": "cookie、localStorage和sessionStorage三者的区别？",
+    "answer": "待补充"
   },
   {
     "id": "18",
-    "category": "Vue",
-    "question": "说说Vuex和Pinia？",
+    "category": "浏览器",
+    "question": "如何确定Ajax请求不走缓存路径？",
     "answer": "待补充",
-    "content": "Vuex 或 Pinia 用于集中管理全局共享状态，避免组件层层传递 props 或复杂的事件通信，使状态变化更加可追踪和可维护。\nVuex 的状态管理是这种模式：state、mutations、actions特点是：必须通过 mutation 修改 state，这是为了让状态变化可追踪。\nPinia 的设计更简单：state、actions，没有mutations，可以直接改 state。\nPinia 是 Vue 官方推荐的新状态管理库，相比 Vuex 语法更简洁，没有 mutation 概念，TypeScript 支持更好，并且更适合 Vue3 Composition API。\nVuex 通过 mutation 管理状态变化，而 Pinia 允许直接修改 state，因为 Vue3 的响应式系统和 DevTools 已经能够追踪状态变化，从而减少模板代码并提升开发体验。",
-    "tags": [
-      "组件通信"
-    ]
+    "content": "get请求没有缓存，post请求设置ranNum为一个随机数，这样每次请求都会刷新URL缓存。"
   },
   {
     "id": "19",
-    "category": "Vue",
-    "question": "v-if和v-show的区别？",
+    "category": "浏览器",
+    "question": "前端怎么做性能优化？",
     "answer": "待补充",
-    "content": "(1)v-show隐藏则是为该元素添加css--display:none，dom元素依旧还在。v-if显示隐藏是将dom元素整个添加或删除。\n(2) v-show 由false变为true的时候不会触发组件的生命周期。\nv-if由false变为true的时候，触发组件的beforeCreate、created、beforeMount、mounted钩子，由true变为false的时候触发组件的beforeDestory、destoryed方法\n(3) v-if 是惰性的。意思是：如果初始条件是 false，DOM 不会渲染。而 v-show：DOM 一定会先渲染出来。\nv-if 与 v-show 都能控制dom元素在页面的显示\n如果需要非常频繁地切换，则使用 v-show 较好。\n如果在运行时条件很少改变，则使用 v-if 较好。",
-    "tags": [
-      "Vue"
-    ]
+    "content": "记住四层：网络层、资源层、渲染层、执行层"
   },
   {
     "id": "20",
-    "category": "Vue",
-    "question": "Vue中的$nextTick有什么作用？",
+    "category": "浏览器",
+    "question": "如果接口返回数据很慢。前端能做什么？",
     "answer": "待补充",
-    "tags": [
-      "Vue"
-    ]
+    "content": "先确认接口响应时间，如果确实是后端瓶颈，会和后端协作优化；同时前端可以通过体验优化和结构优化降低感知延迟。"
   },
   {
     "id": "21",
-    "category": "Vue",
-    "question": "computer和watch的区别？",
+    "category": "浏览器",
+    "question": "说说常见的攻击方式？",
     "answer": "待补充",
-    "tags": [
-      "})"
-    ]
+    "content": "1）XSS（跨站脚本）\n本质：把恶意 JS 注入页面让浏览器执行。\n危害：偷 cookie、劫持页面、伪造操作。\n防御：对输入/输出做转义；避免 innerHTML 拼接；开启 CSP；Cookie 设 HttpOnly；必要时做白名单过滤。\n2）CSRF（跨站请求伪造）\n本质：利用浏览器自动携带 cookie，在用户已登录状态下伪造请求。\n防御：CSRF Token（最常用）；SameSite Cookie；校验 Origin/Referer；重要操作加二次验证/验证码。\n3）点击劫持（Clickjacking）\n本质：用透明 iframe 覆盖页面诱导用户点击。\n防御：X-Frame-Options（DENY/SAMEORIGIN）；或 CSP frame-ancestors。"
   },
   {
     "id": "22",
-    "category": "Vue",
-    "question": "为什么v-if和v-for不建议放在一起使用？",
-    "answer": "待补充",
-    "tags": [
-      "支持异步"
-    ]
+    "category": "浏览器",
+    "question": "为什么会跨域？CORS是什么？",
+    "answer": "待补充"
   },
   {
     "id": "23",
-    "category": "Vue",
-    "question": "slot是什么？",
+    "category": "浏览器",
+    "question": "1）为什么会跨域",
     "answer": "待补充",
-    "content": "插槽。用来拓展组件，去更好地复用组件和对其做定制化处理。\nslot 用于父组件向子组件传递模板内容，分为默认插槽、具名插槽和作用域插槽，作用域插槽允许子组件向父组件暴露数据。\n可以使用<slot>标签，也可以使用v-slot（v-slot属性只能在<template>上使用）",
-    "tags": [
-      "优先级不明显，且有性能方面的浪费。"
-    ]
+    "content": "因为浏览器同源策略限制：协议/域名/端口任一不同就是跨域。浏览器会拦截“跨域读响应”，不是拦请求发出。"
   },
   {
     "id": "24",
-    "category": "Vue",
-    "question": "vue中有哪些修饰符？",
+    "category": "浏览器",
+    "question": "2）CORS 是什么",
     "answer": "待补充",
-    "tags": [
-      "优先级不明显，且有性能方面的浪费。"
-    ]
+    "content": "CORS 是服务器通过响应头声明允许哪些源访问资源的机制。浏览器根据响应头决定是否放行读取响应。\n3）简单请求 vs 预检请求\n简单请求：GET/POST/HEAD 且头部/Content-Type 符合限制，浏览器直接发。\n预检请求：如果是 PUT/DELETE/PATCH 或带自定义 Header 等，浏览器先发 OPTIONS 预检，服务器允许后再发真实请求。\n4）常用响应头\nAccess-Control-Allow-Origin：允许的源（* 或指定域）\nAccess-Control-Allow-Methods：允许的方法\nAccess-Control-Allow-Headers：允许的请求头\nAccess-Control-Allow-Credentials：是否允许携带 cookie（要配合前端 withCredentials）\n5）带 cookie 的关键点\n前端：xhr/fetch 开启 withCredentials/credentials: \"include\"\n后端：Allow-Credentials: true 且 Allow-Origin 不能是 *，必须是具体域名。"
   },
   {
     "id": "25",
-    "category": "Vue",
-    "question": "自定义指令怎么用，有什么应用场景？",
+    "category": "CSS",
+    "question": "CSS盒子标准模型是什么？",
     "answer": "待补充",
-    "tags": [
-      "Vue"
-    ]
+    "content": "就是盒子由content，padding ，border ，margin四个部分组成。\n盒子总宽度 = width + padding + border + margin;\n盒子总高度 = height + padding + border + margin。\nwidth/height是content的宽高。\n拓展：IE怪异盒子模型就是width/height 包含了 padding和 border值。"
   },
   {
     "id": "26",
-    "category": "Vue",
-    "question": "Vue2组件中的data为什么是一个函数？",
+    "category": "CSS",
+    "question": "如何理解css属性box-sizing？",
     "answer": "待补充",
-    "content": "为了防止多个组件实例对象之间共用一个data，产生数据污染。采用函数的形式，initData时会将其作为工厂函数都会返回全新data对象（函数返回的对象内存地址并不相同）",
-    "tags": [
-      "vs Vue3"
-    ]
+    "content": "content-box 默认值，元素的 width/height 不包含padding，border，与标准盒子模型表现一致\nborder-box 元素的 width/height 包含 padding，border，与怪异盒子模型表现一致"
   },
   {
     "id": "27",
-    "category": "Vue",
-    "question": "谈谈mixin？",
+    "category": "CSS",
+    "question": "css选择器有哪些，优先级怎么样？",
     "answer": "待补充",
-    "content": "mixin来分发 Vue 组件中的可复用功能。（解决逻辑复用问题）\n缺点：\n(1)、命名冲突；\n(2)、数据来源不清晰\n拓展：vue 的组件是 option 对象的方式，那么逻辑复用方式很自然可以想到通过对象属性的 mixin，vue2 的组件内逻辑复用方案就是 mixin，但是 mixin 很难区分混入的属性、方法的来源，比较乱，代码维护性差，但也没有更好的方案。后面Vue3.0以后把option api换成composition api才解决了这个问题。\nreact 刚开始也是支持 mixin 的，但后来废弃了。然后采用了HOC（高阶组件），再后面有了Fiber架构后，就是用hooks来解决这个问题。",
-    "tags": [
-      "vs Vue3"
-    ]
+    "content": "id选择器（#box），选择id为box的元素\n类选择器（.one），选择类名为one的所有元素\n标签选择器（div），选择标签为div的所有元素\n后代选择器（#box div），选择id为box元素内部所有的div元素\n子选择器（.one>.one_1），选择父元素为.one的所有.one_1的元素\n相邻同胞选择器（.one+.two），选择紧接在.one之后的所有.two元素\n群组选择器（div,p），选择div、p的所有元素\n伪类选择器（:hover，:active）\n内联 > ID选择器 > 类选择器 > 标签选择器"
   },
   {
     "id": "28",
-    "category": "Vue",
-    "question": "Vue3有哪些新特点？",
+    "category": "CSS",
+    "question": "css中有哪些单位？",
     "answer": "待补充",
-    "content": "(1)体积更小（移除一些不常用的 API，打包时只打包用到的模块）\n(2)速度更快\n(a) diff算法优化（增加了静态标记，生变化的地方添加一个flag标记，下次发生变化的时候直接找该地方进行比较）\n(b)静态提升（不参与更新的元素，会做静态提升，只会被创建一次，在渲染时直接复用）",
-    "tags": [
-      "vs Vue3"
-    ]
+    "content": "px：绝对单位，页面按精确像素展示\nem：相对单位，基准点为父节点字体的大小，如果自身定义了font-size按自身来计算，整个页面内1em不是一个固定的值\nrem：相对单位，可理解为root em, 相对根节点html的字体大小来计算\nvh、vw：就是根据窗口的宽度，分成100等份。主要用于页面视口大小布局，在页面布局上更加方便简单。"
   },
   {
     "id": "29",
-    "category": "Vue",
-    "question": "Options API和Composition API有什么不同？",
+    "category": "CSS",
+    "question": "css中，有哪些方式可以隐藏页面元素？区别？",
     "answer": "待补充",
-    "content": "Options API以“组件实例”的概念为中心，通过定义methods，computed，watch，data等属性与方法，共同处理页面逻辑。\nComposition API是直接在函数作用域内定义响应式状态变量，并将从多个函数中得到的状态组合起来处理复杂问题。(Composition API 的风格是基于函数的组合，但组合式 API 并不是函数式编程。组合式 API 是以 Vue 中数据可变的、细粒度的响应性系统为基础的，而函数式编程通常强调数据不可变。)\n组合式API比起选项式API有以下优点：\n(1)更好的逻辑复用；它可以解决mixin命名冲突和数据来源不清晰的问题（在选项式 API 中主要的逻辑复用机制是 mixins）。\n(2)更好的类型推导；Composition API主要利用基本的变量和函数，它们本身就是类型友好的。\n(3)更灵活的代码组织；Composition API相同的逻辑功能基本都是放在一起的，利于阅读和维护。\n(4)不像选项式 API 需要依赖 this 上下文对象访问属性，被编译的模板可以直接访问 <script setup> 中定义的变量。 Composition API中见不到this的使用，减少了this指向不明的情况。\n两种 API 风格都能够覆盖大部分的应用场景。它们只是同一个底层系统所提供的两套不同的接口。实际上，选项式 API 是在组合式 API 的基础上实现的。（官方认为不必只固守一种风格，这两种API风格在学习中可以选择自己喜欢的。未来也不会废弃选项式API）",
-    "tags": [
-      "(c) 响应式系统Proxy"
-    ]
+    "content": "(1) display:none（不占据空间，无法响应点击事件）\n(2) visibility:hidden（占据页面空间，无法响应点击事件）\n(3) opacity:0（改变元素透明度，占据页面空间，可以响应点击事件）\n(4) 设置height、width模型属性为0\n(5) position:absolute（将元素移出可视区域，不影响页面布局）"
   },
   {
     "id": "30",
-    "category": "Vue",
-    "question": "如何处理Vue项目中的错误？",
+    "category": "CSS",
+    "question": "CSS3新增了哪些新特性？",
     "answer": "待补充",
-    "content": "(1)设置全局错误处理函数Vue.config.errorHandler。三个参数分别是错误对象、错误组件、错误信息\n(2)利用生命周期钩子errorCaptured。三个参数分别是错误对象、错误组件、错误信息",
-    "tags": [
-      "(c) 响应式系统Proxy"
-    ]
+    "content": "(1)增加了新样式，比如边框属性border-radius、box-shadow，颜色rgba；\n(2)增加了一些新选择器，比如:nth-child(n)\n(3) transition 过渡\n(4) transform 转换\n(5) animation 动画\n(6)渐变linear-gradient\n(7)新增弹性布局flex和网格布局grid"
   },
   {
     "id": "31",
+    "category": "CSS",
+    "question": "margin 什么时候会发生塌陷（margin collapse）？如何解决？",
+    "answer": "待补充",
+    "content": "1）兄弟元素相邻：\ndiv 的 margin-bottom 和下一个 div 的 margin-top 会合并成一个。\n2）父子塌陷：\n如果父元素没有边框/内边距/新 BFC 隔开，父元素的 margin-top 会和第一个子元素的 margin-top 合并（看起来像子元素把父元素顶走了）。\n3）空块塌陷\n一个元素如果没有内容、没有 border/padding、没有 height，自己的 margin-top 和 margin-bottom 会合并。\n常见隔开的方式：\n给父元素加 padding-top 或 border-top（打断父子合并）\n让父元素形成 BFC：overflow: hidden/auto、display: flow-root\n用 flex / grid（它们不走那套合并规则）\n把间距改成 padding（尤其是容器内间距）"
+  },
+  {
+    "id": "32",
+    "category": "CSS",
+    "question": "什么是BFC？",
+    "answer": "待补充",
+    "content": "BFC是块级格式化上下文的意思。BFC 是一个独立的布局环境，内部元素不会影响外部布局。\n常见用途："
+  },
+  {
+    "id": "33",
+    "category": "CSS",
+    "question": "如何清除浮动？",
+    "answer": "待补充"
+  },
+  {
+    "id": "34",
+    "category": "CSS",
+    "question": "如何把一个元素水平垂直居中？",
+    "answer": "待补充",
+    "content": "总结：\n(1)margin: auto;\n(2)Table布局：\n父元素display: table-cell;vertical-align: middle; text-align: center;\n子元素 display: inline-block;\n(3)定位+margin：position: absolute设置left、top、margin-left、margin-top(定高)\n(4)定位+ transform：position: absolute;transform: translate(-50%, -50%)\n(5)flex布局(不定高，不定宽)：display: flex; justify-content: center; align-items: center;\n(6)grid布局(不定高，不定宽)：用法和flex一样，但兼容性相对比较差\n细分：\n(1)行内元素："
+  },
+  {
+    "id": "35",
+    "category": "CSS",
+    "question": "说说弹性盒布局模型flexbox？",
+    "answer": "待补充",
+    "content": "常用属性有（只列举常用的，想看全部可以查文档）：\n(1) flex-direction：主轴方向。row为水平（默认），column为垂直\n(2) flex-wrap：是否换行。nowrap（默认值）：不换行；wrap：换行\n(3) justify-content：主轴对齐方式。flex-start，flex-end：右对齐，center：居中\n(4) align-items：交叉轴对齐方式。flex-start，flex-end：右对齐，center：居中\n(5) align-content：定义了多根轴线的对齐方式。如果项目只有一根轴线，该属性不起作用（该属性较复杂，如果想深入了解建议看文档）"
+  },
+  {
+    "id": "36",
+    "category": "CSS",
+    "question": "介绍一下grid网格布局？",
+    "answer": "待补充",
+    "content": "grid 布局即网格布局，是一个二维的布局方式（flex是一维布局方式），擅长将一个页面划分为几个主要区域，以及定义这些区域的大小、位置、层次等关系。布局非常强大，但在 IE 10 以下不支持，在手机端支持不如flex。\ngrid-template-columns: repeat(3, 1fr);// 定义多少列，每列多宽，1fr表示等距，类似于flex：1\ngap: 16px; // 子元素的间距，不包括首尾，不用直接算每个元素的margin"
+  },
+  {
+    "id": "37",
+    "category": "CSS",
+    "question": "如何实现两栏布局，右侧自适应？",
+    "answer": "待补充"
+  },
+  {
+    "id": "38",
+    "category": "CSS",
+    "question": "如何实现三栏布局，中间自适应？",
+    "answer": "待补充"
+  },
+  {
+    "id": "39",
+    "category": "CSS",
+    "question": "css3动画有哪些？",
+    "answer": "待补充"
+  },
+  {
+    "id": "40",
+    "category": "CSS",
+    "question": "让Chrome支持小于12px 的文字方式有哪些？区别？",
+    "answer": "待补充",
+    "content": "(1) zoom: 0.5（字号缩小一半，非标准属性，有兼容问题，缩放会改变了元素占据的空间大小，触发重排）\n(1) -webkit-transform: scale(0.5) 大部分现代浏览器支持，并且对英文、数字、中文也能够生效，缩放不会改变了元素占据的空间大小，页面布局不会发生变化"
+  },
+  {
+    "id": "41",
+    "category": "CSS",
+    "question": "如何用css画一个三角形？",
+    "answer": "待补充",
+    "content": "利用边框，元素的边框放大后其实是个梯形，利用旋转、隐藏、设置宽高等方式，可以变换出想要的三角形。"
+  },
+  {
+    "id": "42",
+    "category": "CSS",
+    "question": "sass和less的区别？",
+    "answer": "待补充",
+    "content": "①编译环境不一样；Sass需要安装ruby环境。Less引入less.js进行处理"
+  },
+  {
+    "id": "43",
+    "category": "CSS",
+    "question": "如何实现单行／多行文本溢出的省略样式？",
+    "answer": "待补充",
+    "content": "单行：\noverflow: hidden;\ntext-overflow: ellipsis;\nwhite-space: nowrap;\n多行：\n(1) 基于高度截断：\n伪元素 + 定位。通过伪元素绝对定位到行尾并遮住文字，再通过 overflow: hidden 隐藏多余文字\n(2) 基于行数截断："
+  },
+  {
+    "id": "44",
+    "category": "CSS",
+    "question": "响应式布局的方式有什么？",
+    "answer": "待补充",
+    "content": "(1)媒体查询\n(2)通过单位，比如百分比，vw/vh，rem"
+  },
+  {
+    "id": "45",
+    "category": "CSS",
+    "question": "21，CSS优化和提高性能的方法有那些？",
+    "answer": "待补充",
+    "content": "（1） css 压缩；\n（2） 减少使用@import，建议使用 link，因为后者在页面加载时一起加载，前者是等待页面加载完成之后再进行加载；\n（3） 选择合理的选择器，减少重复匹配；\n（4） CSS精灵图；\n（5） 内容与样式分离；"
+  },
+  {
+    "id": "46",
+    "category": "JS",
+    "question": "基础数据类型有哪些？",
+    "answer": "待补充",
+    "content": "Undefined，Null，Number，String，Boolean，Object，Symbol（ES6新增）、BigInt\n基础数据类型：7种，字符串（String）、数字(Number)、布尔(Boolean)、空（Null）、未定义（Undefined）、Symbol、BigInt\n引用数据类型：1种，对象(Object)。数组(Array)、函数(Function)、正则（RegExp）、日期（Date）等都是子类型。"
+  },
+  {
+    "id": "47",
+    "category": "JS",
+    "question": "Symbol类型的使用？",
+    "answer": "待补充",
+    "content": "Symbol 是 ES6 引入了一种新的原始数据类型，表示独一无二的值且不可变的数据类型，它主要是为了解决可能出现的全局变量冲突的问题。\n①使用Symbol作为对象属性名(不被Object.key等方式访问)\n②使用Symbol代替常量(Symbol可以生成一个全局唯一的值)\n③使用Symbol定义类的私有属性/方法\nconst symbol1 = Symbol();\nconst symbol2 = Symbol(42);\nconst symbol3 = Symbol('foo');\n不支持语法：\"new Symbol()\"。\nSymbol 键默认不会被 Object.keys 枚举（但可以用 Object.getOwnPropertySymbols / Reflect.ownKeys 拿到）\nSymbol.for / Symbol.keyFor：全局注册表"
+  },
+  {
+    "id": "48",
+    "category": "JS",
+    "question": "基础数据类型和引用数据类型的区别？",
+    "answer": "待补充",
+    "content": "①基本数据类型传入的是数据的副本，原数据的更改不会影响传入后的数据。引用数据类型传入的是数据的引用地址，原数据的更改会彩响传入后的数据。\n②基本数据类型存储在栈中，引用数据类型在栈中存储了指针(引用地址)，该指针(引用地址)指向的数据实体存储在堆中。"
+  },
+  {
+    "id": "49",
+    "category": "JS",
+    "question": "常用的数组方法有哪些？",
+    "answer": "待补充"
+  },
+  {
+    "id": "50",
+    "category": "JS",
+    "question": "常用的字符串方法有哪些？",
+    "answer": "待补充",
+    "content": "前排提醒：字符串的增删改查都是创建一个新副本，并不影响原字符串，因为字符串是基础数据类型，非引用数据类型\n增：concat()\n删：slice(start, [end])、substr(indexStart, number)、substring(start, [end])\n（substr已经弃用，建议不用。substring() 和 slice() 方法几乎相同，但在处理负数参数时有一些细微差别）\n改：trim()、toLowerCase()、 toUpperCase()\n查： indexOf()、includes()、chatAt()、startWith()\nchatAt()给定索引位置的字符，输入的是下标，给的是字符，和indexOf相反。\nstartWith()的用法和includes()一样\n还有转化方法：split()\n模板匹配方法：match()、search()、replace()——这几个都是针对正则表达式的\nmatch()：把匹配到的返回一个数组\nsearch()：把匹配到的返回一个索引，没有就是-1\nreplace()：替换。参数第一个匹配内容，参数第二个替换内容"
+  },
+  {
+    "id": "51",
+    "category": "JS",
+    "question": "相等==和全等===有什么区别？",
+    "answer": "待补充",
+    "content": "相等运算符有隐藏的类型转换（隐式转换），只要操作数相等就会判断是true\n全等运算符不会有类型转换，必须类型和值都相等才会返回true"
+  },
+  {
+    "id": "52",
+    "category": "JS",
+    "question": "null和undefined的区别？",
+    "answer": "待补充",
+    "content": "null表示”没有对象”，即该处不应该有值\nundefined表示”缺省值”，就是此处应该有一个值，但是还没有定义。"
+  },
+  {
+    "id": "53",
+    "category": "JS",
+    "question": "判断数据类型的方法？",
+    "answer": "待补充",
+    "content": "①Object.prototype.toString.call()，全部可以判断出来，输出举例：[object String]\n②typeof，无法区别null，会判断为Object。在引用数据类型中，除了function 类型以外，其他的也无法判断，都会判定为object。输出举例：object\n③A instanceof B，可以用来判断A是否在B的原型链上，但它不能检测null和undefined。就是说可以准确地判断复杂引用数据类型，但是不能正确判断基础数据类型。\n④B.constructor == A，理论可以辅助判断，但不推荐，因为constructor可以被覆盖。"
+  },
+  {
+    "id": "54",
+    "category": "JS",
+    "question": "深浅拷贝的区别和实现？",
+    "answer": "待补充",
+    "content": "浅拷贝：只复制第一层，里面的对象还是同一个地址。"
+  },
+  {
+    "id": "55",
+    "category": "JS",
+    "question": "递归实现：利用 WeakMap",
+    "answer": "待补充",
+    "content": "lodash.cloneDeep：运用第三方库lodash\nstructuredClone()：浏览器原生提供的深拷贝方法，不能复制：function、DOM 节点"
+  },
+  {
+    "id": "56",
+    "category": "JS",
+    "question": "扩展：WeakMap递归实现深拷贝",
+    "answer": "待补充"
+  },
+  {
+    "id": "57",
+    "category": "JS",
+    "question": "WeakMap 的作用：",
+    "answer": "待补充",
+    "content": "1、记录已经拷贝过的对象\n2、遇到循环引用直接返回\n3、key 是弱引用，不影响垃圾回收"
+  },
+  {
+    "id": "58",
+    "category": "JS",
+    "question": "怎么理解ES6新增Set、Map两种数据结构的？",
+    "answer": "待补充",
+    "content": "Set是ES6新增的数据结构，类似于数组，但是成员的值都是唯一的，没有重复的值，我们一般称为集合。Set本身是一个构造函数，用来生成 Set 数据结构。\n比如：let set = new Set(['red', 'green', 'blue']);"
+  },
+  {
+    "id": "59",
+    "category": "JS",
+    "question": "所以扩展运算符和Set 结构相结合实现数组或字符串去重。",
+    "answer": "待补充",
+    "content": "方法有增add()，删delete()、clear()，查get()，以及遍历API和size属性\nMap类型是键值对的有序列表，而键和值都可以是任意类型。比如\nconst map = new Map(["
+  },
+  {
+    "id": "60",
+    "category": "JS",
+    "question": "Object和Map的区别是什么？",
+    "answer": "待补充",
+    "content": "(1)、Object的key值只能是字符串、数字或者Symbol，但是Map的key值可以是任何类型；\n(2)、Map 中的元素会保持其插入时的顺序，Object不会，它有自己的一套排序（非负整数>字符串/负整数/浮点数>Symbol）\n(3)、Map 是可迭代对象，所以其中的键值对是可以通过 for of 循环或 .foreach() 方法来迭代的；而普通的对象键值对则默认是不可迭代的，只能通过 for in 循环来访问。\n(4)、JSON 默认支持 Object 而不支持 Map\n(5)、在 Map 中新增键时，不会覆盖其原型上的键；而在 Object 中新增键时，则有可能覆盖其原型上的键\n(6)、增删改的方式都不一样。\n使用 Map：\n(1)、储存的键不是字符串/数字/或者 Symbol 时，选择 Map，因为 Object 并不支持\n(2)、储存大量的数据时，选择 Map，因为它占用的内存更小\n(3)、需要进行许多新增/删除元素的操作时，选择 Map，因为速度更快\n(4)、需要保持插入时的顺序的话，选择 Map，因为 Object 会改变排序\n(5)、需要迭代/遍历的话，选择 Map，因为它默认是可迭代对象，迭代更为便捷\n使用 Object：\n(1)、只是简单的数据结构时，选择 Object，因为它在数据少的时候占用内存更少，且新建时更为高效\n(2)、需要用到 JSON 进行文件传输时，选择 Object，因为 JSON 不默认支持 Map\n(3)、需要对多个键值进行运算时，选择 Object，因为句法更为简洁\n(4)、需要覆盖原型上的键时，选择 Object"
+  },
+  {
+    "id": "61",
+    "category": "JS",
+    "question": "数组排序方式有哪些？",
+    "answer": "待补充",
+    "content": "sort排序，冒泡排序，快速排序，插入排序，希尔排序，选择排序，归并排序"
+  },
+  {
+    "id": "62",
+    "category": "JS",
+    "question": "this指向的各种情况有哪些？",
+    "answer": "待补充"
+  },
+  {
+    "id": "63",
+    "category": "JS",
+    "question": "①全局作用域中的函数，其内部this指向window；",
+    "answer": "待补充",
+    "content": "②对象内部的函数，其this指向对象本身；"
+  },
+  {
+    "id": "64",
+    "category": "JS",
+    "question": "如何改变this的指针，用法区别是什么？",
+    "answer": "待补充"
+  },
+  {
+    "id": "65",
+    "category": "JS",
+    "question": "什么是闭包，为什么闭包无法回收变量？",
+    "answer": "待补充",
+    "content": "有权访问另一个函数作用域内变量的函数（闭包让你可以在一个内层函数中访问到其外层函数的作用域）。\n闭包是一个“现象”。当一个函数：定义在另一个函数内部，并且访问了外部变量，且在外部函数执行完后仍然存在，它就是闭包。"
+  },
+  {
+    "id": "66",
+    "category": "JS",
+    "question": "作用：为了设计私有的方法和变量。",
+    "answer": "待补充",
+    "content": "优点：避免全局变量的污染\n缺点：使用不当易造成内存泄露\n因为外部变量没有释放，指向大函数的小函数也释放不了。内部函数的作用域链无法被垃圾回收机制回收，导致内存泄露。"
+  },
+  {
+    "id": "67",
+    "category": "JS",
+    "question": "谈一谈自执行函数？",
+    "answer": "待补充"
+  },
+  {
+    "id": "68",
+    "category": "JS",
+    "question": "什么是高阶函数？",
+    "answer": "待补充"
+  },
+  {
+    "id": "69",
+    "category": "JS",
+    "question": "说说箭头函数和普通函数的区别？",
+    "answer": "待补充",
+    "content": "(1)、箭头函数没有自己的this，继承而来的this指向永远不变，而且使用call()、apply()、bind()无法改变箭头函数中this的指向。\n(2)、箭头函数不绑定arguments，取而代之用rest参数…解决\n(3)、不能使用new操作符(作为构造函数使用)\n(4)、不能使用原型属性(打印prototype会是undefined)"
+  },
+  {
+    "id": "70",
+    "category": "JS",
+    "question": "什么是原型、原型链？",
+    "answer": "待补充",
+    "content": "JavaScript 常被描述为一种基于原型的语言——每个对象拥有一个原型对象。\n原型对象通常指的是prototype和__proto__，其中前者叫做显式原型对象，后者叫做隐式原型对象。JS在声明构造函数时会有一个prototype属性，而实例化出来的对象通常不具备prototype属性，而是一个__proto__属性，它指向构造函数的原型对象。在原型对象上修改或添加属性，则其下的所有实例对象都可以共享。\n修改原型：Object.setPrototypeOf();\n原型对象也可能拥有原型，并从中继承方法和属性，一层一层、以此类推。这种关系常被称为原型链。\n（当在实例化的对象中访问一个属性时，首先会在该对象内部寻找，如找不到，则会向其 proto＿指向的原型中寻找，如仍找不到，则继续向原型中＿proto__指向的上级原型中寻找，直至找到或 Object.prototype为止，这种链状过程即为原型链。）\njs的原型链最终指向的是Object原型对象(Object.prototype)，如果再往上找就是null了。"
+  },
+  {
+    "id": "71",
+    "category": "JS",
+    "question": "实现继承的方式有哪些？",
+    "answer": "待补充"
+  },
+  {
+    "id": "72",
+    "category": "JS",
+    "question": "new操作符具体做了什么？",
+    "answer": "待补充"
+  },
+  {
+    "id": "73",
+    "category": "JS",
+    "question": "什么是作用域和作用域链？",
+    "answer": "待补充"
+  },
+  {
+    "id": "74",
+    "category": "JS",
+    "question": "说说 JavaScript 中内存泄漏的几种情况？",
+    "answer": "待补充",
+    "content": "(1)、意外的全局变量\n(2)、滥用闭包\n(3)、定时器用完后不清除\n(4)、使用addEventListener进行事件监听，但是不监听的时候却不移除"
+  },
+  {
+    "id": "75",
+    "category": "JS",
+    "question": "说说JS的垃圾回收机制？",
+    "answer": "待补充",
+    "content": "JS 是自动内存管理语言，内存回收由引擎负责，垃圾回收算法以标记清除为主。"
+  },
+  {
+    "id": "76",
+    "category": "JS",
+    "question": "标记清除怎么工作？",
+    "answer": "待补充",
+    "content": "1、从“根对象”开始（全局对象 / 当前执行上下文）\n2、找所有“还能访问到”的对象\n3、标记为“存活”\n4、没被标记的 → 清除\n一句话：能从根访问到的对象不会被回收。\n什么是“根”？全局变量、当前执行函数里的变量、闭包引用的变量。\n标记清除只看“是否可达”，不看引用次数，所以循环引用不会造成内存泄漏。"
+  },
+  {
+    "id": "77",
+    "category": "JS",
+    "question": "什么是Ajax，如何实现？",
+    "answer": "待补充"
+  },
+  {
+    "id": "78",
+    "category": "JS",
+    "question": "是一种可以实现局部网页刷新的技术，可以使网页异步刷新。",
+    "answer": "待补充",
+    "content": "①创建核心对象XMLHttpRequest；"
+  },
+  {
+    "id": "79",
+    "category": "JS",
+    "question": "实现异步的方式有哪些？",
+    "answer": "待补充"
+  },
+  {
+    "id": "80",
+    "category": "JS",
+    "question": "怎么理解Promise？",
+    "answer": "待补充"
+  },
+  {
+    "id": "81",
+    "category": "JS",
+    "question": "Promise并发？",
+    "answer": "待补充",
+    "content": "第一类：并行执行\n典型 API：Promise.all、Promise.allSettled\n第二类：串行执行"
+  },
+  {
+    "id": "82",
+    "category": "JS",
+    "question": "原理：利用Promise 链式调用",
+    "answer": "待补充",
+    "content": "第三类：限制并发（超时控制+顺序保证+失败停止+请求取消）\n同时最多执行 3 个请求：维护一个执行池pool（最多 N 个 worker）+ 一个共享索引 nextIndex；worker 循环领取任务执行，直到领完\n请求超过 3 秒自动失败:通过Promise.race([ request(), timeoutPromise])，谁先结束就返回谁。\n并发控制但结果必须按原顺序返回: 每个任务完成后把结果写回 results[i]，所以完成顺序乱也不影响结果顺序\n一旦失败就不再启动新任务 ：加一个开关：stopped 标志；任何任务失败就 stopped=true，阻止后续入池；已在跑的任务自然结束；最后抛第一个错误。\n取消正在跑的 fetch ：关键词：AbortController，给每个 fetch 绑 signal；失败时统一 controller.abort() 取消在跑请求。\n核心：并发池 + 队列 + index。\n结构：queue（等待任务）+ running（正在执行）+ limit （最大并发）"
+  },
+  {
+    "id": "83",
+    "category": "JS",
+    "question": "说说事件循环？",
+    "answer": "待补充"
+  },
+  {
+    "id": "84",
+    "category": "JS",
+    "question": "JavaScript是一门单线程的语言，而实现单线程非阻塞的方法就是事件循环。",
+    "answer": "待补充",
+    "content": "Js里面有同步任务和异步任务，异步任务里面分宏任务和微任务。\n同步任务：立即执行的任务，同步任务一般会直接进入到主线程中执行\n异步任务：异步执行的任务，比如ajax网络请求，setTimeout定时函数等\n同步任务进入主线程，即主执行栈，异步任务进入任务队列，主线程内的任务执行完毕为空，会去任务队列（Event Queue）读取对应的任务，推入主线程执行。上述过程的不断重复就事件循环"
+  },
+  {
+    "id": "85",
+    "category": "JS",
+    "question": "说说async await？",
+    "answer": "待补充",
+    "content": "async 是异步的意思，await则可以理解为 async wait。所以可以理解async就是用来声明一个异步方法，而 await是用来等待异步方法执行。\nasync 函数一定返回 Promise；return 的值会被包成 Promise.resolve(值)。\n不管await后面跟着的是什么，await都会阻塞后面的代码。（大概相当于promise的then）\n浏览器环境（DOM / Web API / 事件 / 防抖节流）"
+  },
+  {
+    "id": "86",
+    "category": "JS",
+    "question": "何为防抖和节流，如何实现？",
+    "answer": "待补充",
+    "content": "防抖和节流都是防止短时间内高频触发事件的方案；\n防抖原理：如果一段时间内事件触发了多次，那么只执行最后一次（实时搜索框进行搜索）；逻辑：每次触发都清掉上一次，重新计时，只有“最后那次”会真正执行。\n节流原理：要执行的事件每隔一段时间会被冷却，无法执行；（比方说坦克大战，不管手速多快，弹药的发射间隔有个最大值，哪怕点击多次也只发射一颗弹药）\n逻辑：记录上次执行时间，到时间才允许再执行"
+  },
+  {
+    "id": "87",
+    "category": "JS",
+    "question": "DOM是什么？",
+    "answer": "待补充",
+    "content": "DOM是一种文档对象模型。当html页面被实现加载的时候，浏览器会创建一个dom，给文档提供了一种新的逻辑结构，并且可以改变内容和结构。（相当于浏览器给HTML创建了一个大对象，这个对象就是dom）\n扩展：BOM就是浏览器对象模型。"
+  },
+  {
+    "id": "88",
+    "category": "JS",
+    "question": "说说JavaScript中的事件流和事件模型？",
+    "answer": "待补充",
+    "content": "事件流都会经历三个阶段：\n(1)、事件捕获阶段(capture phase)\n(2)、处于目标阶段(target phase)\n(3)、事件冒泡阶段(bubbling phase)\n事件模型可以分为三种：\n(1)、原始事件模型（就是平常的onclick这些事件，绑定速度快，但只支持冒泡不支持捕获，同类型事件只能绑定一次，后面再绑会覆盖前面的）\n(2)、标准事件模型\naddEventListener(eventType, handler, useCapture)\nremoveEventListener(eventType, handler, useCapture)\n第一个参数是事件类型，第二个参数是处理函数，第三个参数用于指定是否在捕获阶段进行处理，默认false不处理。\n可以在同一个dom上绑定多个同类型事件，且互不冲突。\n(3)、IE事件模型（基本不用）"
+  },
+  {
+    "id": "89",
+    "category": "JS",
+    "question": "event.preventDefault()和event.stopPropagation()的区别是什么？",
+    "answer": "待补充",
+    "content": "前者阻止默认事件，但不能阻止事件在dom进一步传播。后者可以阻止捕获和冒泡事件的进一步传播。"
+  },
+  {
+    "id": "90",
+    "category": "JS",
+    "question": "什么是事件代理(即事件委托)？",
+    "answer": "待补充",
+    "content": "事件委托就是利用冒泡的原理，把本应该添加到某个元素上的事件委托给他的父级，从而减少DOM交互达到网页优化。\n事件委托具有局限性：focus、blur这些事件没有事件冒泡机制，所以无法进行委托绑定事件。mousemove、mouseout这样的事件，虽然有事件冒泡，但是只能不断通过位置去计算定位，对性能消耗高，因此也是不适合于事件委托的。"
+  },
+  {
+    "id": "91",
+    "category": "JS",
+    "question": "DOM常见的操作有哪些？",
+    "answer": "待补充",
+    "content": "下表只列举常用的："
+  },
+  {
+    "id": "92",
+    "category": "JS",
+    "question": "说说 Javascript 数字精度丢失的问题，如何解决？",
+    "answer": "待补充",
+    "content": "小数在转换的时候，会先转成二进制进行计算，然后再转成十进制。但是有的小数在转成二进制时会出现无限循环，可是存储时有位数限制（64位），超过时会进行舍入操作(0舍1入)，所以会出现精度丢失问题。\n解决方法：自己封装方法，把小数转成整数再进行计算，或者用第三方库Math.js"
+  },
+  {
+    "id": "93",
+    "category": "JS",
+    "question": "offsetWidth、clientWidth和scrollWidth的区别？",
+    "answer": "待补充",
+    "content": "内容可视区宽度：clientWidth = width + 左右padding（只有可视区）\n元素的实际宽度：offsetWidth = width + 左右padding + 左右border（只有可视区）\n实际内容的宽度：scrollWidth = 内容区宽度（包括可视区和隐藏区）"
+  },
+  {
+    "id": "94",
+    "category": "JS",
+    "question": "offsetTop和scrollTop的区别？",
+    "answer": "待补充",
+    "content": "offsetTop，元素的上外边框至包含元素的上内边框之间的像素距离\nscrollTop，可以确定元素当前滚动的状态，也可以设置元素的滚动位置，垂直滚动 scrollTop > 0，重置滚动scrollTop = 0"
+  },
+  {
+    "id": "95",
+    "category": "JS",
+    "question": "什么是跨域，怎么解决？",
+    "answer": "待补充",
+    "content": "跨域是同源策略衍生出来的问题，协议、域名、端口有任何一个不同，就会产生跨域问题。\n①JSONP。利用<script>标签不受跨域限制的特点获取数据（仅支持get方法）\n②使用跨域资源共享（CORS）来跨域。服务器设置Access-Control-Allow-Origin HTTP响应头之后，浏览器将会允许跨域请求。\n③node中间件代理，利用中间服务器转发请求和响应(Proxy) ，因为服务器不受跨域限制"
+  },
+  {
+    "id": "96",
+    "category": "JS",
+    "question": "require和import的区别？",
+    "answer": "待补充",
+    "content": "①前者是common JS语法，后者是ES6语法；\n②前者引入的是原始导出值的复制，后者是导出值的引用；"
+  },
+  {
+    "id": "97",
+    "category": "JS",
+    "question": "对ES6的理解？",
+    "answer": "待补充"
+  },
+  {
+    "id": "98",
+    "category": "JS",
+    "question": "怎么理解ES6的Decorator（装饰器）？",
+    "answer": "待补充",
+    "content": "本质就是一个普通的函数，用于扩展类属性和类方法。"
+  },
+  {
+    "id": "99",
+    "category": "Next.js",
+    "question": "Next的路由机制是什么？",
+    "answer": "待补充",
+    "content": "Next.js 使用基于文件系统的路由机制：位于 app/（App Router） 或 pages/（Pages Router） 目录下的文件会自动成为路由。路由路径 = 文件路径。无需像 React Router 那样手动配置。"
+  },
+  {
+    "id": "100",
+    "category": "Next.js",
+    "question": "如何在动态路由中获取参数？",
+    "answer": "待补充",
+    "content": "1）客户端页面：use(params)\n2）服务端页面：props.params.id"
+  },
+  {
+    "id": "101",
+    "category": "Next.js",
+    "question": "如何实现嵌套路由布局？",
+    "answer": "待补充",
+    "content": "在 app/ 中使用多层 layout.js，每层 layout 共享结构如导航栏或侧边栏。"
+  },
+  {
+    "id": "102",
+    "category": "Next.js",
+    "question": "App Router 与 Pages Router 在路由层面的区别？",
+    "answer": "待补充",
+    "content": "app/ 使用 React Server Components；"
+  },
+  {
+    "id": "103",
+    "category": "Next.js",
+    "question": "getStaticPaths 的作用？",
+    "answer": "待补充",
+    "content": "用于静态生成动态路由页面，告诉 Next.js 要预渲染哪些路径。"
+  },
+  {
+    "id": "104",
+    "category": "Next.js",
+    "question": "getStaticProps 与 getServerSideProps 区别？",
+    "answer": "待补充"
+  },
+  {
+    "id": "105",
+    "category": "Next.js",
+    "question": "动态路由如何实现增量静态生成（ISR）？",
+    "answer": "待补充",
+    "content": "使用 getStaticProps 返回 revalidate 字段，实现定期更新静态页面。"
+  },
+  {
+    "id": "106",
+    "category": "Next.js",
+    "question": "Next.js 路由由文件夹结构定义？",
+    "answer": "待补充",
+    "content": "补充：Not-found.js（页面或资源未找到）"
+  },
+  {
+    "id": "107",
+    "category": "Next.js",
+    "question": "什么时候使用CSR组件和SSR组件？",
+    "answer": "待补充",
+    "content": "客户端组件：\n1）需要使用State和事件处理的时候，比如onClick；\n2）生命周期逻辑，如useEffect；\n3）使用浏览器特有的API，如localStorage, window等；\n4）自定义钩子；\n服务端组件：\n1）从数据库或API获取数据时；\n2）使用API keys、token等无需公开给客户端的；\n3）优化JS加载，加快浏览器速度；\n4）改进FCP（首屏渲染）。"
+  },
+  {
+    "id": "108",
+    "category": "Next.js",
+    "question": "metadata是什么，怎么使用？",
+    "answer": "待补充",
+    "content": "Metadata是元数据，用来提高 SEO 和 Web 可共享性。\n静态元数据直接导出，动态元数据使用generateMetadata在获取数据以后返回并导出。"
+  },
+  {
+    "id": "109",
+    "category": "Next.js",
+    "question": "服务端组件什么时候会变成动态渲染？",
+    "answer": "待补充",
+    "content": "当路由使用以下任何 API 时，它就会变得动态：\n1）cookie；\n2）header\n3）connection\n指示渲染应等待传入的用户请求然后再继续，当组件不使用动态 API，但您希望它在运行时动态呈现而不是在构建时静态呈现时，它非常有用。\n4）unstable_noStore\n可用于以声明方式选择退出静态渲染并指示不应缓存特定组件。在版本15中，建议使用connection而不是unstable_noStore。\n5）fetch with { cache: 'no-store' }，类似于unstable_noStore\n6）使用searchParams属性\n7）draftMode"
+  },
+  {
+    "id": "110",
+    "category": "React",
+    "question": "框架的好处？",
+    "answer": "待补充",
+    "content": "(1)web前端框架可以解决原始html，css，js的UI与数据状态之间同步的难题，避免了大量的操作DOM代码。\n(2)有统一的规范和数据模型，提高开发效率，利于团队合作。"
+  },
+  {
+    "id": "111",
+    "category": "React",
+    "question": "React的特性有哪些？",
+    "answer": "待补充",
+    "content": "(1) JSX语法。（React描述视图的一种方案，它使用XML标记的方式去直接声明界面，相当于js的语法扩展，由babel实现。所以React描述视图可以直接用 js 来写逻辑，对比Vue本质上没什么新语法）\n(2)单向数据绑定。（主要思想是组件不会改变接收的数据，只会监听数据的变化，当数据发生变化时它们会使用接收到的新值，而不是去修改已有的值。单向响应的数据流会比双向绑定的更安全，速度更快，且状态来源清晰可预测）\n(3)虚拟DOM。\n(4)声明式编程。（声明式编程是一种编程范式，它关注的是你要做什么，而不是如何做。只需要声明组件的视图、组件的状态数据、组件之间的依赖关系，那么状态改变就会自动的更新DOM。拓展：jquery 那种直接操作 dom 的工具函数库则是命令式的）\n(5)Component组件式开发。（在React中，一切皆为组件。组件可以是一个函数或者是一个类，接受数据输入。React追求的是将数据变更与渲染过程分离，以保持组件的纯粹。特点：可组合、可复用、可维护）\n(6)Fiber 架构\n(7)Hooks 机制"
+  },
+  {
+    "id": "112",
+    "category": "React",
+    "question": "React 是单向还是双向数据流？",
+    "answer": "待补充",
+    "content": "单向数据流。意思是：state → props → 子组件。数据永远从父流向子。\n那为什么有 onChange？那不是双向。那是：子组件触发事件 → 父组件更新 state → 再往下传。依然是单向，只是事件回调形成“反向通知”。\nVue 也是默认是单向数据流。但是Vue 提供了“双向绑定语法糖”（v-model）。"
+  },
+  {
+    "id": "113",
+    "category": "React",
+    "question": "什么是虚拟DOM，有什么优缺点？",
+    "answer": "待补充",
+    "content": "虚拟DOM是对真实DOM的抽象，本质是js对象。它最少包含标签名 (tag)、属性 (attrs) 和子元素对象 (children) 三个属性(不同框架对这三个属性的名命可能会有差别)。虚拟DOM和真实DOM一一对应，状态变更时，通过diff算法记录新树和旧树的差异，最后把差异更新到真正的DOM上。\n(1)无需手动操作DOM，极大地提高了性能；\n(2)可以跨平台。真实DOM和平台强相关，而虚拟DOM本质是js对象，可以更方便地跨平台操作，比如服务器渲染、移动端开发等。\n(3)虚拟DOM允许：批量更新、可中断渲染、时间切片、并发模式。如果直接操作真实 DOM，每一步都是副作用，很难回滚。"
+  },
+  {
+    "id": "114",
+    "category": "React",
+    "question": "React diff的原理是什么？",
+    "answer": "待补充",
+    "content": "实际上，diff 算法探讨的就是虚拟 DOM 树发生变化后，生成 DOM 树更新补丁的方式。它通过对比新旧两株虚拟 DOM 树的变更差异，将更新补丁作用于真实 DOM，以最小成本完成视图更新。传统diff算法通过循环递归对节点进行依次对比，效率低下。而React diff通过对tree、component、element三个层级的策略降低了算法复杂度，将 O(n^3) 复杂度的问题转换成 O(n) 复杂度的问题。\n(1) tree diff：只会对相同层级的节点进行比较，只有删除、创建操作，没有移动操作（该级别没做性能优化，官方建议少做这样的跨层级操作）。\n(2) component diff：同一个类的组件继续往下diff运算，非同类直接删除、创建。（同一个类的可以使用shouldComponentUpdate()来告诉react要不要对此组件进行diff运算）\n(3) element diff：当节点处于同一层级时，可以做删除、插入、移动操作，每个节点在对应的层级用唯一的key作为标识层级唯一的key作为标识。"
+  },
+  {
+    "id": "115",
+    "category": "React",
+    "question": "说说对Fiber架构的理解以及解决了什么问题？",
+    "answer": "待补充"
+  },
+  {
+    "id": "116",
+    "category": "React",
+    "question": "React 渲染流程是什么？",
+    "answer": "待补充",
+    "content": "1、render 阶段（计算虚拟 DOM）\n2、commit 阶段（更新真实 DOM）\n3.0、（useLayoutEffect 执行）\n3.1、浏览器绘制（paint）\n3.2、（useEffect 执行）"
+  },
+  {
+    "id": "117",
+    "category": "React",
+    "question": "为什么 React 要设计成“函数组件每次 render 都重新执行整个函数”？而不是像 Vue 那样精细依赖追踪？",
+    "answer": "待补充",
+    "content": "React 通过重新执行函数保持模型简单和可预测， 再用 diff 优化实际 DOM 更新， 这为并发和可中断渲染提供了基础。"
+  },
+  {
+    "id": "118",
+    "category": "React",
+    "question": "React 函数组件每次重新渲染时，函数体会发生什么？",
+    "answer": "待补充",
+    "content": "React 函数组件每次渲染都会重新执行函数体，因此函数体内的普通变量会重置；state/refs 等由 React 持久化存储，不会因为函数重新执行而重置；渲染阶段生成新的 UI 描述，React 再通过 diff 决定是否更新真实 DOM。"
+  },
+  {
+    "id": "119",
+    "category": "React",
+    "question": "React类组件最新的生命周期是怎么样的？",
+    "answer": "待补充",
+    "content": "React 16.4之后去掉了三个生命周期，分别是：\ncomponentWillMount、componentWillReceiveProps、componentWillUpdate\n(废弃是因为Fiber的原因，很可能因为高优先级任务的出现而打断现有任务导致它们会被执行多次。)\n新增了两个生命周期：\ngetDerivedStateFromProps、getSnapshotBeforeUpdate\n挂载阶段（创建阶段）：\nconstructor——（实例化过程中自动调用，通过super关键字获取来自父组件的props，初始化state状态或者在this上挂载方法）\ngetDerivedStateFromProps——（props和state变化时会调用，第一个参数为即将更新的props，第二个参数为上一个状态的state）\nrender——（用于渲染DOM结构，可以访问组件state与prop属性，注意不要在 render 里面 setState, 否则会触发死循环导致内存崩溃）\ncomponentDidMount——（组件挂载到真实DOM节点后执行，其在render方法之后执行。\n此方法多用于执行一些数据获取，事件监听等操作）\n更新阶段：\ngetDerivedStateFromProps\nshouldComponentUpdate——（用于告知组件本身基于当前的props和state是否需要重新渲染组件）\nrender：\ngetSnapshotBeforeUpdate——（该周期函数在render后执行，执行之时DOM元素还没有被更新。该方法返回的一个Snapshot值，作为componentDidUpdate第三个参数传入，该生命周期必须和componentDidUpdate搭配使用）\ncomponentDidUpdate——（组件更新结束后触发）\n卸载阶段：\ncomponentWillUnmount——（此方法用于组件卸载前，清理一些注册是监听事件，或者取消订阅的网络请求等）"
+  },
+  {
+    "id": "120",
+    "category": "React",
+    "question": "hooks是为了解决什么问题？有哪些hooks api ？",
+    "answer": "待补充",
+    "content": "(1)为了解决逻辑复用问题。\n之前是利用高阶组件HOC解决逻辑复用问题，但是HOC容易导致组件嵌套太深，再加上class组件生命周期比较多，组件会变得非常大。为了解决这个问题，就在函数组件的 fiber 节点中加入了 memorizedState 属性用来存储数据，然后在函数组件里面通过 api 来使用这些数据，这些 api 被叫做 hooks api。因为是使用 fiber 节点上的数据，就把 api 命名为了 useXxx。存储数据的方式是链表（数组），顺序不能变，所以 hooks api 不能出现在if等逻辑块中，只能在顶层。\n(2)使组件变得更容易理解，利于维护。\n在组件中，每个生命周期常常包含一些不相关的逻辑，有的开发人员甚至会乱用生命周期。除了代码复用和代码管理会遇到困难外，class 是学习 React 的一大屏障。我们必须去理解 JavaScript 中 this 的工作方式，这与其他语言存在巨大差异。还不能忘记绑定事件处理器。没有稳定的语法提案，这些代码非常冗余。\n常用hooks：\nuseState：存储和更改state；\nuseReducer：合并组件的状态更新逻辑，就是处理有多个状态更新逻辑的组件(列表的增删改）。const [state, dispatch] = useReducer(reducer, initialArg, init?)。用reducer函数来触发state的变更或修改；reducer是一个纯函数，参数为 state 和 action，返回值是更新后的 state；\nuseContext：进行深层数据传递；（使用场景：更改主题、保存当前路由、保存当前用户信息、配合useReducer进行状态管理）\nuseRef：值为 {current: 具体值} 的形式，因为指向不变，变的是current的值，每次对比都是同一个。当你希望组件“记住”某些信息，但又不想让这些信息触发新的渲染时，你可以使用 ref 。（使用场景：“跳出” React 并与外部 API 通信、存储一些不影响渲染逻辑的值、存储和操作 DOM 元素、存储 timeout ID）"
+  },
+  {
+    "id": "121",
+    "category": "React",
+    "question": "(1)useState和useRef的区别：",
+    "answer": "待补充",
+    "content": "useState：存值，改变会触发重新渲染，值在每次 render 中参与 UI 计算，是“响应式数据”。\nuseRef：存一个 .current，改变不会触发重新渲染，不参与 UI 渲染计算，是“持久化容器”。你可以把它理解成：一个在组件生命周期内稳定存在的对象盒子。React 给你的一个“后门”， 让你在必要时直接接触 DOM。\nstate 是“驱动 UI 变化的源”，ref 是“持久化存储 + 逃离 React 的通道”\nuseEffect：可以在组件需要与外部系统同步的时候使用，比如异步执行函数。默认情况下，Effect 会在每次渲染后都会执行。当组件销毁的时候会调用返回的清理函数，相当于componentDidMount，componentDidUpdate 和 componentWillUnmount 这三个生命周期函数的组合。（注意：React官方建议从组件生命周期中跳脱出来，独立思考 Effect。从生命周期思考会让思路变得复杂，相反，始终专注于单个启动/停止周期。无论组件是挂载、更新还是卸载，都不应该有影响。只需要描述如何开始同步和如何停止。如果做得好，Effect 将能够在需要时始终具备启动和停止的弹性。）\nuseLayoutEffect：和useEffect一样也能处理副作用。区别就是useLayoutEffect 在 DOM 更新后、浏览器绘制前同步执行；useEffect 在浏览器完成绘制后异步执行。读取或同步修改 DOM 时使用 useLayoutEffect，其余副作用使用 useEffect。\n常见bug：\n如果你需要读取 DOM 尺寸然后立刻修改样式，用 useEffect 可能会闪一下（因为已经绘制了再更新）。"
+  },
+  {
+    "id": "122",
+    "category": "React",
+    "question": "(1)为什么 React 官方推荐优先使用 useEffect，而不是 useLayoutEffect？",
+    "answer": "待补充",
+    "content": "因为 useLayoutEffect 是同步执行，会阻塞浏览器绘制，影响性能；大多数副作用不需要阻塞渲染，因此推荐优先使用 useEffect，仅在需要同步读取或修改 DOM 时使用 useLayoutEffect。\nuseMemo：是基于state 执行函数并且缓存值，在state 变化后重新计算值（相当于 vue的getter），避免重复计算。useMemo可以用作性能优化，但不会让首次渲染更快，它只会帮助你跳过不必要的更新工作。\nuseCallback：useCallback 解决的核心问题是：函数引用稳定。当 dep 不变时，返回同一个函数引用。注意：缓存的是“函数引用”，相当于带依赖控制的函数缓存器。真正作用是：控制引用变化，影响依赖和渲染。一般会搭配React.Memo做性能优化。但性能优化只是：引用稳定带来的副作用，不是本质。\nReact.memo：缓存组件，避免不必要的重新渲染。（当props不变时，子组件不再随父组件一起更新）"
+  },
+  {
+    "id": "123",
+    "category": "React",
+    "question": "(1)为什么 useCallback 常常和 React.memo 一起出现？",
+    "answer": "待补充",
+    "content": "因为：React.memo 比较 props 是浅比较，函数是引用类型，普通函数每次 render 都是新引用，所以 React.memo 会失效。useCallback 保证引用稳定，React.memo 才能真正生效。"
+  },
+  {
+    "id": "124",
+    "category": "React",
+    "question": "(2) 为什么会过度优化？",
+    "answer": "待补充",
+    "content": "因为 useCallback 不是免费的。每次 render，React 要比较依赖数组，要维护 memoized hook，要做额外逻辑。如果子组件没有用 React.memo或者组件很轻，或者函数根本没传下去，那 useCallback 没带来任何收益，反而增加心智复杂度。什么时候该用 useCallback？当函数作为 props 传给 React.memo 子组件或作为依赖传入 useEffect / useMemo且依赖不频繁变化（让子组件不用随父组件一起更新）。\n标准：React.memo 默认浅比较，如果传入对象/函数等引用类型，每次 render 容易产生新引用导致 memo 失效；可用 useMemo/useCallback 稳定引用，但是否需要取决于子组件渲染成本与更新频率，避免过度优化。\nuseTransition：（React18）用于标记非紧急更新，让 React 优先处理高优先级任务，提高交互响应性。"
+  },
+  {
+    "id": "125",
+    "category": "React",
+    "question": "如何设计自定义 Hook？",
+    "answer": "待补充",
+    "content": "当发现同一段逻辑在多个组件里重复出现，而且这段逻辑不只是函数工具，而是“跟 React 生命周期/状态绑定”的东西（useState/useEffect/useRef）。如果只是纯函数计算，别写 hook，写 utils 就行。\n（1）输入（API 设计）。参数要少、语义要清晰。把可变的东西作为参数传进来，不要把组件的局部细节强塞进 hook 里。\n（2）输出（返回值）。返回“组件需要的最小集合”：状态、操作函数、必要的 ref。常见模式是返回一个对象：{ data, loading, error, run, reset }，或者返回数组 [state, actions]。关键是稳定、可预测，让使用者一眼看懂怎么用。\n（3）内部实现。把会引发渲染的东西放 state；不需要触发渲染但要跨渲染保存的东西放 ref（比如上一次的值、定时器 id、请求序号、ECharts 实例）。副作用放 effect，并且 cleanup 一定要写，避免订阅/定时器泄漏。需要稳定引用的函数，用 useCallback；需要稳定计算结果，用 useMemo，但只在确实有必要时用。\n（4）边界和可测试性。hook 要处理竞态、卸载、重复触发这些边界。比如请求型 hook 要避免“后返回的覆盖先返回的”，可以用 requestId 存在 ref 里；组件卸载后不 setState，可以在 cleanup 里标记 isMounted=false 或用 AbortController。另外尽量把业务计算做成纯函数抽出去，这样 hook 只负责“调度”，测试也容易。"
+  },
+  {
+    "id": "126",
+    "category": "React",
+    "question": "React 为什么 Hook 不能写在条件判断里？",
+    "answer": "待补充",
+    "content": "React 在内部通过链表（或数组）按调用顺序保存 Hook 状态，每次渲染时依赖调用顺序进行匹配。如果调用顺序发生变化，状态会错位，因此 Hook 必须在组件顶层按固定顺序调用。\n（update 阶段必须和 mount 阶段的 Hook 数量和顺序完全一致。更新阶段在复用原来的 Hook 链表。）"
+  },
+  {
+    "id": "127",
+    "category": "React",
+    "question": "为什么可以在循环里用自定义 Hook，但不能在循环里直接用 useState？",
+    "answer": "待补充"
+  },
+  {
+    "id": "128",
+    "category": "React",
+    "question": "useEffect 什么时候执行？cleanup 什么时候执行？",
+    "answer": "待补充",
+    "content": "useEffect:\n默认：每次 render 后执行（commit 之后）\n[]：只在 mount 后执行一次\n[dep]：mount + dep 改变时执行\n执行前会先执行上一次的 cleanup（如果有）\ncleanup："
+  },
+  {
+    "id": "129",
+    "category": "React",
+    "question": "React 18 为什么会执行两次 effect？（StrictMode）？",
+    "answer": "待补充",
+    "content": "因为在开发环境下，React 会故意：mount、立刻 unmount、再 mount\n目的是检测副作用是否安全，生产环境不会。（严格模式通过“模拟重复挂载”来暴露未清理和非幂等副作用的问题。）\n也会执行两次render，流程是：render、commit、effect、cleanup、render、commit、effect"
+  },
+  {
+    "id": "130",
+    "category": "React",
+    "question": "为什么推荐setCount(c => c + 1)这种函数式更新而不是setCount(count + 1)？",
+    "answer": "待补充",
+    "content": "函数式更新能确保基于最新状态计算，避免闭包和批处理导致的状态不一致问题。\n（React 18 扩展了自动批处理范围，不再局限于 React 事件内，异步回调中也会自动批处理。）"
+  },
+  {
+    "id": "131",
+    "category": "React",
+    "question": "state 和 props有什么区别？",
+    "answer": "待补充",
+    "content": "state就是内部数据状态，props是外部传入组件内部的数据。react具有单向数据流的特性，所以props的主要作用是从父组件向子组件中传递数据。在子组件中，props在内部不可变的，如果想要改变它，只能通过外部组件传入新的props来重新渲染子组件。\n两者相同点：\n(1)两者都是 JavaScript 对象\n(2)两者都是用于保存信息\n(3)props 和 state 都能触发渲染更新"
+  },
+  {
+    "id": "132",
+    "category": "React",
+    "question": "区别：",
+    "answer": "待补充",
+    "content": "(1)props 是外部传递给组件的，而 state 是在组件内被组件自己管理的，一般在 constructor 中初始化\n(2)props 在组件内部是不可修改的，但 state 在组件内部可以进行修改\n(3)state 是多变的、可以修改"
+  },
+  {
+    "id": "133",
+    "category": "React",
+    "question": "组件状态传递方式有哪些？",
+    "answer": "待补充",
+    "content": "四种："
+  },
+  {
+    "id": "134",
+    "category": "React",
+    "question": "组件卸载时会发生什么？",
+    "answer": "待补充",
+    "content": "执行所有 effect 的 cleanup"
+  },
+  {
+    "id": "135",
+    "category": "React",
+    "question": "Redux的特性和原理？",
+    "answer": "待补充",
+    "content": "特性：\n(1)、单一数据源\n(2)、state 是只读的\n(3)、使用纯函数来执行修改"
+  },
+  {
+    "id": "136",
+    "category": "React",
+    "question": "原理：",
+    "answer": "待补充",
+    "content": "数据都放在 store公共存储空间，组件通过 dispatch 一个 action ，将state 直接传入 store，而且修改的逻辑都是在 reducer 里面，组件通过subscribe 从 store 获取到 state 的改变，从中取出最新的数据。\n注意Redux 的更新流程是严格单向的：\n（1）dispatch 一个 action\n（2）action 进入 reducer\n（3）reducer 返回新的 state\n（4）store 更新\n（5）订阅的组件重新 render\nreducer 不写副作用，因为它必须可重复执行（比如时间旅行、热重载、调试回放），同样输入必须得到同样输出，否则状态不可回放。\n扩展：\nRedux中间件（redux-thunk、redux-saga）：\n因为异步过程在组件间不好管理，所以有了中间件。中间件的原理就是层层包装 dispatch。它最终返回的函数就是处理 action 的 dispatch。"
+  },
+  {
+    "id": "137",
+    "category": "React",
+    "question": "怎样在react中引入css？",
+    "answer": "待补充",
+    "content": "(1) 直接在组件中写。（样式过多容易造成代码混乱）\n(2) 引入css文件。（样式是全局生效，容易互相影响）\n(3) 引入 .module.css 文件。（将css文件作为一个模块引入）\n(4) CSS in JS的模式，采用第三方库比如styled-components。"
+  },
+  {
+    "id": "138",
+    "category": "React",
+    "question": "React Router有几种模式？",
+    "answer": "待补充",
+    "content": "(1) hash 模式：在url后面加上#，如http://127.0.0.1:5500/home/#/page1\n(基于 hash 的路由：通过监听 hashchange 事件，感知 hash 的变化\n改变 hash 可以直接通过 location.hash=xxx)\n(利用 hashchange 事件监听 URL 的变化，从而进行 DOM 操作来模拟页面跳转)\n(2) history 模式：允许操作浏览器的曾经在标签页或者框架里访问的会话历史记录\n(通过BrowserRouter传过来的当前值，通过props传进来的path与context传进来的pathname进行匹配，然后决定是否执行渲染组件, 同时能够应用 history.go() 等 API"
+  },
+  {
+    "id": "139",
+    "category": "React",
+    "question": "监听 url 的变化可以通过自定义事件触发实现)",
+    "answer": "待补充",
+    "content": "前端路由本质是根据 URL 渲染不同组件。常见有 hash 和 history 两种模式。hash 通过监听 hashchange 实现，不会刷新 404；history 基于 pushState，需要服务器支持。React Router 本质是监听地址变化并匹配渲染对应组件。"
+  },
+  {
+    "id": "140",
+    "category": "React",
+    "question": "如何处理React项目中的错误？",
+    "answer": "待补充",
+    "content": "react16引用了错误边界（ErrorBoundary）新的概念。\n错误边界是一种 React 组件，可以捕获子组件的错误，同时也不会渲染发生崩溃的子组件，还能展示降级UI。\n形成错误边界组件的两个条件：\n使用了 static getDerivedStateFromError()\n使用了 componentDidCatch()\n抛出错误后，请使用 static getDerivedStateFromError(error) 渲染备用 UI ，使用 componentDidCatch(error，errorInfo) 打印错误信息"
+  },
+  {
+    "id": "141",
+    "category": "React",
+    "question": "触发组件重新 render 的来源？",
+    "answer": "待补充",
+    "content": "state、props、key、context、forceUpdate / 外部更新"
+  },
+  {
+    "id": "142",
+    "category": "React",
+    "question": "如果 render 阶段允许副作用，并发渲染会出现什么具体问题？",
+    "answer": "待补充"
+  },
+  {
+    "id": "143",
+    "category": "React",
+    "question": "副作用会重复，可能重复发请求、重复注册监听、状态失控。",
+    "answer": "待补充"
+  },
+  {
+    "id": "144",
+    "category": "React",
+    "question": "一句话定义副作用：只要一个函数的执行，会影响函数外部世界的状态，就是副作用。",
+    "answer": "待补充",
+    "content": "（而为什么 React 要求组件函数本身“尽量像纯函数”？纯函数让系统具备数学性质，从而可以安全地重算、丢弃、调度。）"
+  },
+  {
+    "id": "145",
+    "category": "React",
+    "question": "为什么 setState是异步的？（在 React 18 批处理下）？",
+    "answer": "待补充",
+    "content": "是因为：React 会批量收集更新，在当前事件结束后统一处理，重新 render。这叫批处理（batching）。\n目的：减少重复 render，提高性能。\n所以“异步”本质是：不是立即生效，而是进入更新队列。"
+  },
+  {
+    "id": "146",
+    "category": "React",
+    "question": "为什么不推荐用 index 作为 key？",
+    "answer": "待补充",
+    "content": "用 index 作为 key 时，删除或插入元素会导致后续元素的 key 变化，React 会复用错误的 Fiber，可能导致组件状态或 DOM 状态错位。"
+  },
+  {
+    "id": "147",
+    "category": "React",
+    "question": "说说对Suspense的理解？",
+    "answer": "待补充",
+    "content": "Suspense 本质是组件在 render 阶段抛出 Promise，React 捕获后暂停当前 Fiber 渲染，渲染 fallback，待 Promise resolve 后重新调度 render。它依赖 Fiber 的可中断渲染能力。Suspense 其实本质不是“加载中组件”。它本质是： “render 失败重试机制”。\n流程：\nrender Child —— 发现数据未准备 —— throw promise —— React 捕获 —— 找到最近 Suspense —— 显示 fallback —— 重新 render。\n用在哪些场景：\n1、页面数据还没加载完时显示loading\n2、数据加载（配合框架）\n3、并发场景优化，比如切换 tab：不立即闪 loading，等数据准备好再平滑切换。\nErrorBoundary 和 Suspense 底层机制类似，都是通过在 render 阶段抛出异常进行边界控制；区别在于 Error 表示不可恢复错误，而 Promise 表示可恢复的异步等待。"
+  },
+  {
+    "id": "148",
+    "category": "React",
+    "question": "React 18有哪些新特性？",
+    "answer": "待补充",
+    "content": "重点：React 18 引入自动批处理、并发渲染机制以及 useTransition 等调度能力，提升了应用响应性。\n（1）自动批处理（Automatic Batching）\n以前：\nsetTimeout(() => {"
+  },
+  {
+    "id": "149",
+    "category": "React",
+    "question": "React有哪些优化性能的方式？",
+    "answer": "待补充",
+    "content": "(1) 避免不必要的 render\nReact.memo、useMemo、useCallback、useRef、合理状态隔离、不滥用 context\n(2) 减少渲染量\n列表虚拟化（react-window）、分页、懒加载组件（React.lazy + Suspense）\n(3) 调度优化\nuseTransition（低优先级更新）、useDeferredValue、自动批处理\n(4) 数据层优化\n减少深层对象引用变化、稳定 key、避免重复请求、缓存数据\n(5) 构建层优化\n代码分割、Tree shaking、SSR / RSC、减少 bundle 体积"
+  },
+  {
+    "id": "150",
+    "category": "React",
+    "question": "服务端渲染（SSR）解决什么问题？怎么做？过程是什么？",
+    "answer": "待补充",
+    "content": "SSR是Server Side Render简称；页面上的内容是通过服务端渲染生成的，浏览器直接显示服务端返回的html就可以了。（平时写的HTML页面和框架渲染的页面属于浏览器端渲染）。解决的问题：\n(1) SEO，由于搜索引擎爬虫抓取工具可以直接查看完全渲染的页面\n(2) 加速首屏加载，解决首屏白屏问题。\n缺点：提高了项目复杂度和服务器的负荷"
+  },
+  {
+    "id": "151",
+    "category": "React",
+    "question": "怎么做：",
+    "answer": "待补充",
+    "content": "(1) 手动搭建一个 SSR 框架。(2) 使用成熟的SSR 框架，如 Next.JS\n过程：\n服务器端运行React代码生成HTML——>发送HTML给浏览器——>浏览器接到内容显示——>浏览器加载JS文件——>JS代码执行并接管页面的操作"
+  },
+  {
+    "id": "152",
+    "category": "TypeScript",
+    "question": "谈谈对TS的理解，和JS的区别？",
+    "answer": "待补充",
+    "content": "TypeScript 是 JavaScript 的类型的超集，扩展了 JavaScript 的语法。\n支持ES6语法，支持面向对象编程的概念，如类、接口、继承、泛型等。\n（超集就是TS包含JS，所以JS也是TS的子集）\n注意：TS类型系统会在编译期就推导完成，运行时没有类型，是JS世界。\n举例：\ntype A = { a?: string }\ntype B = { a: number }\ntype C = A & B\n最后推导结果是：\ntype C = string & number 也就是never\nTypeScript 的类型系统只存在于编译期。\n（泛型并不是在运行时变化，而是在编译阶段根据使用的类型参数进行类型替换和推导。）"
+  },
+  {
+    "id": "153",
+    "category": "TypeScript",
+    "question": "为何选择 TypeScript？",
+    "answer": "待补充",
+    "content": "(1)、TypeScript 增加了代码的可读性和可维护性。\n(2)、新增了其他语言的语法，比如 Class（类）、Interface（接口）、Generics (泛型)、Enums (枚举）等，可以更方便快地实现一些强大功能。\n(3)、TypeScript 拥抱了 ES6 规范，兼容很多第三方库，因为TS在编译阶段会编译成.js文件。\n(4)、TS给JS添加了一套静态类型系统，从动态类型语言变成了静态类型语言，可以在编译期间做类型检查，从而发现一些类型安全问题。"
+  },
+  {
+    "id": "154",
+    "category": "TypeScript",
+    "question": "你在项目里是怎么用 TypeScript 的？",
+    "answer": "待补充",
+    "content": "我在项目里主要用 TypeScript 做接口建模和组件类型约束，比如用 interface/type 定义接口返回结构，用 keyof 和泛型写一些通用函数，比如根据字段更新对象。对于列表组件或表单组件会用泛型保证数据类型一致。另外也会用 Pick/Omit 这些工具类型做结构裁剪，避免重复定义类型。"
+  },
+  {
+    "id": "155",
+    "category": "TypeScript",
+    "question": "你在项目里怎么用 TS 提升代码质量？",
+    "answer": "待补充",
+    "content": "在项目里我主要通过三种方式用 TS 提升质量：\n第一，给接口数据和业务模型定义清晰的类型，避免 any，确保字段变更能在编译期暴露问题。\n第二，在通用函数或工具方法里使用泛型，尤其是配合 keyof 和 T[K]，保证 key 和 value 的类型联动，避免误传错误字段。\n第三，通过字面量类型和 as const 保持精确类型推断，避免类型被无意扩大成 string 或 number。"
+  },
+  {
+    "id": "156",
+    "category": "TypeScript",
+    "question": "typescript 的数据类型有哪些？",
+    "answer": "待补充",
+    "content": "除了js有的那几种（Boolean、Number、String、null、undefined、Object、Symbol、BigInt）\n还有：\narray（数组类型）、tuple（元组类型）、enum（枚举类型）、any（任意类型）\nvoid （用于标识方法返回值的类型，表示该方法没有返回值）\nnever 类型（空集合 （包括null和 undefined）的子类型，可以赋值给任何类型，代表从不会出现的值，一般用来指定那些总是会抛出异常、无限循环）"
+  },
+  {
+    "id": "157",
+    "category": "TypeScript",
+    "question": "说一下typescript中的枚举？",
+    "answer": "待补充",
+    "content": "通俗来说，枚举就是一个对象的所有可能取值的集合。"
+  },
+  {
+    "id": "158",
+    "category": "TypeScript",
+    "question": "请解释 TypeScript 中 interface 和 type 的区别？",
+    "answer": "待补充"
+  },
+  {
+    "id": "159",
+    "category": "TypeScript",
+    "question": "区别：",
+    "answer": "待补充",
+    "content": "（1）interface 可以声明合并，type不行。\n（2）interface 不能定义联合类型、元组、基础类型别名（就是给基础类型起个新名字），type 可以定义更多类型形式。\n（3）interface可以实现 extends ，type不能直接extends，但可以用交叉类型实现继承效果。（interface可以继承type，反之不行）\n（4）type 更偏“类型表达式”，interface 更偏“对象结构描述”。\n综上：如果是对象结构优先 interface，因为支持声明合并，扩展性更好；如果涉及联合类型或工具类型组合（比如Omi），会用 type。"
+  },
+  {
+    "id": "160",
+    "category": "TypeScript",
+    "question": "说说你对 TypeScript 中类的理解？",
+    "answer": "待补充",
+    "content": "传统的面向对象语言基本都是基于类的，JavaScript 基于原型的方式让开发者多了很多理解成本。在 ES6 之后，JavaScript 拥有了 class 关键字，虽然本质依然是构造函数。TypeScript 的 class 支持面向对象的所有特性，比如 类、接口等。"
+  },
+  {
+    "id": "161",
+    "category": "TypeScript",
+    "question": "说说TypeScript的泛型？",
+    "answer": "待补充",
+    "content": "泛型就是：让“类型”变成一个参数（泛型 = 类型参数）。就像函数参数一样。意思是：类型先不写死，用的时候再传。\n（标准说法：定义函数、接口或者类的时候，不预先定义好具体的类型，而在使用的时候在指定类型）\n（1）泛型可以让函数或类型更通用；\n（2）保证类型安全，不用 any；"
+  },
+  {
+    "id": "162",
+    "category": "TypeScript",
+    "question": "那和any有什么区别？",
+    "answer": "待补充",
+    "content": "any：关闭类型检查，不报错，但运行会炸\n泛型：保持类型信息，会报错提示\nunknown：不知道类型，得手动判断（会迫使你在开发中先做类型判断），会报错提示"
+  },
+  {
+    "id": "163",
+    "category": "TypeScript",
+    "question": "说说TypeScript中的高级类型？",
+    "answer": "待补充",
+    "content": "交叉类型 & （必须同时满足成员结构，否则就是never）\n联合类型 | （联合类型只要求满足其中一个成员结构即可）\n类型索引（keyof 类似于 Object.keys ，用于获取一个接口中 Key 的联合类型）\n类型约束（通过关键字 extend 进行约束，可以结合类型索引）\n映射类型（通过 in 关键字做类型的映射，可以结合类型索引）"
+  },
+  {
+    "id": "164",
+    "category": "TypeScript",
+    "question": "怎么理解类型运算中的extends？",
+    "answer": "待补充",
+    "content": "extends的两种用法：泛型约束、条件类型判断。"
+  },
+  {
+    "id": "165",
+    "category": "TypeScript",
+    "question": "解释一下 keyof 是什么？",
+    "answer": "待补充",
+    "content": "举个例子：\nkeyof User 的意思是：取出 User 的“所有键名”，变成一个联合类型。所以：\ntype K = \"id\" | \"name\"，不是字段类型（number/string），是字段名。\nkeyof 用来获取一个类型的所有属性名，返回一个联合类型。使用 keyof T 是为了保证传入的 key 一定是对象已有的属性名，避免访问不存在的字段。"
+  },
+  {
+    "id": "166",
+    "category": "TypeScript",
+    "question": "什么是字面量类型？",
+    "answer": "待补充",
+    "content": "字面量类型就是把具体的值当成类型。比如: let a: string，这里的类型是 string（很宽）。而：let b: \"hello\"，这里的类型是 \"hello\"（只能是这个值）。这就叫字面量类型。\nTypeScript 会对变量做类型推断，如果是 const 声明会推断为字面量类型，但如果是 let 或显式标注为 string 会被扩大为宽泛类型。通过 as const 可以保持字面量类型，从而让泛型推断更精确。\nas const 可以把值收窄为字面量类型，避免 const 字符串被扩大成 string，从而保住泛型推断。比如：const k = \"user\" as const"
+  },
+  {
+    "id": "167",
+    "category": "TypeScript",
+    "question": "什么是映射类型，常用工具类型有哪些？",
+    "answer": "待补充",
+    "content": "写法类似于[K in keyof T]，意思是：遍历 T 的每一个属性名 K，给它重新定义类型。\n常用工具类型Partial、Readonly、Required、Pick、Exclude、Omit、Record、ReturnType、Parameters。\n工具类型核心三要素：keyof、映射类型、条件类型\n用途："
+  },
+  {
+    "id": "168",
+    "category": "TypeScript",
+    "question": "为什么 keyof any 是string | number | symbol ？",
+    "answer": "待补充",
+    "content": "因为 JS 对象的 key 可以是 string、number、symbol。keyof any 表示任意对象的key"
+  },
+  {
+    "id": "169",
+    "category": "TypeScript",
+    "question": "说说infer的用法？",
+    "answer": "待补充",
+    "content": "infer 用来在条件类型里提取类型变量。意思是：从类型里猜出一部分类型，并给它起个名字（它只在条件类型里用）。\n举例："
+  },
+  {
+    "id": "170",
+    "category": "TypeScript",
+    "question": "我们想实现一个类型：如果 T 是数组类型，就返回元素类型，否则返回 T 本身。",
+    "answer": "待补充",
+    "content": "比如：\nUnwrap<string[]> → string\nUnwrap<number> → number\n答案：\ntype Unwrap<T> = T extends (infer U)[] ? U : T"
+  },
+  {
+    "id": "171",
+    "category": "TypeScript",
+    "question": "说说TS里面typeof和 instanceof用法，和JS有什么区别？",
+    "answer": "待补充",
+    "content": "JS里的 typeof / instanceof → 运行时判断\nTS里的 typeof / instanceof → 还能触发类型收窄\n在TS中，typeof可以从已有结构中提取类型信息，当类型需要从真实数据推导时使用这是为了让类型直接来自真实数据。比如：\nInstanceof不变，在JS里面是判断原型链，但TS多做了类型收窄。比如："
+  },
+  {
+    "id": "172",
+    "category": "TypeScript",
+    "question": "satisfies的用法是什么？",
+    "answer": "待补充",
+    "content": "校验对象是否符合某个类型，同时保持原始类型推导。既校验结构，又保留推导能力。很多库（例如路由、配置）都会用。"
+  },
+  {
+    "id": "173",
+    "category": "TypeScript",
+    "question": "这里的作用：检查是否符合 Config，但不改变推导类型。",
+    "answer": "待补充",
+    "content": "如果写成：\nconst config:Config = {\nport: 3000,\nmode: \"dev\""
+  },
+  {
+    "id": "174",
+    "category": "TypeScript",
+    "question": "说说类型守卫？",
+    "answer": "待补充",
+    "content": "TS 官方把 “通过判断让类型变窄”的机制统一叫做 type narrowing（类型收窄），而这些能触发 narrowing 的判断方式就被叫做 type guard（类型守卫）。\ntypeof x === \"string\" → 类型守卫\nx instanceof Error → 类型守卫"
+  },
+  {
+    "id": "175",
+    "category": "TypeScript",
+    "question": "v is User 是什么？",
+    "answer": "待补充",
+    "content": "这是 TypeScript 的 Type Guard（类型守卫）语法。\n结构：\nfunction fn(x: unknown): x is SomeType\n意思是： 如果这个函数返回 true，TS 就认为 x 是 SomeType\n也就是说：这个函数不仅返回 boolean，还告诉 TS 类型信息。"
+  },
+  {
+    "id": "176",
+    "category": "TypeScript",
+    "question": "如果以后类型新增一个成员，怎么避免漏改代码？",
+    "answer": "待补充",
+    "content": "(1)如果是联合类型，用 switch 处理判别字段，在 default 分支里用：\nconst _exhaustive: never = value;"
+  },
+  {
+    "id": "177",
+    "category": "Vue",
+    "question": "Vue是什么？",
+    "answer": "待补充",
+    "content": "Vue是一个渐进式框架，基于标准 HTML、CSS 和 JavaScript 构建，并提供了一套声明式的、组件化的编程模型。Vue 有两个核心功能：\n(1)声明式渲染：Vue 基于标准 HTML 拓展了一套模板语法\n(2)响应式：Vue 会自动跟踪 JavaScript 状态并在其发生变化时响应式地更新 DOM"
+  },
+  {
+    "id": "178",
+    "category": "Vue",
+    "question": "Vue和React的区别？",
+    "answer": "待补充",
+    "content": "相同点：\n(1)都是组件化思想\n(2)都有Virtual DOM（虚拟dom）这个概念\n(3)数据驱动视图，开发时只需要关注数据的变化\n(4)都提倡单向数据流\n不同点：\n(1)核心思想不同。React推崇函数式编程（纯组件），数据不可变以及单向数据流。Vue是以数据可变的、细粒度的响应性系统为基础，属性可直接修改，它对侦测数据的变化更敏感、更精确。\n(2)对于视图描述这块，它们的方案不一样。React用的是jsx，可以直接用 js 来写逻辑。Vue基于标准 HTML 拓展了一套模板语法vue template。\n(3) diff算法不同。react主要使用diff队列保存需要更新哪些DOM，得到patch树，再统一操作批量更新DOM。Vue 使用双向指针，边对比，边更新DOM。\n(4)响应式原理不同。React是在state和props的值改变后通过diff算法算出更改的部分，再渲染页面，Vue2是通过Object.defineProperty()来劫持各个属性的setter，getter，在数据变动时发布消息给订阅者，触发相应的监听回调。Vue3用的是Proxy。\n拓展：\n(1)vue template 是受限制的，只能访问 data，prop、method，可以静态的分析和优化，而 react 的 jsx 因为直接是 js 的语法，动态逻辑比较多，没法静态的做分析和优化。\n(2)react的jsx本来就是和 js 同一个上下文，结合 typescript 就很自然。但是vue template和 js 上下文割裂开来，引入 typescript 做类型推导的时候就比较困难，需要单独把所有 prop、method、data 的类型声明一遍才行。"
+  },
+  {
+    "id": "179",
+    "category": "Vue",
+    "question": "都运用了虚拟DOM，React和Vue有什么区别？",
+    "answer": "待补充",
+    "content": "React：重新渲染 + diff\nVue：依赖追踪 + 精确更新\n两者都有 虚拟 DOM 和 diff，但触发更新的方式完全不同。\nReact 的思路是：\nstate 改变 -> 组件函数重新执行 -> 生成新的 virtual DOM -> diff -> 更新真实 DOM\n所以 React 的特点是：组件级重新执行。它不知道哪个变量影响哪个节点，所以选择重新算一遍再diff。\n再看 Vue 的更新模型：\nVue 有一个核心东西叫：响应式系统。它会做一件事：依赖收集。\n流程是：数据变化 -> 找到依赖 -> 更新对应组件\nReact 的 diff：组件重新 render -> VDOM diff\nVue 的 diff：只在依赖触发时 diff ，所以 Vue 的更新范围通常更小。"
+  },
+  {
+    "id": "180",
+    "category": "Vue",
+    "question": "Vue2和Vue3的响应式数据原理分别是什么？",
+    "answer": "待补充",
+    "content": "Vue2用的是Object.defineProperty，通过set和get重新定义和修改属性，属性变化会通知相关依赖进行更新操作。\n缺点：\n(1)检测不到对象属性的添加和删除\n(2)数组API方法无法监听到\n(3)需要对每个属性进行遍历监听，如果嵌套对象，需要深层监听，造成性能问题。\nVue3用的Proxy，Proxy 是 ES6 中提供的功能，其作用为：实现基本操作的拦截和自定义（如属性查找、赋值、枚举、函数调用等）。可以监听整个对象。"
+  },
+  {
+    "id": "181",
+    "category": "Vue",
+    "question": "为什么vue2中对象添加新属性不会刷新页面？",
+    "answer": "待补充",
+    "content": "vue2是用过Object.defineProperty实现数据响应式，最开始的对象属性被设置成响应式数据，后面新加的属性无法触发事件属性的拦截变成响应式数据。\n解决方式：Vue.set()、Object.assign()、$forcecUpdated()"
+  },
+  {
+    "id": "182",
+    "category": "Vue",
+    "question": "Vue3 的 reactive / ref 区别",
+    "answer": "待补充",
+    "content": "都可以用来声明响应式状态，reactive 用于创建对象的响应式数据，而 ref 用于创建基本类型的响应式数据。因为 Proxy 只能代理对象，无法直接代理基本类型，所以 Vue3 使用 ref 通过 value 属性包装基本类型实现响应式。为什么模板又不用 .value，因为Vue 在 template 里会自动帮你解包，这就是ref auto unwrapping（ref自动解包）。\nreactive() API 有一些局限性：\n(1)、声明的值类型有限，它只能用于对象类型 (对象、数组和如 Map、Set 这样的集合类型)，不能持有如 string、number 或 boolean 这样的原始类型。\n(2)、不能替换整个对象。state = reactive({ count: 1 })会导致丢失响应性连接，应该写成state.count = 1;\n(3)、对解构操作不友好。对属性进行解构操作也会丢失响应性连接。\nconst user = reactive({\nage: 18"
+  },
+  {
+    "id": "183",
+    "category": "Vue",
+    "question": "Vue 的双向绑定是怎么实现的？",
+    "answer": "待补充",
+    "content": "Vue 的双向绑定是通过 v-model 实现的，本质上是数据绑定和事件监听的结合。数据变化会更新视图，而用户输入时通过事件修改数据，从而实现数据和视图的同步。\n注意：Vue 的数据流是单向的，v-model 本质是 value 绑定和 input 事件的语法糖（或者说本质是 props 和 emit 的语法糖），通过事件修改数据，从而形成类似双向绑定的效果。Vue2 默认使用 value 和 input 事件，Vue3 改为 modelValue 和 update:modelValue，从而支持多个 v-model。"
+  },
+  {
+    "id": "184",
+    "category": "Vue",
+    "question": "created / mounted 区别",
+    "answer": "待补充",
+    "content": "created：数据已经初始化完成，可以访问 data、methods、computed 等，但DOM还没渲染，常见用途是初始化数据、发请求。\nmounted：组件已经完成渲染，DOM 已经挂载到页面。常见用途：操作 DOM、获取元素尺寸、初始化第三方库。\n如果数据不依赖DOM，Vue2请求接口可以在created也可以在mounted，但是服务端渲染不支持mounted，这时候要放在created。放在mounted请求有可能导致页面闪动（页面dom结构已经生成），但如果在页面加载前完成则不会，出现此情况建议：放在created生命周期当中。Vue3推荐onMounted，不要放在setup。"
+  },
+  {
+    "id": "185",
+    "category": "Vue",
+    "question": "updated / beforeUpdate 的区别",
+    "answer": "待补充",
+    "content": "beforeUpdate：数据更新了，但 DOM 还没更新。\nupdated：DOM 已经更新完成。一般不建议在 updated 里再修改数据，可能造成无限更新循环。"
+  },
+  {
+    "id": "186",
+    "category": "Vue",
+    "question": "setup是什么？",
+    "answer": "待补充",
+    "content": "setup 是 Vue3 Composition API 的入口函数，在组件创建时执行。开发者可以在里面声明响应式状态、计算属性、监听以及生命周期，并将需要暴露给模板的数据 return 出去。\nsetup 执行时机：setup → beforeCreate → created\n也就是说：setup 比 Vue2 生命周期还早。\n所以在 setup 里 没有 this，因为组件实例还没创建。这也是 Vue3 不再推荐 this.xxx 的原因。"
+  },
+  {
+    "id": "187",
+    "category": "Vue",
+    "question": "说说keep-alive？",
+    "answer": "待补充",
+    "content": "keep-alive 用于缓存组件实例，避免组件被销毁。当组件被缓存时不会触发 destroy 生命周期，而是触发 activated 和 deactivated（Vue3对应onActivated、onDeactivated）。常用于路由页面缓存，比如列表页返回时保留状态和滚动位置。"
+  },
+  {
+    "id": "188",
+    "category": "Vue",
+    "question": "keep-alive 缓存的组件，第一次进入页面会触发 mounted 还是 activated？",
+    "answer": "待补充",
+    "content": "答：mounted\nkeep-alive 会缓存组件实例，当组件切换时不会销毁，而是进入 activated 和 deactivated 状态。默认会缓存访问过的组件，但可以通过 include、exclude、max 控制缓存策略。\nerrorCaptured？（onErrorCaptured）\nVue 提供 errorCaptured 生命周期用于捕获子组件运行时错误，常用于错误监控或降级处理。如果返回 false，可以阻止错误继续向父组件传播。\n触发时机：当子组件发生错误时，父组件的 errorCaptured 会被触发。"
+  },
+  {
+    "id": "189",
+    "category": "Vue",
+    "question": "return false 的作用：",
+    "answer": "待补充",
+    "content": "如果返回false，错误就不会继续向上冒泡。"
+  },
+  {
+    "id": "190",
+    "category": "Vue",
+    "question": "父组件生命周期和子组件生命周期的执行顺序是什么？",
+    "answer": "待补充",
+    "content": "父子组件生命周期执行顺序是：created 阶段父组件先执行，子组件后执行；mounted 阶段子组件先执行，父组件最后执行。"
+  },
+  {
+    "id": "191",
+    "category": "Vue",
+    "question": "Vue组件之间的通信方式都有哪些？",
+    "answer": "待补充",
+    "content": "(1)父向子通信：props\n(2)子向父通信：$emit\n触发自定义事件，this.$emit('事件名', 参数)。父组件接收到后，由父组件\n修改，子组件本身是不能修改父组件的数据的。\n(3)兄弟组件之间的通信：EventBus\n创建一个中央事件总线EventBus，兄弟组件通过$emit触发自定义事件，$emit第二个参数为传递的数值，另一个兄弟组件通过$on监听自定义事件。\n(4)祖孙与后代组件之间的通信：provide 与 inject\n在祖先组件定义provide属性，返回传递的值。在后代组件通过inject接收组件传递过来的值。\n(5)非关系组件间之间的通信：Vuex / Pinia"
+  },
+  {
+    "id": "192",
+    "category": "Vue",
+    "question": "EventBus 为什么很少推荐了？",
+    "answer": "待补充",
+    "content": "第一，数据流不清晰。你只看到某个组件在 $on，但到底是谁 $emit 的，要到处找。项目一大就很痛苦。\n第二，难维护。事件名全靠字符串，改名、重构都不安全。\n第三，容易内存泄漏。如果组件销毁时忘记 `$off``，监听还在，就会有问题。\n第四，调试困难。不像 Vuex / Pinia 那样有明确的状态流和 devtools 支持，EventBus 经常是“消息飞来飞去”。"
+  },
+  {
+    "id": "193",
+    "category": "Vue",
+    "question": "Vue3的composable是什么？",
+    "answer": "待补充",
+    "content": "composable 是 Vue3 Composition API 中用于抽离和复用逻辑的函数，通常以 useXxx 命名。它可以把状态、方法、计算属性、监听等逻辑封装起来，在多个组件中复用，作用类似 React 自定义 Hook，但更贴近 Vue 的响应式体系。"
+  },
+  {
+    "id": "194",
+    "category": "Vue",
+    "question": "说说Vuex和Pinia？",
+    "answer": "待补充",
+    "content": "Vuex 或 Pinia 用于集中管理全局共享状态，避免组件层层传递 props 或复杂的事件通信，使状态变化更加可追踪和可维护。\nVuex 的状态管理是这种模式：state、mutations、actions特点是：必须通过 mutation 修改 state，这是为了让状态变化可追踪。\nPinia 的设计更简单：state、actions，没有mutations，可以直接改 state。\nPinia 是 Vue 官方推荐的新状态管理库，相比 Vuex 语法更简洁，没有 mutation 概念，TypeScript 支持更好，并且更适合 Vue3 Composition API。\nVuex 通过 mutation 管理状态变化，而 Pinia 允许直接修改 state，因为 Vue3 的响应式系统和 DevTools 已经能够追踪状态变化，从而减少模板代码并提升开发体验。"
+  },
+  {
+    "id": "195",
+    "category": "Vue",
+    "question": "v-if和v-show的区别？",
+    "answer": "待补充",
+    "content": "(1)v-show隐藏则是为该元素添加css--display:none，dom元素依旧还在。v-if显示隐藏是将dom元素整个添加或删除。\n(2) v-show 由false变为true的时候不会触发组件的生命周期。\nv-if由false变为true的时候，触发组件的beforeCreate、created、beforeMount、mounted钩子，由true变为false的时候触发组件的beforeDestory、destoryed方法\n(3) v-if 是惰性的。意思是：如果初始条件是 false，DOM 不会渲染。而 v-show：DOM 一定会先渲染出来。\nv-if 与 v-show 都能控制dom元素在页面的显示\n如果需要非常频繁地切换，则使用 v-show 较好。\n如果在运行时条件很少改变，则使用 v-if 较好。"
+  },
+  {
+    "id": "196",
+    "category": "Vue",
+    "question": "Vue中的$nextTick有什么作用？",
+    "answer": "待补充"
+  },
+  {
+    "id": "197",
+    "category": "Vue",
+    "question": "computer和watch的区别？",
+    "answer": "待补充"
+  },
+  {
+    "id": "198",
+    "category": "Vue",
+    "question": "为什么v-if和v-for不建议放在一起使用？",
+    "answer": "待补充"
+  },
+  {
+    "id": "199",
+    "category": "Vue",
+    "question": "slot是什么？",
+    "answer": "待补充",
+    "content": "插槽。用来拓展组件，去更好地复用组件和对其做定制化处理。\nslot 用于父组件向子组件传递模板内容，分为默认插槽、具名插槽和作用域插槽，作用域插槽允许子组件向父组件暴露数据。\n可以使用<slot>标签，也可以使用v-slot（v-slot属性只能在<template>上使用）"
+  },
+  {
+    "id": "200",
+    "category": "Vue",
+    "question": "vue中有哪些修饰符？",
+    "answer": "待补充"
+  },
+  {
+    "id": "201",
+    "category": "Vue",
+    "question": "自定义指令怎么用，有什么应用场景？",
+    "answer": "待补充"
+  },
+  {
+    "id": "202",
+    "category": "Vue",
+    "question": "Vue2组件中的data为什么是一个函数？",
+    "answer": "待补充",
+    "content": "为了防止多个组件实例对象之间共用一个data，产生数据污染。采用函数的形式，initData时会将其作为工厂函数都会返回全新data对象（函数返回的对象内存地址并不相同）"
+  },
+  {
+    "id": "203",
+    "category": "Vue",
+    "question": "谈谈mixin？",
+    "answer": "待补充",
+    "content": "mixin来分发 Vue 组件中的可复用功能。（解决逻辑复用问题）\n缺点：\n(1)、命名冲突；\n(2)、数据来源不清晰\n拓展：vue 的组件是 option 对象的方式，那么逻辑复用方式很自然可以想到通过对象属性的 mixin，vue2 的组件内逻辑复用方案就是 mixin，但是 mixin 很难区分混入的属性、方法的来源，比较乱，代码维护性差，但也没有更好的方案。后面Vue3.0以后把option api换成composition api才解决了这个问题。\nreact 刚开始也是支持 mixin 的，但后来废弃了。然后采用了HOC（高阶组件），再后面有了Fiber架构后，就是用hooks来解决这个问题。"
+  },
+  {
+    "id": "204",
+    "category": "Vue",
+    "question": "Vue3有哪些新特点？",
+    "answer": "待补充",
+    "content": "(1)体积更小（移除一些不常用的 API，打包时只打包用到的模块）\n(2)速度更快\n(a) diff算法优化（增加了静态标记，生变化的地方添加一个flag标记，下次发生变化的时候直接找该地方进行比较）\n(b)静态提升（不参与更新的元素，会做静态提升，只会被创建一次，在渲染时直接复用）"
+  },
+  {
+    "id": "205",
+    "category": "Vue",
+    "question": "Options API和Composition API有什么不同？",
+    "answer": "待补充",
+    "content": "Options API以“组件实例”的概念为中心，通过定义methods，computed，watch，data等属性与方法，共同处理页面逻辑。\nComposition API是直接在函数作用域内定义响应式状态变量，并将从多个函数中得到的状态组合起来处理复杂问题。(Composition API 的风格是基于函数的组合，但组合式 API 并不是函数式编程。组合式 API 是以 Vue 中数据可变的、细粒度的响应性系统为基础的，而函数式编程通常强调数据不可变。)\n组合式API比起选项式API有以下优点：\n(1)更好的逻辑复用；它可以解决mixin命名冲突和数据来源不清晰的问题（在选项式 API 中主要的逻辑复用机制是 mixins）。\n(2)更好的类型推导；Composition API主要利用基本的变量和函数，它们本身就是类型友好的。\n(3)更灵活的代码组织；Composition API相同的逻辑功能基本都是放在一起的，利于阅读和维护。\n(4)不像选项式 API 需要依赖 this 上下文对象访问属性，被编译的模板可以直接访问 <script setup> 中定义的变量。 Composition API中见不到this的使用，减少了this指向不明的情况。\n两种 API 风格都能够覆盖大部分的应用场景。它们只是同一个底层系统所提供的两套不同的接口。实际上，选项式 API 是在组合式 API 的基础上实现的。（官方认为不必只固守一种风格，这两种API风格在学习中可以选择自己喜欢的。未来也不会废弃选项式API）"
+  },
+  {
+    "id": "206",
+    "category": "Vue",
+    "question": "如何处理Vue项目中的错误？",
+    "answer": "待补充",
+    "content": "(1)设置全局错误处理函数Vue.config.errorHandler。三个参数分别是错误对象、错误组件、错误信息\n(2)利用生命周期钩子errorCaptured。三个参数分别是错误对象、错误组件、错误信息"
+  },
+  {
+    "id": "207",
     "category": "Vue",
     "question": "vue可以做哪些性能优化？",
-    "answer": "待补充",
-    "tags": [
-      "(c) 响应式系统Proxy"
-    ]
+    "answer": "待补充"
   }
 ]

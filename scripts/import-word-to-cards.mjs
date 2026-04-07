@@ -6,7 +6,7 @@ const workspaceRoot = process.cwd();
 const inputArg = process.argv[2];
 
 if (!inputArg) {
-  console.error('Usage: npm run import:word -- <path-to-docx>');
+  console.error('Usage: npm run import:word -- <path-to-docx-or-directory>');
   process.exit(1);
 }
 
@@ -15,7 +15,6 @@ const outputPath = path.resolve(workspaceRoot, 'src/data/cards.json');
 
 const LABELS = {
   category: ['分类', 'category'],
-  subcategory: ['子分类', 'subcategory'],
   question: ['问题', '题目', 'question'],
   answer: ['答案', 'answer'],
   content: ['补充', '补充笔记', '笔记', '内容', 'content'],
@@ -43,12 +42,45 @@ function toPlainText(rawText) {
     .join('\n');
 }
 
-function parseCards(text) {
-  if (/(^|\n)\s*(分类|子分类|问题|题目|答案|补充|内容|标签)\s*[:：]/.test(text)) {
+function parseCards(text, fallbackCategory) {
+  if (isLabeledCardText(text)) {
     return parseLabeledCards(text);
   }
 
-  return parseNoteStyleCards(text, path.basename(inputPath, path.extname(inputPath)));
+  return parseNoteStyleCards(text, fallbackCategory);
+}
+
+function isLabeledCardText(text) {
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 20);
+
+  const labeledLines = lines.filter((line) =>
+    /^(分类|子分类|问题|题目|答案|补充|内容|标签)\s*[:：]/.test(line),
+  );
+
+  return labeledLines.length >= 3;
+}
+
+async function collectInputFiles(targetPath) {
+  const stats = await fs.stat(targetPath);
+
+  if (stats.isFile()) {
+    return [targetPath];
+  }
+
+  if (!stats.isDirectory()) {
+    throw new Error(`Unsupported input path: ${targetPath}`);
+  }
+
+  const entries = await fs.readdir(targetPath, { withFileTypes: true });
+
+  return entries
+    .filter((entry) => entry.isFile() && path.extname(entry.name).toLowerCase() === '.docx')
+    .map((entry) => path.join(targetPath, entry.name))
+    .sort((left, right) => left.localeCompare(right, 'zh-CN'));
 }
 
 function parseLabeledCards(text) {
@@ -66,14 +98,13 @@ function parseLabeledCards(text) {
       return;
     }
 
-    if (!current.category || !current.subcategory || !current.question || !current.answer) {
+    if (!current.category || !current.question || !current.answer) {
       throw new Error(`Card is missing required fields: ${JSON.stringify(current, null, 2)}`);
     }
 
     cards.push({
       id: String(cards.length + 1),
       category: current.category,
-      subcategory: current.subcategory,
       question: current.question,
       answer: current.answer,
       ...(current.content ? { content: current.content } : {}),
@@ -148,14 +179,18 @@ function cleanHeading(line, fallbackCategory) {
 
 function isLikelyHeading(line) {
   return (
-    line.length <= 20 && !/[？?：:]/.test(line) && !/^(第?\d+|[（(]?\d+[)）]|[-*•])/.test(line) && !/[<>/=+]/.test(line)
+    line.length <= 20 &&
+    !/[？?：:]/.test(line) &&
+    !/^(第?\d+|[（(]?\d+[)）]|[-*•])/.test(line) &&
+    !/[<>/=+]/.test(line)
   );
 }
 
 function isLikelyQuestion(line) {
   return (
     /[？?]$/.test(line) ||
-    (line.length <= 40 && /(是什么|区别|作用|原理|实现|为什么|怎么|有哪些|执行顺序|说说|区别都|分别是什么)/.test(line))
+    (line.length <= 40 &&
+      /(是什么|区别|作用|原理|实现|为什么|怎么|有哪些|执行顺序|说说|区别都|分别是什么)/.test(line))
   );
 }
 
@@ -170,7 +205,6 @@ function buildCardFromNote(cards, currentCard, bodyLines) {
   cards.push({
     id: String(cards.length + 1),
     category: currentCard.category,
-    subcategory: currentCard.subcategory,
     question: currentCard.question,
     answer: '待补充',
     ...(content ? { content } : {}),
@@ -184,13 +218,11 @@ function parseNoteStyleCards(text, fallbackCategory) {
     .filter(Boolean);
 
   const cards = [];
-  let currentSubcategory = fallbackCategory;
   let currentCard = null;
   let bodyLines = [];
 
   lines.forEach((line, index) => {
     if (index === 0) {
-      currentSubcategory = cleanHeading(line, fallbackCategory);
       return;
     }
 
@@ -198,7 +230,6 @@ function parseNoteStyleCards(text, fallbackCategory) {
       buildCardFromNote(cards, currentCard, bodyLines);
       currentCard = null;
       bodyLines = [];
-      currentSubcategory = cleanHeading(line, fallbackCategory);
       return;
     }
 
@@ -206,7 +237,6 @@ function parseNoteStyleCards(text, fallbackCategory) {
       buildCardFromNote(cards, currentCard, bodyLines);
       currentCard = {
         category: fallbackCategory,
-        subcategory: currentSubcategory,
         question: line,
       };
       bodyLines = [];
@@ -223,13 +253,30 @@ function parseNoteStyleCards(text, fallbackCategory) {
   return cards;
 }
 
-const { value: rawText } = await mammoth.extractRawText({ path: inputPath });
-const text = toPlainText(rawText);
-const cards = parseCards(text);
+const inputFiles = await collectInputFiles(inputPath);
 
-await fs.writeFile(outputPath, `${JSON.stringify(cards, null, 2)}\n`, 'utf8');
+if (inputFiles.length === 0) {
+  throw new Error(`No .docx files found in ${inputPath}`);
+}
 
-console.log(`Imported ${cards.length} cards to ${outputPath}`);
+const cards = [];
+
+for (const filePath of inputFiles) {
+  const { value: rawText } = await mammoth.extractRawText({ path: filePath });
+  const text = toPlainText(rawText);
+  const fallbackCategory = path.basename(filePath, path.extname(filePath));
+  const parsedCards = parseCards(text, fallbackCategory);
+  cards.push(...parsedCards);
+}
+
+const normalizedCards = cards.map((card, index) => ({
+  ...card,
+  id: String(index + 1),
+}));
+
+await fs.writeFile(outputPath, `${JSON.stringify(normalizedCards, null, 2)}\n`, 'utf8');
+
+console.log(`Imported ${normalizedCards.length} cards to ${outputPath}`);
 console.log('Expected DOCX format:');
 console.log('分类: React');
 console.log('子分类: Hooks');
