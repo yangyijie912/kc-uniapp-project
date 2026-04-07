@@ -243,7 +243,9 @@ onShow(() => {
 
 <style scoped>
 .page {
-  height: 100vh;
+  /* 解决h5出现双滚动条的问题 */
+  height: calc(100vh - var(--window-top) - var(--window-bottom));
+  overflow: hidden;
   padding: 24rpx 28rpx 48rpx;
   box-sizing: border-box;
   background: linear-gradient(180deg, #f8f2e8 0%, #efe5d5 100%);
