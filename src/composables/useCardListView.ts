@@ -6,7 +6,6 @@ import { ref, computed } from 'vue';
 import { getCards } from '@/services/cardService';
 import { getCategories } from '@/services/categoryService';
 import type { Card, Category, CardView } from '@/types/card';
-import type { PageResult } from '@/types/common';
 import { toCardViews } from '@/utils/cardView';
 
 type CardQueryParams = Partial<Card> & {
@@ -18,41 +17,32 @@ type CardQueryParams = Partial<Card> & {
 export default function useCardListView() {
   const cardList = ref<Card[]>([]);
   const categoryList = ref<Category[]>([]);
-  const queryParams = ref<CardQueryParams>({
-    page: 1,
-    pageSize: 10,
-  });
-
-  const total = ref(0);
   const loading = ref(false);
+  const total = ref(0);
   const hasMore = ref(true);
 
-  function setQueryParams(params: Partial<CardQueryParams>) {
-    // 更新查询参数，合并新的参数到现有的查询参数中
-    queryParams.value = {
-      ...queryParams.value,
-      ...params,
-    };
-  }
-
-  const loadCards = (append = false) => {
+  const loadCards = (params?: CardQueryParams) => {
     if (loading.value) return;
     loading.value = true;
-    const res = getCards(queryParams.value);
+
+    const res = getCards({
+      ...params,
+      page: 1,
+      pageSize: (params?.pageSize || 10) * (params?.page || 1),
+    });
     if (res.success && res.data) {
-      const pageData = res.data as PageResult<Card>;
-      total.value = pageData.total;
-      hasMore.value = pageData.page * pageData.pageSize < pageData.total;
-      cardList.value = append ? [...cardList.value, ...pageData.list] : pageData.list;
+      total.value = res.data.total;
+      hasMore.value = res.data.page * res.data.pageSize < res.data.total;
+      //   cardList.value = append ? [...cardList.value, ...res.data.list] : res.data.list;
+      cardList.value = res.data.list;
     } else {
-      if (!append) {
-        cardList.value = [];
-      }
+      cardList.value = [];
       uni.showToast({
         title: res.message || '加载数据失败',
         icon: 'none',
       });
     }
+
     loading.value = false;
   };
 
@@ -69,15 +59,9 @@ export default function useCardListView() {
     }
   }
 
-  function loadAllData() {
-    loadCards();
+  function loadAllData(params?: CardQueryParams) {
+    loadCards(params);
     loadCategories();
-  }
-
-  function loadNextPage() {
-    if (!hasMore.value || loading.value) return;
-    queryParams.value.page = (queryParams.value.page ?? 1) + 1;
-    loadCards(true);
   }
 
   const cardViewList = computed<CardView[]>(() => {
@@ -87,13 +71,12 @@ export default function useCardListView() {
   return {
     loading,
     hasMore,
+    total,
     cardList,
     categoryList,
     cardViewList,
-    setQueryParams,
     loadCards,
     loadCategories,
     loadAllData,
-    loadNextPage,
   };
 }

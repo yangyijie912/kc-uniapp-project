@@ -91,8 +91,10 @@ import QuizSetupSheet from '@/components/QuizSetupSheet.vue';
 import type { CardStatus } from '@/types/card';
 import type { quizQuery } from '@/types/quiz';
 
-const { cardViewList, loading, hasMore, loadAllData, setQueryParams, loadNextPage } =
-  useCardListView();
+const { cardViewList, loading, hasMore, loadCards, loadAllData } = useCardListView();
+
+const pageSize = 10;
+const currentPage = ref(1);
 
 const inputKeyword = ref('');
 const showQuizSetup = ref(false);
@@ -181,9 +183,29 @@ const goToQuizByCategory = (query: quizQuery) => {
   });
 };
 
+const buildQuery = (page: number) => ({
+  categoryId: queryParams.categoryId,
+  keyword: queryParams.keyword,
+  status: parseStatus(queryParams.status),
+  page,
+  pageSize,
+});
+
+const loadCurrentPages = () => {
+  loadAllData(buildQuery(currentPage.value));
+};
+
+const refreshData = () => {
+  if (currentPage.value < 1) {
+    currentPage.value = 1;
+  }
+  loadCurrentPages();
+};
+
 const handleScrollToLower = () => {
   if (!loading.value && hasMore.value) {
-    loadNextPage();
+    currentPage.value += 1;
+    loadCards(buildQuery(currentPage.value));
   }
 };
 
@@ -191,38 +213,31 @@ const handleScrollToLower = () => {
 const searchCard = () => {
   const keyword = inputKeyword.value?.trim();
   queryParams.keyword = keyword;
-  setQueryParams({
-    categoryId: queryParams.categoryId,
-    status: parseStatus(queryParams.status),
-    keyword: keyword ? keyword : undefined,
-    page: 1,
-  });
-  loadAllData();
+  isSearchResultMode.value = Boolean(keyword);
+  currentPage.value = 1;
+  loadCurrentPages();
 };
 
 // 切换状态筛选
 const toggleStatusFilter = (status?: CardStatus) => {
   queryParams.status = status;
-  setQueryParams({
-    categoryId: queryParams.categoryId,
-    keyword: queryParams.keyword,
-    status,
-    page: 1,
-  });
-  loadAllData();
+  currentPage.value = 1;
+  loadCurrentPages();
 };
 
 onLoad((options) => {
   const p = parseParams(options as PageOptions);
   Object.assign(queryParams, p);
+  inputKeyword.value = p.keyword || '';
   if (p.keyword) {
     isSearchResultMode.value = true;
   }
-  setQueryParams(p);
+  currentPage.value = 1;
+  loadCurrentPages();
 });
 
 onShow(() => {
-  loadAllData();
+  refreshData();
 });
 </script>
 
