@@ -45,7 +45,7 @@
         </view>
       </view>
 
-      <view class="card-list" :class="{ 'is-editing': isEditMode }" @longpress="onEdit">
+      <view class="card-list" :class="{ 'is-editing': isEditMode }">
         <view
           v-for="value in cardViewList"
           :key="value.id"
@@ -54,6 +54,7 @@
             'is-editing': isEditMode,
             'is-selected': selectedCards.includes(value.id),
           }"
+          @longpress="onEdit(value.id)"
           @click="onCardClick(value.id)"
         >
           <view
@@ -100,10 +101,41 @@
       </view>
       <view class="batch-actions">
         <view class="batch-btn batch-btn-secondary" @click="exitEditMode">取消</view>
-        <view class="batch-btn batch-btn-ghost">转移分类</view>
-        <view class="batch-btn batch-btn-danger">删除</view>
+        <view class="batch-btn batch-btn-ghost" @click="selectCategory">转移分类</view>
+        <view class="batch-btn batch-btn-danger" @click="batchDelete">删除</view>
       </view>
     </view>
+
+    <BaseDialog
+      :open="categoryDialogVisible"
+      title="选择分类"
+      :showDefaultFooter="false"
+      @close="closeCategoryDialog"
+    >
+      <view class="category-dialog">
+        <view class="category-dialog-tip">请选择要转移到的分类，确认后会批量更新已选卡片。</view>
+        <picker
+          :range="categoryOptions"
+          range-key="name"
+          :value="selectedTransferCategoryIndex"
+          @change="onTransferCategoryChange"
+        >
+          <view class="transfer-picker" :class="{ placeholder: !selectedTransferCategoryName }">
+            {{ selectedTransferCategoryName || '请选择分类' }}
+          </view>
+        </picker>
+        <view class="transfer-picker-hint">
+          当前选择：{{ selectedTransferCategoryName || '未选择' }}
+        </view>
+      </view>
+
+      <template #footer>
+        <view class="dialog-footer-default">
+          <view class="btn btn-cancel" @click="closeCategoryDialog">取消</view>
+          <view class="btn btn-confirm" @click="confirmTransferCategory">转移分类</view>
+        </view>
+      </template>
+    </BaseDialog>
 
     <QuizSetupSheet
       :open="showQuizSetup"
@@ -118,12 +150,14 @@
 import { onLoad, onShow } from '@dcloudio/uni-app';
 import { computed, reactive, ref } from 'vue';
 import { jsonToUrlParam } from '@/utils/jsonToUrl';
+import { batchDeleteCards, batchUpdateCards } from '@/services/cardService';
 import useCardListView from '@/composables/useCardListView';
+import BaseDialog from '@/components/BaseDialog.vue';
 import QuizSetupSheet from '@/components/QuizSetupSheet.vue';
 import type { CardStatus } from '@/types/card';
 import type { quizQuery } from '@/types/quiz';
 
-const { cardViewList, loading, hasMore, loadCards, loadAllData } = useCardListView();
+const { cardViewList, categoryList, loading, hasMore, loadCards, loadAllData } = useCardListView();
 
 const pageSize = 10;
 const currentPage = ref(1);
@@ -140,6 +174,29 @@ const statusTabs = [
 
 const isEditMode = ref(false); // 是否处于编辑模式（多选状态）
 const selectedCards = ref<string[]>([]); // 已选择的卡片ID列表
+const categoryOptions = computed(() =>
+  categoryList.value.map((category) => ({
+    id: category.id,
+    name: category.name,
+  })),
+);
+const categoryDialogVisible = ref(false);
+const selectedTransferCategoryId = ref('');
+
+const selectedTransferCategoryIndex = computed(() => {
+  const index = categoryOptions.value.findIndex(
+    (category) => category.id === selectedTransferCategoryId.value,
+  );
+
+  return index === -1 ? 0 : index;
+});
+
+const selectedTransferCategoryName = computed(() => {
+  return (
+    categoryOptions.value.find((category) => category.id === selectedTransferCategoryId.value)
+      ?.name || ''
+  );
+});
 
 // 定义查询参数类型
 type QueryParams = {
@@ -269,13 +326,102 @@ const toggleStatusFilter = (status?: CardStatus) => {
 };
 
 // 进入编辑模式（长按卡片）
-const onEdit = () => {
+const onEdit = (id: string) => {
   isEditMode.value = true;
+  if (!selectedCards.value.includes(id)) {
+    selectedCards.value.push(id);
+  }
 };
 
 const exitEditMode = () => {
   isEditMode.value = false;
   selectedCards.value = [];
+  closeCategoryDialog();
+};
+
+// 选择转移的分类
+const onTransferCategoryChange = (event: { detail: { value: string } }) => {
+  const index = Number(event.detail.value);
+  const category = categoryOptions.value[index];
+
+  if (category) {
+    selectedTransferCategoryId.value = category.id;
+  }
+};
+
+const openCategoryDialog = () => {
+  if (selectedCards.value.length === 0) {
+    uni.showToast({ title: '请先选择卡片', icon: 'none' });
+    return;
+  }
+
+  if (!selectedTransferCategoryId.value) {
+    selectedTransferCategoryId.value = categoryOptions.value[0]?.id || '';
+  }
+
+  categoryDialogVisible.value = true;
+};
+
+const closeCategoryDialog = () => {
+  categoryDialogVisible.value = false;
+};
+
+// 选择分类并转移
+const selectCategory = () => {
+  openCategoryDialog();
+};
+
+const confirmTransferCategory = () => {
+  if (selectedCards.value.length === 0) {
+    uni.showToast({ title: '请先选择卡片', icon: 'none' });
+    return;
+  }
+
+  if (!selectedTransferCategoryId.value) {
+    uni.showToast({ title: '请选择分类', icon: 'none' });
+    return;
+  }
+
+  const res = batchUpdateCards(selectedCards.value, {
+    categoryId: selectedTransferCategoryId.value,
+  });
+
+  if (res.success) {
+    uni.showToast({ title: '转移成功', icon: 'success' });
+    closeCategoryDialog();
+    exitEditMode();
+    refreshData();
+    return;
+  }
+
+  uni.showToast({ title: res.message || '转移失败', icon: 'none' });
+};
+
+// 批量删除
+const batchDelete = () => {
+  if (selectedCards.value.length === 0) {
+    uni.showToast({ title: '请至少选择一张卡片', icon: 'none' });
+    return;
+  }
+
+  uni.showModal({
+    title: '确认删除',
+    content: `确定要删除选中的 ${selectedCards.value.length} 张卡片吗？不可恢复`,
+    confirmText: '删除',
+    cancelText: '取消',
+    success: (res) => {
+      if (res.confirm) {
+        const { success, message } = batchDeleteCards(selectedCards.value);
+        if (success) {
+          uni.showToast({ title: message || '删除成功', icon: 'success' });
+          exitEditMode();
+          refreshData();
+        } else {
+          uni.showToast({ title: message || '删除失败，请重试', icon: 'none' });
+        }
+      }
+    },
+  });
 };
 
 onLoad((options) => {
@@ -714,5 +860,74 @@ onShow(() => {
 .batch-btn-danger {
   background: rgba(239, 125, 66, 0.12);
   color: #c76530;
+}
+
+.category-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.category-dialog-tip {
+  color: #6c645a;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.transfer-picker {
+  height: 84rpx;
+  padding: 0 22rpx;
+  display: flex;
+  align-items: center;
+  border-radius: 22rpx;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1rpx solid rgba(61, 43, 24, 0.12);
+  color: #1e1c18;
+  font-size: 28rpx;
+  box-sizing: border-box;
+}
+
+.transfer-picker.placeholder {
+  color: #9d9487;
+}
+
+.transfer-picker-hint {
+  color: #6c645a;
+  font-size: 22rpx;
+  line-height: 1.5;
+}
+
+.dialog-footer-default {
+  display: flex;
+  gap: 16rpx;
+}
+
+.btn {
+  flex: 1;
+  min-height: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20rpx;
+  font-size: 28rpx;
+  font-weight: 700;
+  box-sizing: border-box;
+}
+
+.btn-cancel {
+  border: 1rpx solid rgba(61, 43, 24, 0.12);
+  background: rgba(255, 255, 255, 0.78);
+  color: #6c645a;
+}
+
+.btn-confirm {
+  background: linear-gradient(135deg, #127a72, #1f5eff);
+  color: #fff;
+  box-shadow: 0 12rpx 24rpx rgba(31, 94, 255, 0.22);
+}
+
+.btn:active {
+  transform: scale(0.98);
+  opacity: 0.92;
 }
 </style>
