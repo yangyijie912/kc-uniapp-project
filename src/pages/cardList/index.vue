@@ -29,22 +29,40 @@
         </view>
 
         <view class="page-actions">
-          <view v-if="showQuizAction" class="action-tool quiz-btn" @click="openQuizSetup">
-            <text class="action-tool-icon">▷</text>
+          <view class="page-actions-copy">
+            <view class="page-actions-title">批量操作</view>
+            <view class="page-actions-desc">长按卡片进入多选，支持转移分类与删除</view>
           </view>
-          <view class="action-tool add-btn" @click="goToAddCard">
-            <text class="action-tool-icon">+</text>
+
+          <view class="page-actions-body">
+            <view v-if="showQuizAction" class="action-tool quiz-btn" @click="openQuizSetup">
+              <text class="action-tool-icon">▷</text>
+            </view>
+            <view class="action-tool add-btn" @click="goToAddCard">
+              <text class="action-tool-icon">+</text>
+            </view>
           </view>
         </view>
       </view>
 
-      <view class="card-list">
+      <view class="card-list" :class="{ 'is-editing': isEditMode }" @longpress="onEdit">
         <view
           v-for="value in cardViewList"
           :key="value.id"
           class="card-item"
-          @click="goToDetail(value.id)"
+          :class="{
+            'is-editing': isEditMode,
+            'is-selected': selectedCards.includes(value.id),
+          }"
+          @click="onCardClick(value.id)"
         >
+          <view
+            v-if="isEditMode"
+            class="card-check"
+            :class="{ selected: selectedCards.includes(value.id) }"
+          >
+            <view class="card-check-dot"></view>
+          </view>
           <view class="card-top">
             <view class="card-title">
               <view class="card-category">{{ value.categoryName }}</view>
@@ -67,11 +85,25 @@
         </view>
       </view>
 
-      <view v-if="cardViewList.length > 0" class="list-footer">
+      <view class="list-footer">
         <view v-if="loading" class="list-footer-text is-loading">正在加载更多...</view>
         <view v-else-if="!hasMore" class="list-footer-text">没有更多了</view>
       </view>
+
+      <view v-if="isEditMode" class="bottom-placeholder"> </view>
     </scroll-view>
+
+    <view v-if="isEditMode" class="batch-bar">
+      <view class="batch-summary">
+        <view class="batch-title">已选 {{ selectedCards.length }} 张</view>
+        <view class="batch-desc">长按继续选择，完成后可批量转移分类或删除</view>
+      </view>
+      <view class="batch-actions">
+        <view class="batch-btn batch-btn-secondary" @click="exitEditMode">取消</view>
+        <view class="batch-btn batch-btn-ghost">转移分类</view>
+        <view class="batch-btn batch-btn-danger">删除</view>
+      </view>
+    </view>
 
     <QuizSetupSheet
       :open="showQuizSetup"
@@ -105,6 +137,9 @@ const statusTabs = [
   { label: '模糊', value: 'fuzzy' },
   { label: '未知', value: 'unknown' },
 ] as const;
+
+const isEditMode = ref(false); // 是否处于编辑模式（多选状态）
+const selectedCards = ref<string[]>([]); // 已选择的卡片ID列表
 
 // 定义查询参数类型
 type QueryParams = {
@@ -146,8 +181,16 @@ const parseParams = (options?: PageOptions): QueryParams => {
   };
 };
 
-// 进入卡片详情
-const goToDetail = (id: string) => {
+// 点击卡片多选或进入详情
+const onCardClick = (id: string) => {
+  if (isEditMode.value) {
+    if (selectedCards.value.includes(id)) {
+      selectedCards.value = selectedCards.value.filter((cardId) => cardId !== id);
+    } else {
+      selectedCards.value.push(id);
+    }
+    return;
+  }
   uni.navigateTo({
     url: `/pages/cardDetail/index?id=${id}`,
   });
@@ -223,6 +266,16 @@ const toggleStatusFilter = (status?: CardStatus) => {
   queryParams.status = status;
   currentPage.value = 1;
   loadCurrentPages();
+};
+
+// 进入编辑模式（长按卡片）
+const onEdit = () => {
+  isEditMode.value = true;
+};
+
+const exitEditMode = () => {
+  isEditMode.value = false;
+  selectedCards.value = [];
 };
 
 onLoad((options) => {
@@ -312,38 +365,71 @@ onShow(() => {
 }
 
 .page-actions {
+  min-width: 100%;
+  padding: 22rpx 22rpx 20rpx;
   display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16rpx;
+  border-radius: 28rpx;
+  background: linear-gradient(135deg, rgba(255, 252, 247, 0.96) 0%, rgba(255, 247, 236, 0.88) 100%);
+  border: 1rpx solid rgba(61, 43, 24, 0.12);
+  box-shadow: 0 16rpx 40rpx rgba(80, 55, 25, 0.06);
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.page-actions-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.page-actions-title {
+  color: #1e1c18;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.page-actions-desc {
+  margin-top: 8rpx;
+  color: #6c645a;
+  font-size: 22rpx;
+  line-height: 1.5;
+}
+
+.page-actions-body {
+  display: flex;
+  align-items: center;
   gap: 12rpx;
-  justify-content: flex-end;
   flex-shrink: 0;
 }
 
 .action-tool {
-  width: 64rpx;
-  height: 64rpx;
+  width: 72rpx;
+  height: 72rpx;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 999rpx;
   border: 1rpx solid rgba(61, 43, 24, 0.08);
-  box-shadow: 0 10rpx 22rpx rgba(80, 55, 25, 0.06);
+  box-shadow: 0 12rpx 26rpx rgba(80, 55, 25, 0.08);
   box-sizing: border-box;
   flex-shrink: 0;
 }
 
 .action-tool-icon {
-  font-size: 32rpx;
+  font-size: 34rpx;
   line-height: 1;
   font-weight: 600;
 }
 
 .add-btn {
-  background: rgba(18, 122, 114, 0.1);
+  background: linear-gradient(135deg, rgba(18, 122, 114, 0.16) 0%, rgba(18, 122, 114, 0.08) 100%);
   color: #127a72;
 }
 
 .quiz-btn {
-  background: rgba(31, 94, 255, 0.1);
+  background: linear-gradient(135deg, rgba(31, 94, 255, 0.16) 0%, rgba(31, 94, 255, 0.08) 100%);
   color: #1f5eff;
 }
 
@@ -383,10 +469,41 @@ onShow(() => {
   gap: 18rpx;
 }
 
+@media (max-width: 360px) {
+  .page-actions {
+    flex-direction: column;
+  }
+
+  .page-actions-body {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .batch-bar {
+    left: 20rpx;
+    right: 20rpx;
+  }
+}
+
 .list-footer {
   padding: 20rpx 0 8rpx;
   display: flex;
   justify-content: center;
+}
+
+.bottom-placeholder {
+  height: calc(200rpx + env(safe-area-inset-bottom));
+}
+
+.edit-list-footer {
+  position: fixed;
+  left: 28rpx;
+  right: 28rpx;
+  bottom: calc(170rpx + env(safe-area-inset-bottom));
+  display: flex;
+  justify-content: center;
+  z-index: 4;
+  pointer-events: none;
 }
 
 .list-footer-text {
@@ -405,11 +522,63 @@ onShow(() => {
 }
 
 .card-item {
+  position: relative;
   padding: 28rpx;
   border-radius: 28rpx;
   border: 1rpx solid rgba(61, 43, 24, 0.12);
   background: rgba(255, 252, 247, 0.84);
   box-shadow: 0 16rpx 40rpx rgba(80, 55, 25, 0.06);
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.card-item.is-editing {
+  padding-left: 90rpx;
+}
+
+.card-item.is-selected {
+  border-color: rgba(31, 94, 255, 0.36);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(235, 242, 255, 0.92) 100%);
+  box-shadow: 0 18rpx 42rpx rgba(31, 94, 255, 0.12);
+}
+
+.card-check {
+  position: absolute;
+  left: 24rpx;
+  top: 50%;
+  width: 36rpx;
+  height: 36rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2rpx solid rgba(31, 94, 255, 0.28);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 8rpx 20rpx rgba(31, 94, 255, 0.08);
+  box-sizing: border-box;
+  transform: translateY(-50%);
+}
+
+.card-check-dot {
+  width: 18rpx;
+  height: 18rpx;
+  border-radius: 50%;
+  background: transparent;
+  transform: scale(0.55);
+  opacity: 0;
+}
+
+.card-check.selected {
+  border-color: rgba(31, 94, 255, 0.8);
+  background: rgba(31, 94, 255, 0.14);
+}
+
+.card-check.selected .card-check-dot {
+  opacity: 1;
+  background: #1f5eff;
 }
 
 .card-top {
@@ -479,5 +648,71 @@ onShow(() => {
   color: #6c645a;
   font-size: 26rpx;
   line-height: 1.7;
+}
+
+.batch-bar {
+  position: fixed;
+  left: 28rpx;
+  right: 28rpx;
+  bottom: calc(20rpx + env(safe-area-inset-bottom));
+  z-index: 5;
+  padding: 20rpx 20rpx 18rpx;
+  border-radius: 30rpx;
+  background: rgba(255, 252, 247, 0.96);
+  border: 1rpx solid rgba(61, 43, 24, 0.12);
+  box-shadow: 0 18rpx 42rpx rgba(80, 55, 25, 0.12);
+  backdrop-filter: blur(12px);
+  box-sizing: border-box;
+}
+
+.batch-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.batch-title {
+  color: #1e1c18;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.batch-desc {
+  color: #6c645a;
+  font-size: 22rpx;
+  line-height: 1.5;
+}
+
+.batch-actions {
+  margin-top: 16rpx;
+  display: flex;
+  gap: 12rpx;
+}
+
+.batch-btn {
+  flex: 1;
+  height: 76rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+.batch-btn-secondary {
+  background: rgba(255, 255, 255, 0.8);
+  color: #6c645a;
+  border: 1rpx solid rgba(61, 43, 24, 0.08);
+}
+
+.batch-btn-ghost {
+  background: rgba(31, 94, 255, 0.1);
+  color: #1f5eff;
+}
+
+.batch-btn-danger {
+  background: rgba(239, 125, 66, 0.12);
+  color: #c76530;
 }
 </style>
