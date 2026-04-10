@@ -86,10 +86,12 @@ const exportData = async () => {
     // #ifdef APP-PLUS
     {
       const json = await buildExportJson();
-      await exportToJsonApp(json);
-      uni.showToast({
+      const fullPath = await exportToJsonApp(json);
+      uni.showModal({
         title: '导出成功',
-        icon: 'none',
+        content: `已保存到：\n${fullPath}`,
+        showCancel: false,
+        confirmText: '知道了',
       });
     }
     // #endif
