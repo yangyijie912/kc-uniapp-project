@@ -150,18 +150,26 @@ function getExportFiles(entries: ExportEntry[]): ExportFileEntry[] {
 
 // 清理旧的导出文件，保留最新的 maxCount 个
 async function cleanupOldExports(root: ExportDirectoryHandle, maxCount = 5): Promise<void> {
-  const entries = await readAllEntries(root);
-  const exportFiles = getExportFiles(entries);
+  try {
+    const entries = await readAllEntries(root);
+    const exportFiles = getExportFiles(entries);
 
-  if (exportFiles.length < maxCount) {
-    return;
-  }
+    if (exportFiles.length <= maxCount) {
+      return;
+    }
 
-  const removeCount = exportFiles.length - maxCount + 1;
-  const filesToRemove = exportFiles.slice(0, removeCount);
+    const removeCount = exportFiles.length - maxCount;
+    const filesToRemove = exportFiles.slice(0, removeCount);
 
-  for (const file of filesToRemove) {
-    await removeEntry(file);
+    for (const file of filesToRemove) {
+      try {
+        await removeEntry(file);
+      } catch (error) {
+        void error;
+      }
+    }
+  } catch (error) {
+    void error;
   }
 }
 
@@ -195,12 +203,13 @@ async function exportJsonWithLimit(json: string, fileName: string, maxCount = 5)
     throw new Error('无法访问文件系统');
   }
 
-  await cleanupOldExports(root, maxCount);
   const fileEntry = await writeFile(root, fileName, json);
 
   if (!fileEntry.fullPath) {
     throw new Error('写入文件成功，但无法获取文件路径');
   }
+
+  void cleanupOldExports(root, maxCount);
 
   return fileEntry.fullPath;
 }
