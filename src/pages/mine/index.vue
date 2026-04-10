@@ -25,10 +25,23 @@ import { pickImportDataApp, pickImportDataH5, importFromJsonFile } from '@/servi
 
 function showImportResult(result: Awaited<ReturnType<typeof importFromJsonFile>>) {
   if (result.success && result.data) {
-    const { categoryViewCount, cardCount } = result.data;
+    const {
+      newCategoryCount,
+      newCardCount,
+      skippedCategoryCount,
+      skippedCardCount,
+      overwrittenCardCount,
+    } = result.data;
+    const content = [
+      `新增 ${newCategoryCount} 个分类，${newCardCount} 张卡片`,
+      `跳过 ${skippedCategoryCount} 个分类，${skippedCardCount} 张卡片`,
+      `覆盖 ${overwrittenCardCount} 张卡片`,
+    ].join('\n');
     uni.showModal({
-      title: `成功导入 ${categoryViewCount} 个分类和 ${cardCount} 张卡片`,
-      icon: 'success',
+      title: '导入成功',
+      content,
+      showCancel: false,
+      confirmText: '知道了',
     });
     return;
   }
