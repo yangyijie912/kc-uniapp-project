@@ -12,7 +12,7 @@
 
         <view class="action-card action-card-export" @click="exportData">
           <view class="action-title">数据导出</view>
-          <view class="action-desc">导出当前卡片与分类到 JSON 文件</view>
+          <view class="action-desc">导出格式为 JSON，最多5个，超过覆盖最旧的</view>
         </view>
       </view>
     </view>
@@ -82,22 +82,41 @@ const importData = async () => {
 };
 
 const exportData = async () => {
-  const json = await buildExportJson();
+  try {
+    // #ifdef APP-PLUS
+    {
+      const json = await buildExportJson();
+      await exportToJsonApp(json);
+      uni.showToast({
+        title: '导出成功',
+        icon: 'none',
+      });
+    }
+    // #endif
 
-  // #ifdef H5
-  exportToJsonH5();
-  // #endif
+    // #ifdef H5
+    {
+      await exportToJsonH5();
+      uni.showToast({
+        title: '导出成功',
+        icon: 'none',
+      });
+    }
+    // #endif
 
-  // #ifdef APP-PLUS
-  exportToJsonApp(json);
-  // #endif
-
-  // #ifndef H5 || APP-PLUS
-  uni.showToast({
-    title: '当前平台暂不支持导出',
-    icon: 'none',
-  });
-  // #endif
+    // #ifndef H5 || APP-PLUS
+    uni.showToast({
+      title: '当前平台暂不支持导出',
+      icon: 'none',
+    });
+    // #endif
+  } catch (e) {
+    console.error('导出失败', e);
+    uni.showModal({
+      title: e instanceof Error ? e.message : '导出失败',
+      icon: 'none',
+    });
+  }
 };
 </script>
 
