@@ -93,6 +93,8 @@ type ExportFilesystem = {
   root?: ExportDirectoryHandle;
 };
 
+const EXPORT_FILE_NAME_RE = /^export_(\d{8}_\d{6})\.json$/;
+
 // 读取 PUBLIC_DOCUMENTS 目录下的导出文件列表
 function requestPublicDocumentsFS(): Promise<ExportFilesystem> {
   return new Promise((resolve, reject) => {
@@ -137,13 +139,13 @@ function getExportFiles(entries: ExportEntry[]): ExportFileEntry[] {
       return Boolean(
         entry.isFile &&
         entry.name &&
-        /^export_\d+\.json$/.test(entry.name) &&
+        EXPORT_FILE_NAME_RE.test(entry.name) &&
         typeof (entry as ExportFileEntry).createWriter === 'function',
       );
     })
     .sort((a, b) => {
-      const timeA = Number(a.name?.match(/^export_(\d+)\.json$/)?.[1] || 0);
-      const timeB = Number(b.name?.match(/^export_(\d+)\.json$/)?.[1] || 0);
+      const timeA = Number(a.name?.match(EXPORT_FILE_NAME_RE)?.[1].replace('_', '') || 0);
+      const timeB = Number(b.name?.match(EXPORT_FILE_NAME_RE)?.[1].replace('_', '') || 0);
       return timeA - timeB;
     });
 }
