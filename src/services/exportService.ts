@@ -62,7 +62,6 @@ export const exportToJsonH5 = async () => {
  * ---------- 以下是 app 端的导出实现 ----------
  */
 
-type ExportDirectoryEntry = PlusIoDirectoryEntry;
 type ExportEntry = {
   isFile?: boolean;
   name?: string;
@@ -92,6 +91,8 @@ type ExportDirectoryHandle = {
 type ExportFilesystem = {
   root?: ExportDirectoryHandle;
 };
+
+type CleanupErrorHandler = (message: string) => void;
 
 const EXPORT_FILE_NAME_RE = /^export_(\d{8}_\d{6})\.json$/;
 
@@ -151,27 +152,38 @@ function getExportFiles(entries: ExportEntry[]): ExportFileEntry[] {
 }
 
 // 清理旧的导出文件，保留最新的 maxCount 个
-async function cleanupOldExports(root: ExportDirectoryHandle, maxCount = 5): Promise<void> {
+async function cleanupOldExports(
+  root: ExportDirectoryHandle,
+  maxCount = 5,
+): Promise<string | null> {
   try {
     const entries = await readAllEntries(root);
     const exportFiles = getExportFiles(entries);
 
     if (exportFiles.length <= maxCount) {
-      return;
+      return null;
     }
 
     const removeCount = exportFiles.length - maxCount;
     const filesToRemove = exportFiles.slice(0, removeCount);
 
-    for (const file of filesToRemove) {
-      try {
-        await removeEntry(file);
-      } catch (error) {
-        void error;
+    const results = await Promise.allSettled(filesToRemove.map((file) => removeEntry(file)));
+    const failedFiles: string[] = [];
+
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        const fileName = filesToRemove[index]?.name || filesToRemove[index]?.fullPath || '未知文件';
+        failedFiles.push(fileName);
       }
+    });
+
+    if (failedFiles.length) {
+      return `清理旧备份失败：${failedFiles.join('、')}`;
     }
+
+    return null;
   } catch (error) {
-    void error;
+    return error instanceof Error ? error.message : '清理旧备份失败';
   }
 }
 
@@ -197,7 +209,12 @@ function writeFile(
   });
 }
 
-async function exportJsonWithLimit(json: string, fileName: string, maxCount = 5): Promise<string> {
+async function exportJsonWithLimit(
+  json: string,
+  fileName: string,
+  maxCount = 5,
+  onCleanupError?: CleanupErrorHandler,
+): Promise<string> {
   const fs = await requestPublicDocumentsFS();
   const root = fs.root;
 
@@ -211,13 +228,20 @@ async function exportJsonWithLimit(json: string, fileName: string, maxCount = 5)
     throw new Error('写入文件成功，但无法获取文件路径');
   }
 
-  void cleanupOldExports(root, maxCount);
+  void cleanupOldExports(root, maxCount).then((message) => {
+    if (message) {
+      onCleanupError?.(message);
+    }
+  });
 
   return fileEntry.fullPath;
 }
 
 // 导出为 JSON 文件( app 端 )
-export const exportToJsonApp = async (json: string): Promise<string> => {
+export const exportToJsonApp = async (
+  json: string,
+  onCleanupError?: CleanupErrorHandler,
+): Promise<string> => {
   const fileName = `export_${formatExportedAt()}.json`;
-  return exportJsonWithLimit(json, fileName);
+  return exportJsonWithLimit(json, fileName, 5, onCleanupError);
 };

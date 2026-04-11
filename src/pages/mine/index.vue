@@ -86,7 +86,14 @@ const exportData = async () => {
     // #ifdef APP-PLUS
     {
       const json = await buildExportJson();
-      const fullPath = await exportToJsonApp(json);
+      const fullPath = await exportToJsonApp(json, (message) => {
+        uni.showModal({
+          title: '清理失败',
+          content: message,
+          showCancel: false,
+          confirmText: '知道了',
+        });
+      });
       uni.showModal({
         title: '导出成功',
         content: `已保存到：\n${fullPath}`,
@@ -113,10 +120,11 @@ const exportData = async () => {
     });
     // #endif
   } catch (e) {
-    console.error('导出失败', e);
     uni.showModal({
-      title: e instanceof Error ? e.message : '导出失败',
-      icon: 'none',
+      title: '导出失败',
+      content: e instanceof Error ? e.message : '导出失败',
+      showCancel: false,
+      confirmText: '知道了',
     });
   }
 };
