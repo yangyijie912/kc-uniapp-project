@@ -181,6 +181,13 @@ async function cleanupOldExports(
       return `清理旧备份失败：${failedFiles.join('、')}`;
     }
 
+    const refreshedEntries = await readAllEntries(root);
+    const remainingFiles = getExportFiles(refreshedEntries);
+
+    if (remainingFiles.length > maxCount) {
+      return `清理后仍有 ${remainingFiles.length} 个备份文件，目标最多 ${maxCount} 个`;
+    }
+
     return null;
   } catch (error) {
     return error instanceof Error ? error.message : '清理旧备份失败';
