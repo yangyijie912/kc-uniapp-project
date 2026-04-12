@@ -63,10 +63,7 @@ export const exportToJsonH5 = async () => {
  */
 
 type ExportEntry = {
-  isFile?: boolean;
-  name?: string;
   fullPath?: string;
-  remove: (successCB?: () => void, errorCB?: (result: any) => void) => void;
 };
 
 type ExportFileEntry = ExportEntry & {
@@ -92,9 +89,8 @@ type ExportFilesystem = {
   root?: ExportDirectoryHandle;
 };
 
-type CleanupErrorHandler = (message: string) => void;
-
-const EXPORT_FILE_NAME_RE = /^export_(\d{8}_\d{6})\.json$/;
+const EXPORT_BACKUP_SLOT_COUNT = 5;
+const EXPORT_BACKUP_SLOT_KEY = 'knowledge-card.export-backup-slot';
 
 // 读取 PUBLIC_DOCUMENTS 目录下的导出文件列表
 function requestPublicDocumentsFS(): Promise<ExportFilesystem> {
@@ -103,95 +99,21 @@ function requestPublicDocumentsFS(): Promise<ExportFilesystem> {
   });
 }
 
-// 读取目录下的所有条目（文件和子目录）
-function readAllEntries(dirEntry: ExportDirectoryHandle): Promise<ExportEntry[]> {
-  return new Promise((resolve, reject) => {
-    const reader = dirEntry.createReader();
-    const allEntries: ExportEntry[] = [];
+function getNextExportBackupSlot(): number {
+  const storedValue =
+    typeof uni !== 'undefined' ? Number(uni.getStorageSync(EXPORT_BACKUP_SLOT_KEY)) : NaN;
+  const currentSlot = Number.isFinite(storedValue) ? storedValue : -1;
+  const nextSlot = (currentSlot + 1) % EXPORT_BACKUP_SLOT_COUNT;
 
-    function readBatch() {
-      reader.readEntries((entries: unknown) => {
-        const batch = entries as ExportEntry[];
-
-        if (!batch.length) {
-          resolve(allEntries);
-          return;
-        }
-        allEntries.push(...batch);
-        readBatch();
-      }, reject);
-    }
-
-    readBatch();
-  });
-}
-
-// 删除指定的文件或目录
-function removeEntry(entry: ExportEntry): Promise<void> {
-  return new Promise((resolve, reject) => {
-    entry.remove(() => resolve(), reject);
-  });
-}
-
-// 获取导出文件列表，按时间排序
-function getExportFiles(entries: ExportEntry[]): ExportFileEntry[] {
-  return entries
-    .filter((entry): entry is ExportFileEntry => {
-      return Boolean(
-        entry.isFile &&
-        entry.name &&
-        EXPORT_FILE_NAME_RE.test(entry.name) &&
-        typeof (entry as ExportFileEntry).createWriter === 'function',
-      );
-    })
-    .sort((a, b) => {
-      const timeA = Number(a.name?.match(EXPORT_FILE_NAME_RE)?.[1].replace('_', '') || 0);
-      const timeB = Number(b.name?.match(EXPORT_FILE_NAME_RE)?.[1].replace('_', '') || 0);
-      return timeA - timeB;
-    });
-}
-
-// 清理旧的导出文件，保留最新的 maxCount 个
-async function cleanupOldExports(
-  root: ExportDirectoryHandle,
-  maxCount = 5,
-): Promise<string | null> {
-  try {
-    const entries = await readAllEntries(root);
-    const exportFiles = getExportFiles(entries);
-
-    if (exportFiles.length <= maxCount) {
-      return null;
-    }
-
-    const removeCount = exportFiles.length - maxCount;
-    const filesToRemove = exportFiles.slice(0, removeCount);
-
-    const results = await Promise.allSettled(filesToRemove.map((file) => removeEntry(file)));
-    const failedFiles: string[] = [];
-
-    results.forEach((result, index) => {
-      if (result.status === 'rejected') {
-        const fileName = filesToRemove[index]?.name || filesToRemove[index]?.fullPath || '未知文件';
-        failedFiles.push(fileName);
-      }
-    });
-
-    if (failedFiles.length) {
-      return `清理旧备份失败：${failedFiles.join('、')}`;
-    }
-
-    const refreshedEntries = await readAllEntries(root);
-    const remainingFiles = getExportFiles(refreshedEntries);
-
-    if (remainingFiles.length > maxCount) {
-      return `清理后仍有 ${remainingFiles.length} 个备份文件，目标最多 ${maxCount} 个`;
-    }
-
-    return null;
-  } catch (error) {
-    return error instanceof Error ? error.message : '清理旧备份失败';
+  if (typeof uni !== 'undefined') {
+    uni.setStorageSync(EXPORT_BACKUP_SLOT_KEY, nextSlot);
   }
+
+  return nextSlot;
+}
+
+function getExportBackupFileName(slotIndex: number): string {
+  return `export_backup_${slotIndex + 1}.json`;
 }
 
 // 写入文件
@@ -207,8 +129,19 @@ function writeFile(
       (fileEntry) => {
         fileEntry.createWriter((writer: PlusIoFileWriter) => {
           writer.onerror = reject;
-          writer.onwrite = () => resolve(fileEntry);
-          writer.write(content);
+          let hasTruncated = false;
+
+          writer.onwrite = () => {
+            if (!hasTruncated) {
+              hasTruncated = true;
+              writer.write(content);
+              return;
+            }
+
+            resolve(fileEntry);
+          };
+
+          writer.truncate(0);
         }, reject);
       },
       reject,
@@ -216,12 +149,7 @@ function writeFile(
   });
 }
 
-async function exportJsonWithLimit(
-  json: string,
-  fileName: string,
-  maxCount = 5,
-  onCleanupError?: CleanupErrorHandler,
-): Promise<string> {
+async function exportJsonWithLimit(json: string, fileName: string): Promise<string> {
   const fs = await requestPublicDocumentsFS();
   const root = fs.root;
 
@@ -235,20 +163,12 @@ async function exportJsonWithLimit(
     throw new Error('写入文件成功，但无法获取文件路径');
   }
 
-  void cleanupOldExports(root, maxCount).then((message) => {
-    if (message) {
-      onCleanupError?.(message);
-    }
-  });
-
   return fileEntry.fullPath;
 }
 
 // 导出为 JSON 文件( app 端 )
-export const exportToJsonApp = async (
-  json: string,
-  onCleanupError?: CleanupErrorHandler,
-): Promise<string> => {
-  const fileName = `export_${formatExportedAt()}.json`;
-  return exportJsonWithLimit(json, fileName, 5, onCleanupError);
+export const exportToJsonApp = async (json: string): Promise<string> => {
+  const slotIndex = getNextExportBackupSlot();
+  const fileName = getExportBackupFileName(slotIndex);
+  return exportJsonWithLimit(json, fileName);
 };

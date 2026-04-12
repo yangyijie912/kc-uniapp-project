@@ -12,7 +12,7 @@
 
         <view class="action-card action-card-export" @click="exportData">
           <view class="action-title">数据导出</view>
-          <view class="action-desc">导出格式为 JSON，最多5个，超过覆盖最旧的</view>
+          <view class="action-desc">导出格式为 JSON，固定保留5个备份槽位，自动轮转覆盖旧文件</view>
         </view>
       </view>
     </view>
@@ -86,14 +86,7 @@ const exportData = async () => {
     // #ifdef APP-PLUS
     {
       const json = await buildExportJson();
-      const fullPath = await exportToJsonApp(json, (message) => {
-        uni.showModal({
-          title: '清理失败',
-          content: message,
-          showCancel: false,
-          confirmText: '知道了',
-        });
-      });
+      const fullPath = await exportToJsonApp(json);
       uni.showModal({
         title: '导出成功',
         content: `已保存到：\n${fullPath}`,
