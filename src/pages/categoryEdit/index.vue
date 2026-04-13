@@ -14,7 +14,12 @@
 
       <view class="form-group">
         <view class="form-label">名称</view>
-        <input class="form-input" v-model="form.name" placeholder="例如：Vue" placeholder-class="input-placeholder" />
+        <input
+          class="form-input"
+          v-model="form.name"
+          placeholder="例如：Vue"
+          placeholder-class="input-placeholder"
+        />
       </view>
 
       <view class="form-group">
@@ -70,8 +75,10 @@ onLoad((options) => {
 const onSortInput = (event: Event | { detail?: { value?: string } }) => {
   // 兼容不同平台的输入事件结构，一种是标准的 DOM 输入事件，另一种是部分平台（如微信小程序）的事件结构
   const detailValue = 'detail' in event ? event.detail?.value : undefined;
-  const targetValue = 'target' in event && event.target instanceof HTMLInputElement ? event.target.value : undefined;
-  form.sort = detailValue ?? targetValue ?? '';
+  const targetValue = ('target' in event ? event.target : undefined) as
+    | { value?: string }
+    | undefined;
+  form.sort = detailValue ?? targetValue?.value ?? '';
 };
 
 // 保存分类

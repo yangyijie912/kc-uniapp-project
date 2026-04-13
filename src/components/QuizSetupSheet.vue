@@ -129,6 +129,8 @@ const emit = defineEmits<{
   (e: 'start', query: quizQuery): void;
 }>();
 
+type InputLikeEvent = Event | { detail?: { value?: string }; target?: { value?: string } };
+
 const selectedPracticeMode = ref<quizQuery['mode']>('review');
 
 const practiceModeText = computed(() => {
@@ -163,10 +165,11 @@ const onSelectLimit = (num?: number) => {
   selectedLimit.value = num || 10;
 };
 
-const onCustomLimitInput = (event: Event | { detail?: { value?: string; cursor?: number } }) => {
-  const eventTarget =
-    'target' in event && event.target instanceof HTMLTextAreaElement ? event.target : undefined;
+const onCustomLimitInput = (event: InputLikeEvent) => {
   const eventDetail = 'detail' in event ? event.detail : undefined;
+  const eventTarget = ('target' in event ? event.target : undefined) as
+    | { value?: string }
+    | undefined;
   const value = eventDetail?.value ?? eventTarget?.value ?? '';
   const numericValue = parseInt(value, 10);
   if (!isNaN(numericValue) && numericValue > 0) {

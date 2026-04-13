@@ -184,6 +184,25 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void;
 }>();
 
+type InputLikeEvent =
+  | Event
+  | {
+      detail?: { value?: string; cursor?: number };
+      target?: { value?: string; selectionStart?: number };
+    };
+
+function readInputValue(event: InputLikeEvent) {
+  const eventDetail = 'detail' in event ? event.detail : undefined;
+  const eventTarget = ('target' in event ? event.target : undefined) as
+    | { value?: string; selectionStart?: number }
+    | undefined;
+
+  return {
+    value: eventDetail?.value ?? eventTarget?.value ?? '',
+    cursor: eventDetail?.cursor ?? eventTarget?.selectionStart,
+  };
+}
+
 // 维护本地内容状态，实时反映输入框内容，不直接更改外部 modelValue
 const localContent = ref(props.modelValue || '');
 
@@ -195,14 +214,11 @@ watch(
   },
 );
 
-const onInput = (event: Event | { detail?: { value?: string; cursor?: number } }) => {
-  const eventTarget =
-    'target' in event && event.target instanceof HTMLTextAreaElement ? event.target : undefined;
-  const eventDetail = 'detail' in event ? event.detail : undefined;
-  const value = eventDetail?.value ?? eventTarget?.value ?? '';
+const onInput = (event: InputLikeEvent) => {
+  const { value, cursor } = readInputValue(event);
 
   // 更新光标位置
-  const pos = eventDetail?.cursor ?? eventTarget?.selectionStart ?? value.length;
+  const pos = cursor ?? value.length;
   cursorPosition.value = pos;
   lockInsertPosition.value = false;
 
@@ -215,16 +231,13 @@ const onFocus = () => {
 };
 
 // 失去焦点时确保更新光标
-const onBlur = (event: Event | { detail?: { value?: string; cursor?: number } }) => {
+const onBlur = (event: InputLikeEvent) => {
   if (lockInsertPosition.value) {
     return;
   }
 
-  const eventTarget =
-    'target' in event && event.target instanceof HTMLTextAreaElement ? event.target : undefined;
-  const eventDetail = 'detail' in event ? event.detail : undefined;
-  const value = eventDetail?.value ?? eventTarget?.value ?? '';
-  const pos = eventDetail?.cursor ?? eventTarget?.selectionStart ?? value.length;
+  const { value, cursor } = readInputValue(event);
+  const pos = cursor ?? value.length;
   cursorPosition.value = pos;
 };
 
@@ -355,19 +368,25 @@ function onContentConfirm() {
   closeContentDialog();
 }
 
-const onTableRowsInput = (event: Event | { detail?: { value?: string } }) => {
+const onTableRowsInput = (
+  event: Event | { detail?: { value?: string }; target?: { value?: string } },
+) => {
   const detailValue = 'detail' in event ? event.detail?.value : undefined;
-  const targetValue =
-    'target' in event && event.target instanceof HTMLInputElement ? event.target.value : undefined;
-  const numericValue = Number.parseInt(detailValue ?? targetValue ?? '', 10);
+  const targetValue = ('target' in event ? event.target : undefined) as
+    | { value?: string }
+    | undefined;
+  const numericValue = Number.parseInt(detailValue ?? targetValue?.value ?? '', 10);
   tableRows.value = Number.isFinite(numericValue) && numericValue > 0 ? numericValue : 3;
 };
 
-const onTableColumnsInput = (event: Event | { detail?: { value?: string } }) => {
+const onTableColumnsInput = (
+  event: Event | { detail?: { value?: string }; target?: { value?: string } },
+) => {
   const detailValue = 'detail' in event ? event.detail?.value : undefined;
-  const targetValue =
-    'target' in event && event.target instanceof HTMLInputElement ? event.target.value : undefined;
-  const numericValue = Number.parseInt(detailValue ?? targetValue ?? '', 10);
+  const targetValue = ('target' in event ? event.target : undefined) as
+    | { value?: string }
+    | undefined;
+  const numericValue = Number.parseInt(detailValue ?? targetValue?.value ?? '', 10);
   tableColumns.value = Number.isFinite(numericValue) && numericValue > 0 ? numericValue : 3;
 };
 </script>
