@@ -54,7 +54,10 @@
             'is-editing': isEditMode,
             'is-selected': selectedCards.includes(value.id),
           }"
-          @longpress="onEdit(value.id)"
+          @touchstart="handleCardTouchStart(value.id)"
+          @touchend="handleCardTouchEnd"
+          @touchcancel="handleCardTouchEnd"
+          @touchmove="handleCardTouchMove"
           @click="onCardClick(value.id)"
         >
           <view
@@ -161,9 +164,17 @@ const { cardViewList, categoryList, loading, hasMore, loadCards, loadAllData } =
 
 const pageSize = 10;
 const currentPage = ref(1);
+const longPressDuration = 1000;
 
 const inputKeyword = ref('');
 const showQuizSetup = ref(false);
+/**
+ * 长按相关状态:
+ * touchedCardId和长按计时一起工作，避免长按触发后，松手时又被后面的点击事件带着跳进详情页
+ */
+const longPressTimer = ref<ReturnType<typeof setTimeout> | null>(null);
+const touchedCardId = ref('');
+const longPressTriggered = ref(false);
 
 const statusTabs = [
   { label: '全部', value: undefined },
@@ -240,6 +251,12 @@ const parseParams = (options?: PageOptions): QueryParams => {
 
 // 点击卡片多选或进入详情
 const onCardClick = (id: string) => {
+  if (longPressTriggered.value && touchedCardId.value === id) {
+    longPressTriggered.value = false;
+    touchedCardId.value = '';
+    return;
+  }
+
   if (isEditMode.value) {
     if (selectedCards.value.includes(id)) {
       selectedCards.value = selectedCards.value.filter((cardId) => cardId !== id);
@@ -251,6 +268,31 @@ const onCardClick = (id: string) => {
   uni.navigateTo({
     url: `/pages/cardDetail/index?id=${id}`,
   });
+};
+
+const clearLongPressState = () => {
+  if (longPressTimer.value) {
+    clearTimeout(longPressTimer.value);
+    longPressTimer.value = null;
+  }
+};
+
+const handleCardTouchStart = (id: string) => {
+  clearLongPressState();
+  touchedCardId.value = id;
+  longPressTriggered.value = false;
+  longPressTimer.value = setTimeout(() => {
+    longPressTriggered.value = true;
+    onEdit(id);
+  }, longPressDuration);
+};
+
+const handleCardTouchEnd = () => {
+  clearLongPressState();
+};
+
+const handleCardTouchMove = () => {
+  clearLongPressState();
 };
 
 const goToAddCard = () => {
