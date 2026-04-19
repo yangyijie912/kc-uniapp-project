@@ -18,6 +18,10 @@ const md = new MarkdownIt({
   typographer: true, // 启用一些语言替换 + 引号美化
 });
 
+md.renderer.rules.table_open = () =>
+  '<div class="markdown-table-scroll"><table class="markdown-table">';
+md.renderer.rules.table_close = () => '</table></div>';
+
 // 将 Markdown 转换为富文本格式
 const renderMarkdownToRichText = computed(() => {
   if (!props?.content) {
@@ -116,12 +120,56 @@ const renderMarkdownToRichText = computed(() => {
 }
 
 .markdown-body :deep(blockquote) {
-  margin: 22rpx 0;
+  margin: 14rpx 0 26rpx;
   padding: 18rpx 22rpx;
   border-left: 8rpx solid rgba(18, 122, 114, 0.28);
   border-radius: 0 18rpx 18rpx 0;
   background: rgba(18, 122, 114, 0.06);
   color: #5d6c69;
+}
+
+.markdown-body :deep(blockquote p) {
+  margin: 0;
+}
+
+.markdown-body :deep(blockquote p + p) {
+  margin-top: 12rpx;
+}
+
+.markdown-body :deep(.markdown-table-scroll) {
+  margin: 22rpx 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 18rpx;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.markdown-body :deep(.markdown-table) {
+  width: 100%;
+  min-width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+.markdown-body :deep(.markdown-table th),
+.markdown-body :deep(.markdown-table td) {
+  min-width: 160rpx;
+  padding: 16rpx 18rpx;
+  border: 1rpx solid rgba(61, 43, 24, 0.12);
+  color: #5e564d;
+  line-height: 1.6;
+  vertical-align: top;
+  word-break: break-word;
+}
+
+.markdown-body :deep(.markdown-table th) {
+  background: rgba(18, 122, 114, 0.08);
+  color: #1e1c18;
+  font-weight: 700;
+}
+
+.markdown-body :deep(.markdown-table tr:nth-child(even) td) {
+  background: rgba(61, 43, 24, 0.03);
 }
 
 .markdown-body :deep(code) {

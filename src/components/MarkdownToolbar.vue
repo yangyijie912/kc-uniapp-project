@@ -244,10 +244,11 @@ const onBlur = (event: InputLikeEvent) => {
 // 插入内容
 function appendContent(text: string) {
   const pos = cursorPosition.value;
-  const newValue = localContent.value.slice(0, pos) + text + localContent.value.slice(pos);
+  const blockText = `\n\n${text}\n\n`;
+  const newValue = localContent.value.slice(0, pos) + blockText + localContent.value.slice(pos);
   localContent.value = newValue;
   // 更新光标位置到插入内容后
-  cursorPosition.value = pos + text.length;
+  cursorPosition.value = pos + blockText.length;
   lockInsertPosition.value = true;
   emit('update:modelValue', newValue);
 }
