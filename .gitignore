@@ -19,6 +19,3 @@ dist
 *.njsproj
 *.sln
 *.sw?
-
-.vscode
-docs
