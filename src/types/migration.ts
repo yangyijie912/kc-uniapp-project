@@ -27,3 +27,5 @@ export interface ImportResult {
   skippedCardCount: number; // 跳过的卡片数量（不规范的卡片）
   overwrittenCardCount: number; // 覆盖的卡片数量（同 ID 覆盖）
 }
+
+export type ImportMode = 'merge' | 'overwrite';

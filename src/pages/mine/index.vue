@@ -2,7 +2,7 @@
   <view class="page">
     <view class="panel">
       <view class="panel-title">我的</view>
-      <view class="panel-subtitle">数据维护入口统一放在这里</view>
+      <view class="panel-subtitle">数据统计和维护入口</view>
 
       <view class="action-grid">
         <view class="action-card action-card-import" @click="importData">
@@ -22,21 +22,48 @@
 <script setup lang="ts">
 import { buildExportJson, exportToJsonApp, exportToJsonH5 } from '@/services/exportService';
 import { pickImportDataApp, pickImportDataH5, importFromJsonFile } from '@/services/importService';
+import type { ImportMode } from '@/types/migration';
 
-function showImportResult(result: Awaited<ReturnType<typeof importFromJsonFile>>) {
+function chooseImportMode(): Promise<ImportMode | null> {
+  return new Promise((resolve) => {
+    uni.showActionSheet({
+      itemList: ['合并导入', '覆盖导入'],
+      success: (res) => {
+        if (res.tapIndex === 0) {
+          resolve('merge');
+          return;
+        }
+
+        if (res.tapIndex === 1) {
+          resolve('overwrite');
+          return;
+        }
+
+        resolve(null);
+      },
+      fail: () => {
+        resolve(null);
+      },
+    });
+  });
+}
+
+function showImportResult(
+  result: Awaited<ReturnType<typeof importFromJsonFile>>,
+  mode: ImportMode,
+) {
   if (result.success && result.data) {
-    const {
-      newCategoryCount,
-      newCardCount,
-      skippedCategoryCount,
-      skippedCardCount,
-      overwrittenCardCount,
-    } = result.data;
-    const content = [
-      `新增 ${newCategoryCount} 个分类，${newCardCount} 张卡片`,
-      `跳过 ${skippedCategoryCount} 个分类，${skippedCardCount} 张卡片`,
-      `覆盖 ${overwrittenCardCount} 张卡片`,
-    ].join('\n');
+    const content =
+      mode === 'overwrite'
+        ? [
+            `覆盖成功，当前新增分类 ${result.data.categoryViewCount} 个，卡片 ${result.data.cardCount} 张`,
+            `跳过 ${result.data.skippedCategoryCount} 个分类，${result.data.skippedCardCount} 张卡片`,
+          ].join('\n')
+        : [
+            `新增 ${result.data.newCategoryCount} 个分类，${result.data.newCardCount} 张卡片`,
+            `跳过 ${result.data.skippedCategoryCount} 个分类，${result.data.skippedCardCount} 张卡片`,
+            `覆盖 ${result.data.overwrittenCardCount} 张卡片`,
+          ].join('\n');
     uni.showModal({
       title: '导入成功',
       content,
@@ -54,11 +81,37 @@ function showImportResult(result: Awaited<ReturnType<typeof importFromJsonFile>>
 
 const importData = async () => {
   try {
+    const mode = await chooseImportMode();
+    if (!mode) {
+      return;
+    }
+
+    if (mode === 'overwrite') {
+      const confirmOverwrite = await new Promise<boolean>((resolve) => {
+        uni.showModal({
+          title: '确认覆盖导入',
+          content: '覆盖导入会先清空当前分类和卡片，再导入选中的文件，继续吗？',
+          confirmText: '继续',
+          cancelText: '取消',
+          success: (res) => {
+            resolve(Boolean(res.confirm));
+          },
+          fail: () => {
+            resolve(false);
+          },
+        });
+      });
+
+      if (!confirmOverwrite) {
+        return;
+      }
+    }
+
     // #ifdef H5
     {
       const jsonStrH5 = await pickImportDataH5();
-      const importResultH5 = await importFromJsonFile(jsonStrH5);
-      showImportResult(importResultH5);
+      const importResultH5 = await importFromJsonFile(jsonStrH5, mode);
+      showImportResult(importResultH5, mode);
     }
     // #endif
 
@@ -66,8 +119,8 @@ const importData = async () => {
     {
       uni.showLoading({ title: '导入中' });
       const jsonStrApp = await pickImportDataApp();
-      const importResultApp = await importFromJsonFile(jsonStrApp);
-      showImportResult(importResultApp);
+      const importResultApp = await importFromJsonFile(jsonStrApp, mode);
+      showImportResult(importResultApp, mode);
       uni.hideLoading();
     }
     // #endif

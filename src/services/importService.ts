@@ -3,7 +3,7 @@ import { getCards, saveAllCards } from './cardService';
 import { fail, success } from './serviceHelper';
 import { generateUUID } from '@/utils/uuid';
 import { UNCATEGORIZED_ID, UNCATEGORIZED_NAME } from '@/constants/category';
-import type { ImportData, ImportResult } from '@/types/migration';
+import type { ImportData, ImportResult, ImportMode } from '@/types/migration';
 import type { RawCard, Card, Category } from '@/types/card';
 import type { ServiceResult } from '@/types/service';
 
@@ -376,8 +376,23 @@ function mergeCards(
   return Array.from(cardsMap.values());
 }
 
+// 未分类处理：如果导入的卡片数据没有未分类，categoryCount不计算未分类，有则计算
+function getVisibleCategoryCount(categories: Category[], cards: Card[]): number {
+  // 判断是否有未分类的卡片
+  const hasUncategorizedCards = cards.some((card) => card.categoryId === UNCATEGORIZED_ID);
+  return categories.filter((cat) => {
+    if (cat.id === UNCATEGORIZED_ID) {
+      return hasUncategorizedCards; // 只有当有未分类卡片时，才显示未分类
+    }
+    return true; // 其他分类正常显示
+  }).length;
+}
+
 // 最终导入流程
-export async function importFromJsonFile(jsonStr: string): Promise<ServiceResult<ImportResult>> {
+export async function importFromJsonFile(
+  jsonStr: string,
+  mode: ImportMode = 'merge',
+): Promise<ServiceResult<ImportResult>> {
   // 重置计数器，确保每次导入都是独立统计
   countTotal.newCategoryCount = 0;
   countTotal.newCardCount = 0;
@@ -385,15 +400,39 @@ export async function importFromJsonFile(jsonStr: string): Promise<ServiceResult
   countTotal.skippedCardCount = 0;
   countTotal.overwrittenCardCount = 0;
   try {
+    if (mode !== 'merge' && mode !== 'overwrite') {
+      return fail('不支持的导入模式');
+    }
     // 1、解析数据
     const importData = parseImportData(jsonStr);
-    // 2、获取当前系统数据
-    const currentCategories = getCategories().data || [];
-    const currentCards = getCards().data?.list || [];
-    // 3、合并分类和卡片数据，并处理分类ID映射关系
-    const mergeResult = mergeCategories(importData.categories, currentCategories);
-    const mergedCategories = mergeResult.mergedCategories;
-    const mergedCards = mergeCards(importData.cards, currentCards, mergeResult);
+    let mergedCategories: Category[] = [];
+    let mergedCards: Card[] = [];
+    // 合并模式
+    if (mode === 'merge') {
+      // 2、获取当前系统数据
+      const currentCategories = getCategories().data || [];
+      const currentCards = getCards().data?.list || [];
+      // 3、合并分类和卡片数据，并处理分类ID映射关系
+      const mergeResult = mergeCategories(importData.categories, currentCategories);
+      mergedCategories = mergeResult.mergedCategories;
+      mergedCards = mergeCards(importData.cards, currentCards, mergeResult);
+    }
+    // 覆盖模式
+    if (mode === 'overwrite') {
+      // 2、覆盖模式直接清空现有数据，不进行合并，后续保存时直接覆盖即可
+      const clearCategoryRes = saveAllCategories([]);
+      if (!clearCategoryRes.success) {
+        return fail(clearCategoryRes.message || '清空分类失败，覆盖导入中断');
+      }
+      const clearCardRes = saveAllCards([]);
+      if (!clearCardRes.success) {
+        return fail(clearCardRes.message || '清空卡片失败，覆盖导入中断');
+      }
+      // 3、清理传入数据中无效的数据
+      const mergeResult = mergeCategories(importData.categories, []); // 传空数组让所有导入分类都被视为新分类，统计无效分类数量
+      mergedCategories = mergeResult.mergedCategories;
+      mergedCards = mergeCards(importData.cards, [], mergeResult);
+    }
     // 4、批量保存合并后的分类和卡片
     const cardRes = saveAllCards(mergedCards);
     if (!cardRes.success) {
@@ -417,16 +456,4 @@ export async function importFromJsonFile(jsonStr: string): Promise<ServiceResult
   } catch (error: unknown) {
     return fail(error instanceof Error ? error.message : '导入失败');
   }
-}
-
-// 未分类处理：如果导入的卡片数据没有未分类，categoryCount不计算未分类，有则计算
-function getVisibleCategoryCount(categories: Category[], cards: Card[]): number {
-  // 判断是否有未分类的卡片
-  const hasUncategorizedCards = cards.some((card) => card.categoryId === UNCATEGORIZED_ID);
-  return categories.filter((cat) => {
-    if (cat.id === UNCATEGORIZED_ID) {
-      return hasUncategorizedCards; // 只有当有未分类卡片时，才显示未分类
-    }
-    return true; // 其他分类正常显示
-  }).length;
 }
