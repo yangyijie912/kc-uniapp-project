@@ -1,6 +1,11 @@
 <template>
   <view class="page">
-    <scroll-view class="page-scroll" scroll-y @scrolltolower="handleScrollToLower">
+    <scroll-view
+      class="page-scroll"
+      scroll-y
+      @scrolltolower="handleScrollToLower"
+      @contextmenu.prevent
+    >
       <view v-if="!isSearchResultMode" class="toolbar">
         <input
           v-model="inputKeyword"
@@ -54,10 +59,11 @@
             'is-editing': isEditMode,
             'is-selected': selectedCards.includes(value.id),
           }"
-          @touchstart="handleCardTouchStart(value.id)"
+          @touchstart="handleCardTouchStart(value.id, $event)"
           @touchend="handleCardTouchEnd"
           @touchcancel="handleCardTouchEnd"
-          @touchmove="handleCardTouchMove"
+          @touchmove="handleCardTouchMove($event)"
+          @contextmenu.prevent
           @click="onCardClick(value.id)"
         >
           <view
@@ -164,7 +170,8 @@ const { cardViewList, categoryList, loading, hasMore, loadCards, loadAllData } =
 
 const pageSize = 10;
 const currentPage = ref(1);
-const longPressDuration = 1000;
+const longPressDuration = 1000; // 长按持续时间，单位毫秒
+const longPressMoveThreshold = 12; // 长按移动超过12px则取消长按，避免误触发
 
 const inputKeyword = ref('');
 const showQuizSetup = ref(false);
@@ -174,7 +181,11 @@ const showQuizSetup = ref(false);
  */
 const longPressTimer = ref<ReturnType<typeof setTimeout> | null>(null);
 const touchedCardId = ref('');
-const longPressTriggered = ref(false);
+const longPressTriggered = ref(false); // 长按是否已触发，避免触发后续点击事件
+const touchStartPoint = ref<{ x: number; y: number } | null>(null); // 触摸起始点
+const touchMoveCanceled = ref(false); // 是否取消长按，避免误触发
+
+type CardTouchEvent = Pick<TouchEvent, 'touches' | 'changedTouches'>;
 
 const statusTabs = [
   { label: '全部', value: undefined },
@@ -254,6 +265,16 @@ const onCardClick = (id: string) => {
   if (longPressTriggered.value && touchedCardId.value === id) {
     longPressTriggered.value = false;
     touchedCardId.value = '';
+    touchStartPoint.value = null;
+    touchMoveCanceled.value = false;
+    return;
+  }
+
+  // 如果触摸移动超过阈值，取消长按，并且不进入详情页
+  if (touchMoveCanceled.value && touchedCardId.value === id) {
+    touchedCardId.value = '';
+    touchMoveCanceled.value = false;
+    touchStartPoint.value = null;
     return;
   }
 
@@ -270,6 +291,7 @@ const onCardClick = (id: string) => {
   });
 };
 
+// 清除长按状态，避免误触发
 const clearLongPressState = () => {
   if (longPressTimer.value) {
     clearTimeout(longPressTimer.value);
@@ -277,10 +299,19 @@ const clearLongPressState = () => {
   }
 };
 
-const handleCardTouchStart = (id: string) => {
+// 获取触摸点坐标，兼容 touchstart 和 touchend 事件
+const getTouchPoint = (event: CardTouchEvent) => {
+  return event.touches?.[0] || event.changedTouches?.[0] || null;
+};
+
+// 处理卡片触摸开始事件，启动长按计时
+const handleCardTouchStart = (id: string, event: CardTouchEvent) => {
   clearLongPressState();
   touchedCardId.value = id;
   longPressTriggered.value = false;
+  touchMoveCanceled.value = false;
+  const point = getTouchPoint(event);
+  touchStartPoint.value = point ? { x: point.clientX, y: point.clientY } : null;
   longPressTimer.value = setTimeout(() => {
     longPressTriggered.value = true;
     onEdit(id);
@@ -291,7 +322,25 @@ const handleCardTouchEnd = () => {
   clearLongPressState();
 };
 
-const handleCardTouchMove = () => {
+// 触摸移动时，如果移动距离超过阈值，则取消长按，避免误触发进入编辑模式
+const handleCardTouchMove = (event: CardTouchEvent) => {
+  if (!touchStartPoint.value) {
+    return;
+  }
+
+  const point = getTouchPoint(event);
+  if (!point) {
+    return;
+  }
+
+  const deltaX = Math.abs(point.clientX - touchStartPoint.value.x);
+  const deltaY = Math.abs(point.clientY - touchStartPoint.value.y);
+
+  if (Math.max(deltaX, deltaY) < longPressMoveThreshold) {
+    return;
+  }
+
+  touchMoveCanceled.value = true;
   clearLongPressState();
 };
 
@@ -494,6 +543,14 @@ onShow(() => {
 
 .page-scroll {
   height: 100%;
+}
+
+/* 解决h5页面长按出现默认菜单的问题 */
+.page-scroll,
+.card-item {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .toolbar {
