@@ -71,6 +71,7 @@ type ExportFileEntry = ExportEntry & {
     successCB?: (writer: PlusIoFileWriter) => void,
     errorCB?: (result: any) => void,
   ) => void;
+  remove?: (successCB?: () => void, errorCB?: (result: any) => void) => void;
 };
 
 type ExportDirectoryHandle = {
@@ -90,7 +91,12 @@ type ExportFilesystem = {
 };
 
 const EXPORT_BACKUP_SLOT_COUNT = 5;
-const EXPORT_BACKUP_SLOT_KEY = 'knowledge-card.export-backup-slot';
+const EXPORT_BACKUP_RECORDS_KEY = 'knowledge-card.export-backup-records';
+
+type ExportRecord = {
+  fileName: string;
+  exportedAt: number;
+};
 
 // 读取 PUBLIC_DOCUMENTS 目录下的导出文件列表
 function requestPublicDocumentsFS(): Promise<ExportFilesystem> {
@@ -99,21 +105,62 @@ function requestPublicDocumentsFS(): Promise<ExportFilesystem> {
   });
 }
 
-function getNextExportBackupSlot(): number {
-  const storedValue =
-    typeof uni !== 'undefined' ? Number(uni.getStorageSync(EXPORT_BACKUP_SLOT_KEY)) : NaN;
-  const currentSlot = Number.isFinite(storedValue) ? storedValue : -1;
-  const nextSlot = (currentSlot + 1) % EXPORT_BACKUP_SLOT_COUNT;
-
-  if (typeof uni !== 'undefined') {
-    uni.setStorageSync(EXPORT_BACKUP_SLOT_KEY, nextSlot);
+function readExportRecords(): ExportRecord[] {
+  if (typeof uni === 'undefined') {
+    return [];
   }
 
-  return nextSlot;
+  const storedValue = uni.getStorageSync(EXPORT_BACKUP_RECORDS_KEY);
+  if (!Array.isArray(storedValue)) {
+    return [];
+  }
+
+  return storedValue.filter(
+    (record): record is ExportRecord =>
+      !!record &&
+      typeof record === 'object' &&
+      typeof record.fileName === 'string' &&
+      typeof record.exportedAt === 'number',
+  );
 }
 
-function getExportBackupFileName(slotIndex: number): string {
-  return `export_backup_${slotIndex + 1}.json`;
+function saveExportRecords(records: ExportRecord[]): void {
+  if (typeof uni === 'undefined') {
+    return;
+  }
+
+  uni.setStorageSync(EXPORT_BACKUP_RECORDS_KEY, records.slice(0, EXPORT_BACKUP_SLOT_COUNT));
+}
+
+function normalizeExportFileName(inputFileName?: string): string {
+  const trimmed = (inputFileName || '').trim();
+  if (!trimmed) {
+    return `${formatExportedAt()}.json`;
+  }
+
+  const baseName = trimmed.replace(/\.json$/i, '').slice(0, 10);
+  const safeName = baseName.replace(/[\\/:*?"<>|]/g, '_');
+
+  return `${safeName}.json`;
+}
+
+function getNextExportTarget(fileName: string): { fileName: string; previousFileName?: string } {
+  const records = readExportRecords();
+  const existingRecord = records.find((record) => record.fileName === fileName);
+
+  if (existingRecord) {
+    return { fileName: existingRecord.fileName };
+  }
+
+  if (records.length < EXPORT_BACKUP_SLOT_COUNT) {
+    return { fileName };
+  }
+
+  const oldestRecord = records.reduce((oldest, current) =>
+    current.exportedAt < oldest.exportedAt ? current : oldest,
+  );
+
+  return { fileName, previousFileName: oldestRecord.fileName };
 }
 
 // 写入文件
@@ -166,9 +213,54 @@ async function exportJsonWithLimit(json: string, fileName: string): Promise<stri
   return fileEntry.fullPath;
 }
 
+function removeFile(root: ExportDirectoryHandle, fileName: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    root.getFile(
+      fileName,
+      { create: false },
+      (fileEntry) => {
+        if (typeof fileEntry.remove !== 'function') {
+          resolve();
+          return;
+        }
+
+        fileEntry.remove(resolve, reject);
+      },
+      () => {
+        resolve();
+      },
+    );
+  });
+}
+
 // 导出为 JSON 文件( app 端 )
-export const exportToJsonApp = async (json: string): Promise<string> => {
-  const slotIndex = getNextExportBackupSlot();
-  const fileName = getExportBackupFileName(slotIndex);
-  return exportJsonWithLimit(json, fileName);
+export const exportToJsonApp = async (json: string, inputFileName?: string): Promise<string> => {
+  const fileName = normalizeExportFileName(inputFileName);
+  const target = getNextExportTarget(fileName);
+  const fs = await requestPublicDocumentsFS();
+  const root = fs.root;
+
+  if (!root) {
+    throw new Error('无法访问文件系统');
+  }
+
+  if (target.previousFileName && target.previousFileName !== target.fileName) {
+    await removeFile(root, target.previousFileName);
+  }
+
+  const fileEntry = await writeFile(root, target.fileName, json);
+
+  if (!fileEntry.fullPath) {
+    throw new Error('写入文件成功，但无法获取文件路径');
+  }
+
+  const records = readExportRecords().filter((record) => record.fileName !== target.fileName);
+  records.push({
+    fileName: target.fileName,
+    exportedAt: Date.now(),
+  });
+  records.sort((left, right) => left.exportedAt - right.exportedAt);
+  saveExportRecords(records);
+
+  return fileEntry.fullPath;
 };

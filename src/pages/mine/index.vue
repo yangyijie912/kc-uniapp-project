@@ -12,17 +12,57 @@
 
         <view class="action-card action-card-export" @click="exportData">
           <view class="action-title">数据导出</view>
-          <view class="action-desc">导出格式为 JSON，固定保留5个备份槽位，自动轮转覆盖旧文件</view>
+          <view class="action-desc"
+            >导出格式为 JSON，支持自定义文件名，最多保留5个备份并自动轮转覆盖最旧文件</view
+          >
         </view>
       </view>
     </view>
+
+    <BaseDialog
+      :open="exportDialogVisible"
+      title="导出文件名"
+      :showDefaultFooter="false"
+      @close="closeExportDialog"
+    >
+      <view class="export-dialog">
+        <view class="export-dialog-tip"
+          >请输入文件名，不超过
+          {{ MAX_EXPORT_FILE_NAME_LENGTH }} 个字，留空则使用默认命名规则。</view
+        >
+        <input
+          v-model="exportFileName"
+          class="export-input"
+          :maxlength="MAX_EXPORT_FILE_NAME_LENGTH"
+          placeholder="例如：前端知识卡200张"
+          placeholder-class="export-input-placeholder"
+        />
+        <view class="export-dialog-hint"
+          >最多 {{ MAX_EXPORT_FILE_NAME_LENGTH }} 个字，非必填。</view
+        >
+      </view>
+
+      <template #footer>
+        <view class="dialog-footer-default">
+          <view class="btn btn-cancel" @click="closeExportDialog">取消</view>
+          <view class="btn btn-confirm" @click="confirmExport">导出</view>
+        </view>
+      </template>
+    </BaseDialog>
   </view>
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue';
+import BaseDialog from '@/components/BaseDialog.vue';
 import { buildExportJson, exportToJsonApp, exportToJsonH5 } from '@/services/exportService';
 import { pickImportDataApp, pickImportDataH5, importFromJsonFile } from '@/services/importService';
 import type { ImportMode } from '@/types/migration';
+
+const exportDialogVisible = ref(false);
+const exportFileName = ref('');
+const pendingExport = ref(false);
+const MAX_EXPORT_FILE_NAME_LENGTH = 10; // 最大文件名长度（不包含扩展名）
 
 function chooseImportMode(): Promise<ImportMode | null> {
   return new Promise((resolve) => {
@@ -56,7 +96,7 @@ function showImportResult(
     const content =
       mode === 'overwrite'
         ? [
-            `覆盖成功，当前新增分类 ${result.data.categoryViewCount} 个，卡片 ${result.data.cardCount} 张`,
+            `覆盖后当前分类 ${result.data.categoryViewCount} 个，卡片 ${result.data.cardCount} 张`,
             `跳过 ${result.data.skippedCategoryCount} 个分类，${result.data.skippedCardCount} 张卡片`,
           ].join('\n')
         : [
@@ -64,6 +104,7 @@ function showImportResult(
             `跳过 ${result.data.skippedCategoryCount} 个分类，${result.data.skippedCardCount} 张卡片`,
             `覆盖 ${result.data.overwrittenCardCount} 张卡片`,
           ].join('\n');
+
     uni.showModal({
       title: '导入成功',
       content,
@@ -78,6 +119,60 @@ function showImportResult(
     icon: 'none',
   });
 }
+
+const openExportDialog = () => {
+  exportFileName.value = '';
+  exportDialogVisible.value = true;
+};
+
+const closeExportDialog = () => {
+  if (pendingExport.value) {
+    return;
+  }
+
+  exportDialogVisible.value = false;
+  exportFileName.value = '';
+};
+
+const confirmExport = async () => {
+  const fileName = exportFileName.value.trim();
+
+  if (fileName.length > MAX_EXPORT_FILE_NAME_LENGTH) {
+    uni.showToast({
+      title: `文件名不能超过${MAX_EXPORT_FILE_NAME_LENGTH}个字`,
+      icon: 'none',
+    });
+    return;
+  }
+
+  try {
+    pendingExport.value = true;
+    uni.showLoading({ title: '导出中' });
+
+    const json = await buildExportJson();
+    const fullPath = await exportToJsonApp(json, fileName || undefined);
+
+    exportDialogVisible.value = false;
+    exportFileName.value = '';
+
+    uni.showModal({
+      title: '导出成功',
+      content: `已保存到：\n${fullPath}`,
+      showCancel: false,
+      confirmText: '知道了',
+    });
+  } catch (e) {
+    uni.showModal({
+      title: '导出失败',
+      content: e instanceof Error ? e.message : '导出失败',
+      showCancel: false,
+      confirmText: '知道了',
+    });
+  } finally {
+    pendingExport.value = false;
+    uni.hideLoading();
+  }
+};
 
 const importData = async () => {
   try {
@@ -138,14 +233,8 @@ const exportData = async () => {
   try {
     // #ifdef APP-PLUS
     {
-      const json = await buildExportJson();
-      const fullPath = await exportToJsonApp(json);
-      uni.showModal({
-        title: '导出成功',
-        content: `已保存到：\n${fullPath}`,
-        showCancel: false,
-        confirmText: '知道了',
-      });
+      openExportDialog();
+      return;
     }
     // #endif
 
@@ -241,5 +330,38 @@ const exportData = async () => {
   color: #6c645a;
   font-size: 24rpx;
   line-height: 1.7;
+}
+
+.export-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.export-dialog-tip {
+  color: #6c645a;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.export-input {
+  height: 84rpx;
+  padding: 0 22rpx;
+  box-sizing: border-box;
+  border-radius: 22rpx;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1rpx solid rgba(61, 43, 24, 0.12);
+  color: #1e1c18;
+  font-size: 28rpx;
+}
+
+.export-input-placeholder {
+  color: #9d9487;
+}
+
+.export-dialog-hint {
+  color: #6c645a;
+  font-size: 22rpx;
+  line-height: 1.5;
 }
 </style>
