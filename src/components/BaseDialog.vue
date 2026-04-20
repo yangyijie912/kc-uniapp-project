@@ -11,8 +11,8 @@
       <view v-if="$slots.footer || props.showDefaultFooter" class="dialog-footer">
         <slot name="footer">
           <view class="dialog-footer-default">
-            <view class="btn btn-cancel" @click="onClose">取消</view>
-            <view class="btn btn-confirm" @click="onConfirm">确定</view>
+            <view class="btn btn-cancel" @click="onClose">{{ props.cancelText }}</view>
+            <view class="btn btn-confirm" @click="onConfirm">{{ props.confirmText }}</view>
           </view>
         </slot>
       </view>
@@ -26,10 +26,14 @@ const props = withDefaults(
     open: boolean;
     title?: string;
     showDefaultFooter?: boolean;
+    cancelText?: string;
+    confirmText?: string;
   }>(),
   {
     title: '标题',
     showDefaultFooter: true,
+    cancelText: '取消',
+    confirmText: '确定',
   },
 );
 

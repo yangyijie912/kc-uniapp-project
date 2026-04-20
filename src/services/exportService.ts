@@ -90,8 +90,14 @@ type ExportFilesystem = {
   root?: ExportDirectoryHandle;
 };
 
+type ExportDirectoryEntry = {
+  isFile?: boolean;
+  name?: string;
+};
+
 const EXPORT_BACKUP_SLOT_COUNT = 5;
 const EXPORT_BACKUP_RECORDS_KEY = 'knowledge-card.export-backup-records';
+const LEGACY_EXPORT_FILE_NAME_PATTERN = /^(export_backup_[1-5]|\d{8}_\d{6}|备份\d+)\.json$/i;
 
 type ExportRecord = {
   fileName: string;
@@ -129,7 +135,54 @@ function saveExportRecords(records: ExportRecord[]): void {
     return;
   }
 
-  uni.setStorageSync(EXPORT_BACKUP_RECORDS_KEY, records.slice(0, EXPORT_BACKUP_SLOT_COUNT));
+  // 只保留最近 5 条记录，和实际“最多保留 5 个备份”的规则对齐。
+  uni.setStorageSync(EXPORT_BACKUP_RECORDS_KEY, records.slice(-EXPORT_BACKUP_SLOT_COUNT));
+}
+
+function listJsonFileNames(root: ExportDirectoryHandle): Promise<string[]> {
+  return new Promise((resolve, reject) => {
+    const reader = root.createReader();
+    reader.readEntries(
+      (entries) => {
+        const entryList = entries as ExportDirectoryEntry[];
+        const jsonFileNames = entryList
+          .filter((entry) => entry?.isFile && typeof entry.name === 'string')
+          .map((entry) => entry.name as string)
+          .filter((name) => name.toLowerCase().endsWith('.json'));
+
+        resolve(jsonFileNames);
+      },
+      (error) => {
+        reject(error);
+      },
+    );
+  });
+}
+
+async function ensureExportRecords(root: ExportDirectoryHandle): Promise<ExportRecord[]> {
+  const existingRecords = readExportRecords();
+  if (existingRecords.length > 0) {
+    return [...existingRecords].sort((left, right) => left.exportedAt - right.exportedAt);
+  }
+
+  const fileNames = await listJsonFileNames(root);
+  const legacyFileNames = fileNames
+    .filter((name) => LEGACY_EXPORT_FILE_NAME_PATTERN.test(name))
+    .sort((left, right) => left.localeCompare(right, 'zh-CN'))
+    .slice(-EXPORT_BACKUP_SLOT_COUNT);
+
+  if (legacyFileNames.length === 0) {
+    return [];
+  }
+
+  const now = Date.now();
+  const bootstrappedRecords = legacyFileNames.map((fileName, index) => ({
+    fileName,
+    exportedAt: now - (legacyFileNames.length - index) * 1000,
+  }));
+
+  saveExportRecords(bootstrappedRecords);
+  return bootstrappedRecords;
 }
 
 function normalizeExportFileName(inputFileName?: string): string {
@@ -144,19 +197,23 @@ function normalizeExportFileName(inputFileName?: string): string {
   return `${safeName}.json`;
 }
 
-function getNextExportTarget(fileName: string): { fileName: string; previousFileName?: string } {
-  const records = readExportRecords();
-  const existingRecord = records.find((record) => record.fileName === fileName);
+function getNextExportTarget(
+  fileName: string,
+  records: ExportRecord[],
+): { fileName: string; previousFileName?: string } {
+  const orderedRecords = [...records].sort((left, right) => left.exportedAt - right.exportedAt);
+  const existingRecord = orderedRecords.find((record) => record.fileName === fileName);
 
   if (existingRecord) {
     return { fileName: existingRecord.fileName };
   }
 
-  if (records.length < EXPORT_BACKUP_SLOT_COUNT) {
+  // 没满 5 个时直接新增；满了以后，覆盖最旧的一条。
+  if (orderedRecords.length < EXPORT_BACKUP_SLOT_COUNT) {
     return { fileName };
   }
 
-  const oldestRecord = records.reduce((oldest, current) =>
+  const oldestRecord = orderedRecords.reduce((oldest, current) =>
     current.exportedAt < oldest.exportedAt ? current : oldest,
   );
 
@@ -236,13 +293,16 @@ function removeFile(root: ExportDirectoryHandle, fileName: string): Promise<void
 // 导出为 JSON 文件( app 端 )
 export const exportToJsonApp = async (json: string, inputFileName?: string): Promise<string> => {
   const fileName = normalizeExportFileName(inputFileName);
-  const target = getNextExportTarget(fileName);
   const fs = await requestPublicDocumentsFS();
   const root = fs.root;
 
   if (!root) {
     throw new Error('无法访问文件系统');
   }
+
+  // 记录是轮转的“真相源”：先按时间排序，再决定是否覆盖最旧文件。
+  const records = await ensureExportRecords(root);
+  const target = getNextExportTarget(fileName, records);
 
   if (target.previousFileName && target.previousFileName !== target.fileName) {
     await removeFile(root, target.previousFileName);
@@ -254,13 +314,13 @@ export const exportToJsonApp = async (json: string, inputFileName?: string): Pro
     throw new Error('写入文件成功，但无法获取文件路径');
   }
 
-  const records = readExportRecords().filter((record) => record.fileName !== target.fileName);
-  records.push({
+  const nextRecords = records.filter((record) => record.fileName !== target.fileName);
+  nextRecords.push({
     fileName: target.fileName,
     exportedAt: Date.now(),
   });
-  records.sort((left, right) => left.exportedAt - right.exportedAt);
-  saveExportRecords(records);
+  nextRecords.sort((left, right) => left.exportedAt - right.exportedAt);
+  saveExportRecords(nextRecords);
 
   return fileEntry.fullPath;
 };

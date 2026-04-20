@@ -22,8 +22,10 @@
     <BaseDialog
       :open="exportDialogVisible"
       title="导出文件名"
-      :showDefaultFooter="false"
+      cancelText="取消"
+      confirmText="导出"
       @close="closeExportDialog"
+      @confirm="confirmExport"
     >
       <view class="export-dialog">
         <view class="export-dialog-tip"
@@ -41,13 +43,6 @@
           >最多 {{ MAX_EXPORT_FILE_NAME_LENGTH }} 个字，非必填。</view
         >
       </view>
-
-      <template #footer>
-        <view class="dialog-footer-default">
-          <view class="btn btn-cancel" @click="closeExportDialog">取消</view>
-          <view class="btn btn-confirm" @click="confirmExport">导出</view>
-        </view>
-      </template>
     </BaseDialog>
   </view>
 </template>
@@ -234,7 +229,6 @@ const exportData = async () => {
     // #ifdef APP-PLUS
     {
       openExportDialog();
-      return;
     }
     // #endif
 
