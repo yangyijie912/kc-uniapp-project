@@ -16,7 +16,7 @@
           <view class="detail-tag">
             {{
               (Array.isArray(cardData?.tags) && cardData?.tags?.length > 0 ? '/ ' : '') +
-              cardData?.tags?.join('•')
+              (cardData?.tags ? cardData?.tags?.join('•') : '')
             }}
           </view>
         </view>
