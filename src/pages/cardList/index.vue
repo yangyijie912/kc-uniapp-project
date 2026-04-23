@@ -41,10 +41,18 @@
 
           <view class="page-actions-body">
             <view v-if="showQuizAction" class="action-tool quiz-btn" @click="openQuizSetup">
-              <text class="action-tool-icon">▷</text>
+              <image
+                class="action-tool-icon-image"
+                src="/static/actions/quiz.svg"
+                mode="aspectFit"
+              />
             </view>
             <view class="action-tool add-btn" @click="goToAddCard">
-              <text class="action-tool-icon">+</text>
+              <image
+                class="action-tool-icon-image"
+                src="/static/actions/add.svg"
+                mode="aspectFit"
+              />
             </view>
           </view>
         </view>
@@ -673,32 +681,32 @@ onShow(() => {
 }
 
 .action-tool {
-  width: 72rpx;
-  height: 72rpx;
+  width: 96rpx;
+  height: 96rpx;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 999rpx;
   border: 1rpx solid rgba(61, 43, 24, 0.08);
-  box-shadow: 0 12rpx 26rpx rgba(80, 55, 25, 0.08);
+  box-shadow:
+    0 12rpx 26rpx rgba(80, 55, 25, 0.08),
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.72);
   box-sizing: border-box;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
-.action-tool-icon {
-  font-size: 34rpx;
-  line-height: 1;
-  font-weight: 600;
+.action-tool-icon-image {
+  width: 66rpx;
+  height: 66rpx;
 }
 
 .add-btn {
   background: linear-gradient(135deg, rgba(18, 122, 114, 0.16) 0%, rgba(18, 122, 114, 0.08) 100%);
-  color: #127a72;
 }
 
 .quiz-btn {
   background: linear-gradient(135deg, rgba(31, 94, 255, 0.16) 0%, rgba(31, 94, 255, 0.08) 100%);
-  color: #1f5eff;
 }
 
 .filter-row {
