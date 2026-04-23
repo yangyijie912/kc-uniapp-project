@@ -85,17 +85,22 @@
           <view class="card-top">
             <view class="card-title">
               <view class="card-category">{{ value.categoryName }}</view>
-              <view class="card-tag">
-                {{ Array.isArray(value.tags) && value.tags.length > 0 ? '/ ' : ''
-                }}{{ Array.isArray(value.tags) ? value.tags.join('•') : '' }}</view
-              >
             </view>
             <view class="card-status" :class="`status-${value.status}`">{{
               value.statusName ?? '新'
             }}</view>
           </view>
           <view class="card-question">{{ value.question }}</view>
-          <view class="card-answer">{{ value.answer }}</view>
+          <view class="card-answer">
+            {{ value.answer }}
+          </view>
+          <view
+            v-if="Array.isArray(value.tags) && value.tags.length > 0"
+            class="card-tag card-tag-bottom"
+          >
+            {{ value.tags.join(' • ') }}
+          </view>
+          <view v-else class="card-empty-tag card-tag-bottom">暂无标签</view>
         </view>
 
         <view v-if="cardViewList.length === 0" class="result-banner">
@@ -799,11 +804,20 @@ onShow(() => {
 
 .card-item {
   position: relative;
-  padding: 28rpx;
-  border-radius: 28rpx;
-  border: 1rpx solid rgba(61, 43, 24, 0.12);
-  background: rgba(255, 252, 247, 0.84);
-  box-shadow: 0 16rpx 40rpx rgba(80, 55, 25, 0.06);
+  height: 228rpx;
+  padding: 22rpx;
+  display: grid;
+  grid-template-rows: auto 50rpx 1fr auto;
+  row-gap: 6rpx;
+  border-radius: 22rpx;
+  border: 1rpx solid rgba(61, 43, 24, 0.09);
+  background:
+    radial-gradient(circle at 8% 8%, rgba(18, 122, 114, 0.06), transparent 32%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(250, 246, 240, 0.95) 100%);
+  box-shadow:
+    0 10rpx 24rpx rgba(80, 55, 25, 0.08),
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.85);
+  overflow: hidden;
   transition:
     transform 0.18s ease,
     border-color 0.18s ease,
@@ -812,13 +826,15 @@ onShow(() => {
 }
 
 .card-item.is-editing {
-  padding-left: 90rpx;
+  padding-left: 84rpx;
 }
 
 .card-item.is-selected {
-  border-color: rgba(31, 94, 255, 0.36);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(235, 242, 255, 0.92) 100%);
-  box-shadow: 0 18rpx 42rpx rgba(31, 94, 255, 0.12);
+  border-color: rgba(31, 94, 255, 0.3);
+  background:
+    radial-gradient(circle at 10% 8%, rgba(31, 94, 255, 0.1), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(240, 246, 255, 0.94) 100%);
+  box-shadow: 0 12rpx 30rpx rgba(31, 94, 255, 0.14);
 }
 
 .card-check {
@@ -866,7 +882,6 @@ onShow(() => {
 .card-title {
   display: flex;
   align-items: center;
-  gap: 10rpx;
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -874,21 +889,36 @@ onShow(() => {
 
 .card-category {
   color: #127a72;
-  font-size: 24rpx;
+  font-size: 23rpx;
+  font-weight: 600;
 }
 
 .card-tag {
-  color: #9d9487;
+  color: #1677ff;
   font-size: 22rpx;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.card-status {
-  padding: 8rpx 16rpx;
-  border-radius: 999rpx;
+.card-empty-tag {
+  color: #9d9487;
   font-size: 22rpx;
+}
+
+.card-tag-bottom {
+  font-size: 20rpx;
+  line-height: 1.4;
+  opacity: 0.9;
+}
+
+.card-status {
+  padding: 6rpx 12rpx;
+  border-radius: 999rpx;
+  font-size: 19rpx;
+  font-weight: 700;
+  line-height: 1.2;
+  flex-shrink: 0;
 }
 
 .status-fuzzy {
@@ -912,18 +942,28 @@ onShow(() => {
 }
 
 .card-question {
-  margin-top: 18rpx;
+  margin-top: 0;
   color: #1e1c18;
   font-size: 32rpx;
-  line-height: 1.5;
+  line-height: 1.42;
   font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .card-answer {
-  margin-top: 12rpx;
+  margin-top: 0;
   color: #6c645a;
-  font-size: 26rpx;
-  line-height: 1.7;
+  font-size: 24rpx;
+  line-height: 1.8;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  word-break: break-word;
+  opacity: 0.94;
 }
 
 .batch-bar {

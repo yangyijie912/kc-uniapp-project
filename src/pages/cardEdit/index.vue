@@ -9,13 +9,23 @@
     <view class="form-card">
       <view class="form-header">
         <view class="form-title">基础信息</view>
-        <view class="form-tip">修改基础信息，答案尽量概括，正文内容可补充更完整的解释、例子或笔记内容。</view>
+        <view class="form-tip"
+          >修改基础信息，答案尽量概括，正文内容可补充更完整的解释、例子或笔记内容。</view
+        >
       </view>
 
       <view class="form-group">
         <view class="form-label">分类</view>
-        <picker :range="categoryOptions" range-key="name" :value="pickerIndex" @change="onCategoryChange">
-          <view class="picker-input" :class="{ 'picker-placeholder': !selectedCategoryName }">
+        <picker
+          :range="categoryOptions"
+          range-key="name"
+          :value="pickerIndex"
+          @change="onCategoryChange"
+        >
+          <view
+            class="picker-input color-1"
+            :class="{ 'picker-placeholder': !selectedCategoryName }"
+          >
             {{ selectedCategoryName || '请选择分类' }}
           </view>
         </picker>
@@ -25,7 +35,7 @@
         <view class="form-label">问题</view>
         <textarea
           v-model="form.question"
-          class="form-textarea form-textarea-title"
+          class="form-textarea form-textarea-title color-2"
           placeholder="例如：Vue 的 computed 和 watch 有什么区别？"
           placeholder-class="input-placeholder"
           maxlength="-1"
@@ -37,7 +47,7 @@
         <view class="form-label">答案</view>
         <textarea
           v-model="form.answer"
-          class="form-textarea"
+          class="form-textarea color-3"
           placeholder="先写一个简短、能直接展示的答案。"
           placeholder-class="input-placeholder"
           maxlength="-1"
@@ -54,7 +64,7 @@
         <view class="form-label">标签</view>
         <input
           v-model="form.tagsText"
-          class="form-input"
+          class="form-input color-4"
           placeholder="例如：响应式、生命周期、组件通信"
           placeholder-class="input-placeholder"
         />
@@ -466,6 +476,20 @@ onLoad((options) => {
   background: rgba(255, 255, 255, 0.72);
   color: #6c645a;
   border: 1rpx solid rgba(61, 43, 24, 0.08);
+}
+
+.color-1 {
+  border-color: #0000ff70;
+}
+.color-2 {
+  border-color: #ffa50070;
+}
+.color-3 {
+  border-color: #00800070;
+}
+
+.color-4 {
+  border-color: #80808070;
 }
 
 @media (max-width: 320px) {
