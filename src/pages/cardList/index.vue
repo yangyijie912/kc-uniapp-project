@@ -60,6 +60,7 @@
             'is-selected': selectedCards.includes(value.id),
           }"
           @touchstart="handleCardTouchStart(value.id, $event)"
+          @longpress.stop.prevent="handleCardLongPress"
           @touchend="handleCardTouchEnd"
           @touchcancel="handleCardTouchEnd"
           @touchmove="handleCardTouchMove($event)"
@@ -299,6 +300,22 @@ const clearLongPressState = () => {
   }
 };
 
+const vibrateForLongPress = () => {
+  //#ifdef APP-PLUS
+  if (typeof plus !== 'undefined' && plus.device?.vibrate) {
+    plus.device.vibrate(1000);
+  }
+  //#endif
+
+  //#ifndef APP-PLUS
+  if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+    (navigator as Navigator & { vibrate?: (pattern: number | number[]) => boolean }).vibrate?.(
+      1000,
+    );
+  }
+  //#endif
+};
+
 // 获取触摸点坐标，兼容 touchstart 和 touchend 事件
 const getTouchPoint = (event: CardTouchEvent) => {
   return event.touches?.[0] || event.changedTouches?.[0] || null;
@@ -314,12 +331,18 @@ const handleCardTouchStart = (id: string, event: CardTouchEvent) => {
   touchStartPoint.value = point ? { x: point.clientX, y: point.clientY } : null;
   longPressTimer.value = setTimeout(() => {
     longPressTriggered.value = true;
+    vibrateForLongPress();
     onEdit(id);
   }, longPressDuration);
 };
 
 const handleCardTouchEnd = () => {
   clearLongPressState();
+};
+
+const handleCardLongPress = (event: Event) => {
+  event.preventDefault();
+  event.stopPropagation();
 };
 
 // 触摸移动时，如果移动距离超过阈值，则取消长按，避免误触发进入编辑模式
