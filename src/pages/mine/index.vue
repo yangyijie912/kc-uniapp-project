@@ -39,9 +39,6 @@
           placeholder="例如：前端知识卡200张"
           placeholder-class="export-input-placeholder"
         />
-        <view class="export-dialog-hint"
-          >最多 {{ MAX_EXPORT_FILE_NAME_LENGTH }} 个字，非必填。</view
-        >
       </view>
     </BaseDialog>
   </view>
@@ -351,11 +348,5 @@ const exportData = async () => {
 
 .export-input-placeholder {
   color: #9d9487;
-}
-
-.export-dialog-hint {
-  color: #6c645a;
-  font-size: 22rpx;
-  line-height: 1.5;
 }
 </style>
