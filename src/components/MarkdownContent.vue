@@ -18,6 +18,13 @@ const md = new MarkdownIt({
   typographer: true, // 启用一些语言替换 + 引号美化
 });
 
+// 只保留明确的链接识别，关闭容易误判的模糊链接规则
+md.linkify.set({
+  fuzzyLink: false,
+  fuzzyEmail: false,
+  fuzzyIP: false,
+});
+
 md.renderer.rules.table_open = () =>
   '<div class="markdown-table-scroll"><table class="markdown-table">';
 md.renderer.rules.table_close = () => '</table></div>';
