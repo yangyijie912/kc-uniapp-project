@@ -149,13 +149,14 @@ export const pickImportDataApp = async (): Promise<string> => {
         buttons: files.map((file) => ({ title: file.name })),
       },
       (event) => {
-        const { index } = event;
-        if (index === 0) {
+        const index = event?.index;
+        if (typeof index !== 'number' || index <= 0) {
           reject(new Error('已取消选择'));
           return;
         }
 
-        if (!files[index - 1]) {
+        const selectedFile = files[index - 1];
+        if (!selectedFile) {
           reject(new Error('所选文件不存在'));
           return;
         }
