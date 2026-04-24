@@ -91,9 +91,7 @@
             }}</view>
           </view>
           <view class="card-question">{{ value.question }}</view>
-          <view class="card-answer">
-            {{ value.answer }}
-          </view>
+          <text class="card-answer">{{ value.answer }}</text>
           <view
             v-if="Array.isArray(value.tags) && value.tags.length > 0"
             class="card-tag card-tag-bottom"
@@ -804,10 +802,12 @@ onShow(() => {
 
 .card-item {
   position: relative;
-  height: 228rpx;
+  min-height: 228rpx;
+  height: auto;
   padding: 22rpx;
   display: grid;
-  grid-template-rows: auto 50rpx 1fr auto;
+  grid-template-rows: auto auto auto auto;
+  align-content: start;
   row-gap: 6rpx;
   border-radius: 22rpx;
   border: 1rpx solid rgba(61, 43, 24, 0.09);
@@ -954,6 +954,8 @@ onShow(() => {
 
 .card-answer {
   margin-top: 0;
+  width: 100%;
+  min-width: 0;
   color: #6c645a;
   font-size: 24rpx;
   line-height: 1.8;
