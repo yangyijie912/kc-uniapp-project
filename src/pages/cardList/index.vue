@@ -831,7 +831,7 @@ onShow(() => {
   padding: 22rpx;
   display: grid;
   grid-template-rows: auto auto auto auto;
-  align-content: start;
+  align-content: space-around;
   row-gap: 6rpx;
   border-radius: 22rpx;
   border: 1rpx solid rgba(61, 43, 24, 0.09);
