@@ -2,7 +2,7 @@
     "name" : "题卡加一",
     "appid" : "__UNI__B187034",
     "description" : "",
-    "versionName" : "1.0.4",
+    "versionName" : "1.0.5",
     "versionCode" : "100",
     "transformPx" : false,
     "app-plus" : {
@@ -72,6 +72,9 @@
                         "spotlight@3x" : "unpackage/res/icons/120x120.png"
                     }
                 }
+            },
+            "splashscreen" : {
+                "useOriginalMsgbox" : false
             }
         }
     },

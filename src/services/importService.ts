@@ -283,7 +283,7 @@ function mergeCategories(
       mergedCategories.push(newCategory);
       importedCategoryMap.set(importedId, newCategory.id);
       nameMap.set(importedName, newCategory); // 更新名称映射，避免后续同名分类重复添加
-      idMap.set(importedId, newCategory); // 更新ID映射，避免后续ID冲突重复添加
+      idMap.set(newCategory.id, newCategory); // 更新ID映射，避免后续ID冲突重复添加
       countTotal.newCategoryCount += 1;
       continue;
     }
@@ -341,6 +341,8 @@ function normalizeImportedCard(rawCard: RawCard, mergeResult: MergeCategoriesRes
     return null; // 跳过数据不完整的卡片
   }
 
+  const createdAt = rawCard?.createdAt || Date.now();
+
   return {
     id: rawCard.id || generateUUID(),
     categoryId: transformImportedCategoryId(rawCard, mergeResult),
@@ -349,8 +351,9 @@ function normalizeImportedCard(rawCard: RawCard, mergeResult: MergeCategoriesRes
     content: rawCard?.content,
     tags: rawCard?.tags,
     status: rawCard?.status,
-    createdAt: rawCard?.createdAt || Date.now(), // 时间戳
-    updatedAt: rawCard?.updatedAt,
+    createdAt,
+    updatedAt: rawCard?.updatedAt || createdAt,
+    sort: rawCard?.sort ?? Number.MAX_SAFE_INTEGER, // 没有排序值的卡片放到最后
   };
 }
 
@@ -364,8 +367,8 @@ function mergeCards(
   for (const rawCard of importedCards) {
     const normalizedCard = normalizeImportedCard(rawCard, mergeResult);
     if (normalizedCard) {
-      cardsMap.set(normalizedCard.id, normalizedCard); // ID 冲突时覆盖原有卡片
       const existed = cardsMap.has(normalizedCard.id);
+      cardsMap.set(normalizedCard.id, normalizedCard); // ID 冲突时覆盖原有卡片
       if (existed) {
         countTotal.overwrittenCardCount += 1;
       } else {
@@ -388,6 +391,16 @@ function getVisibleCategoryCount(categories: Category[], cards: Card[]): number 
     return true; // 其他分类正常显示
   }).length;
 }
+
+// 旧分类可能没有sort，补上sort
+const ensureCategoriesSort = (categories: Category[]): Category[] => {
+  return categories.map((category, index) => ({
+    ...category,
+    name: category.name.trim(),
+    sort:
+      typeof category.sort === 'number' && Number.isFinite(category.sort) ? category.sort : index,
+  }));
+};
 
 // 最终导入流程
 export async function importFromJsonFile(
@@ -420,28 +433,20 @@ export async function importFromJsonFile(
     }
     // 覆盖模式
     if (mode === 'overwrite') {
-      // 2、覆盖模式直接清空现有数据，不进行合并，后续保存时直接覆盖即可
-      const clearCategoryRes = saveAllCategories([]);
-      if (!clearCategoryRes.success) {
-        return fail(clearCategoryRes.message || '清空分类失败，覆盖导入中断');
-      }
-      const clearCardRes = saveAllCards([]);
-      if (!clearCardRes.success) {
-        return fail(clearCardRes.message || '清空卡片失败，覆盖导入中断');
-      }
+      // 2、已修复，不是“先清空再导入”，而是用处理好的新数据一次性替换旧数据
       // 3、清理传入数据中无效的数据
       const mergeResult = mergeCategories(importData.categories, []); // 传空数组让所有导入分类都被视为新分类，统计无效分类数量
       mergedCategories = mergeResult.mergedCategories;
       mergedCards = mergeCards(importData.cards, [], mergeResult);
     }
     // 4、批量保存合并后的分类和卡片
+    const categoryRes = saveAllCategories(ensureCategoriesSort(mergedCategories));
+    if (!categoryRes.success) {
+      return fail(categoryRes.message || '导入分类失败');
+    }
     const cardRes = saveAllCards(mergedCards);
     if (!cardRes.success) {
       return fail(cardRes.message || '导入卡片失败');
-    }
-    const categoryRes = saveAllCategories(mergedCategories);
-    if (!categoryRes.success) {
-      return fail(categoryRes.message || '导入分类失败');
     }
     // 5、返回导入结果
     return success({

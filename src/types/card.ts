@@ -19,6 +19,7 @@ export type RawCard = {
   status?: Card['status'];
   createdAt?: number;
   updatedAt?: number;
+  sort?: number;
 };
 
 export interface Card {
@@ -29,8 +30,9 @@ export interface Card {
   content?: string;
   tags?: string[];
   status?: CardStatus;
-  createdAt?: number;
-  updatedAt?: number;
+  createdAt: number;
+  updatedAt: number;
+  sort: number;
 }
 
 export interface CategoryView extends Category {
@@ -43,4 +45,13 @@ export interface CategoryView extends Category {
 export interface CardView extends Card {
   categoryName?: string;
   statusName?: string;
+}
+
+export type CardSortBy = 'createdAt' | 'updatedAt' | 'customSort';
+
+export type SortOrder = 'asc' | 'desc';
+
+export interface CardSortConfig {
+  sortBy: CardSortBy;
+  order?: SortOrder;
 }

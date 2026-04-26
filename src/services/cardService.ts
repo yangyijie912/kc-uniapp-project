@@ -2,11 +2,12 @@ import cards from '@/data/cards.json';
 import categories from '@/data/category.json';
 import { UNCATEGORIZED_ID } from '@/constants/category';
 import { CARD_STORAGE_KEY } from '@/constants/storageKeys';
-import type { Card, Category, RawCard } from '@/types/card';
+import type { Card, Category, RawCard, CardSortConfig } from '@/types/card';
 import type { ServiceResult } from '@/types/service';
 import type { PageResult } from '@/types/common';
 import { success, fail } from './serviceHelper';
 import { generateUUID } from '@/utils/uuid';
+import { sortCards } from '@/utils/cardSort';
 
 const defaultCategories = categories as Category[];
 const defaultCategoryIdByName = new Map(
@@ -60,12 +61,15 @@ function normalizeCard(card: Card): Card {
     status: card.status,
     createdAt: card.createdAt,
     updatedAt: card.updatedAt,
+    sort: card.sort,
   };
 }
 
 // 将原始卡片数据转换为Card类型
 function toCard(rawCard: RawCard): Card {
   const categoryId = resolveDefaultCategoryId(rawCard);
+
+  const createdAt = Date.now();
 
   return {
     id: rawCard.id,
@@ -75,8 +79,9 @@ function toCard(rawCard: RawCard): Card {
     content: rawCard.content,
     tags: normalizeTags(rawCard.tags),
     status: rawCard.status,
-    createdAt: rawCard.createdAt,
-    updatedAt: rawCard.updatedAt,
+    createdAt: rawCard?.createdAt ?? createdAt,
+    updatedAt: rawCard?.updatedAt ?? createdAt,
+    sort: rawCard?.sort ?? Number.MAX_SAFE_INTEGER,
   };
 }
 
@@ -137,6 +142,7 @@ type CardQueryParams = Partial<Card> & {
   keyword?: string;
   page?: number;
   pageSize?: number;
+  cardSortConfig?: CardSortConfig;
 };
 
 // 根据参数获取卡片
@@ -150,9 +156,9 @@ export function getCards(params?: CardQueryParams): ServiceResult<PageResult<Car
       pageSize: currentList.length,
     });
   }
-  const { keyword, page = 1, pageSize, ...filters } = params;
+  const { keyword, page = 1, pageSize, cardSortConfig, ...filters } = params;
   const k = keyword?.trim().toLowerCase();
-  const result = currentList.filter((card) => {
+  let result = currentList.filter((card) => {
     // keyword 模糊搜索
     if (k) {
       const matchKeyword =
@@ -175,6 +181,12 @@ export function getCards(params?: CardQueryParams): ServiceResult<PageResult<Car
 
     return true;
   });
+
+  // 排序
+  if (cardSortConfig) {
+    const { sortBy, order } = cardSortConfig;
+    result = sortCards(result, sortBy, order, defaultCategories);
+  }
 
   let paginatedResult = result;
   // 分页计算
@@ -202,10 +214,12 @@ export function getCardById(id: string): ServiceResult<Card | undefined> {
 // 添加新卡片
 export function addCard(card: Omit<Card, 'id'>): ServiceResult<Card> {
   const currentList = loadCardsFromStorage();
+  const createdAt = Date.now();
   const newCard: Card = {
     id: generateUUID(),
     ...card,
-    createdAt: Date.now(),
+    createdAt,
+    updatedAt: createdAt,
   };
   const updatedList = [...currentList, newCard];
   saveCardsToStorage(updatedList);

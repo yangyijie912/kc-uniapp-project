@@ -33,6 +33,15 @@
           >
         </view>
 
+        <picker
+          class="sort-picker-wrap"
+          :range="sortOptionLabels"
+          :value="selectedSortIndex"
+          @change="handleSortChange"
+        >
+          <view class="sort-picker">排序：{{ selectedSortLabel }}</view>
+        </picker>
+
         <view class="page-actions">
           <view class="page-actions-copy">
             <view class="page-actions-title">批量操作</view>
@@ -174,7 +183,8 @@ import { batchDeleteCards, batchUpdateCards } from '@/services/cardService';
 import useCardListView from '@/composables/useCardListView';
 import BaseDialog from '@/components/BaseDialog.vue';
 import QuizSetupSheet from '@/components/QuizSetupSheet.vue';
-import type { CardStatus } from '@/types/card';
+import { CARD_SORT_OPTIONS } from '@/constants/sortConfig';
+import type { CardSortConfig, CardStatus } from '@/types/card';
 import type { quizQuery } from '@/types/quiz';
 
 const { cardViewList, categoryList, loading, hasMore, loadCards, loadAllData } = useCardListView();
@@ -186,6 +196,7 @@ const longPressMoveThreshold = 12; // 长按移动超过12px则取消长按，�
 
 const inputKeyword = ref('');
 const showQuizSetup = ref(false);
+const selectedSortIndex = ref(0);
 /**
  * 长按相关状态:
  * touchedCardId和长按计时一起工作，避免长按触发后，松手时又被后面的点击事件带着跳进详情页
@@ -229,6 +240,15 @@ const selectedTransferCategoryName = computed(() => {
     categoryOptions.value.find((category) => category.id === selectedTransferCategoryId.value)
       ?.name || ''
   );
+});
+
+// 排序选项标签列表和当前选中排序配置
+const sortOptionLabels = CARD_SORT_OPTIONS.map((option) => option.label);
+const selectedSortConfig = computed<CardSortConfig>(() => {
+  return CARD_SORT_OPTIONS[selectedSortIndex.value]?.value ?? CARD_SORT_OPTIONS[0].value;
+});
+const selectedSortLabel = computed(() => {
+  return sortOptionLabels[selectedSortIndex.value] ?? sortOptionLabels[0];
 });
 
 // 定义查询参数类型
@@ -317,6 +337,7 @@ const getTouchPoint = (event: CardTouchEvent) => {
 
 // 处理卡片触摸开始事件，启动长按计时
 const handleCardTouchStart = (id: string, event: CardTouchEvent) => {
+  if (isSearchResultMode.value === true) return;
   clearLongPressState();
   touchedCardId.value = id;
   longPressTriggered.value = false;
@@ -389,6 +410,7 @@ const buildQuery = (page: number) => ({
   categoryId: queryParams.categoryId,
   keyword: queryParams.keyword,
   status: parseStatus(queryParams.status),
+  cardSortConfig: selectedSortConfig.value,
   page,
   pageSize,
 });
@@ -427,8 +449,16 @@ const toggleStatusFilter = (status?: CardStatus) => {
   loadCurrentPages();
 };
 
+// 切换排序方式
+const handleSortChange = (event: { detail: { value: string } }) => {
+  selectedSortIndex.value = Number(event.detail.value);
+  currentPage.value = 1;
+  loadCurrentPages();
+};
+
 // 进入编辑模式（长按卡片）
 const onEdit = (id: string) => {
+  if (isSearchResultMode.value === true) return;
   isEditMode.value = true;
   if (!selectedCards.value.includes(id)) {
     selectedCards.value.push(id);
@@ -703,6 +733,23 @@ onShow(() => {
   align-items: center;
   gap: 14rpx;
   flex-wrap: wrap;
+}
+
+.sort-picker-wrap {
+  flex-shrink: 0;
+}
+
+.sort-picker {
+  min-height: 64rpx;
+  padding: 0 22rpx;
+  display: flex;
+  align-items: center;
+  border-radius: 999rpx;
+  background: rgba(255, 252, 247, 0.84);
+  border: 1rpx solid rgba(61, 43, 24, 0.12);
+  color: #6c645a;
+  font-size: 24rpx;
+  box-sizing: border-box;
 }
 
 .filter-chip {
