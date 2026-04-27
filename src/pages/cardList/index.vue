@@ -2,6 +2,7 @@
   <view class="page">
     <scroll-view
       class="page-scroll"
+      :class="{ 'is-sorting': isSortMode }"
       scroll-y
       @scrolltolower="handleScrollToLower"
       @contextmenu.prevent
@@ -43,31 +44,51 @@
         </picker>
 
         <view class="page-actions">
-          <view class="page-actions-copy">
-            <view class="page-actions-title">批量操作</view>
-            <view class="page-actions-desc">长按卡片进入多选，支持转移分类与删除</view>
+          <view class="page-actions-head">
+            <view class="page-actions-title">{{ currentModeTitle }}</view>
+            <view class="sort-state-tag" :class="{ active: isSortMode || isEditMode }">
+              {{ currentModeTag }}
+            </view>
           </view>
+          <view class="page-actions-desc">{{ currentModeDesc }}</view>
 
           <view class="page-actions-body">
-            <view v-if="showQuizAction" class="action-tool quiz-btn" @click="openQuizSetup">
+            <view
+              class="action-pill action-pill-sort"
+              :class="{
+                active: isSortMode,
+                disabled: !queryParams.categoryId || isSearchResultMode,
+              }"
+              @click="toggleSortMode"
+            >
+              <image
+                class="action-pill-icon"
+                src="/static/actions/drag-sort.svg"
+                mode="aspectFit"
+              />
+              <view class="action-pill-label">{{ sortModeActionLabel }}</view>
+            </view>
+            <view v-if="showQuizAction" class="action-pill action-pill-quiz" @click="openQuizSetup">
               <image
                 class="action-tool-icon-image"
                 src="/static/actions/quiz.svg"
                 mode="aspectFit"
               />
+              <view class="action-pill-label">测验</view>
             </view>
-            <view class="action-tool add-btn" @click="goToAddCard">
+            <view class="action-pill action-pill-add" @click="goToAddCard">
               <image
                 class="action-tool-icon-image"
                 src="/static/actions/add.svg"
                 mode="aspectFit"
               />
+              <view class="action-pill-label">新增</view>
             </view>
           </view>
         </view>
       </view>
 
-      <view class="card-list" :class="{ 'is-editing': isEditMode }">
+      <view class="card-list" :class="{ 'is-editing': isEditMode, 'is-sorting': isSortMode }">
         <view
           v-for="value in cardViewList"
           :key="value.id"
@@ -75,6 +96,7 @@
           :class="{
             'is-editing': isEditMode,
             'is-selected': selectedCards.includes(value.id),
+            'is-sort-active': activeSortCardId === value.id,
           }"
           @touchstart="handleCardTouchStart(value.id, $event)"
           @touchend="handleCardTouchEnd"
@@ -83,6 +105,20 @@
           @contextmenu.prevent
           @click="onCardClick(value.id)"
         >
+          <view
+            v-if="isSortMode"
+            class="drag-handle"
+            @touchstart.stop="handleSortHandleTouchStart(value.id)"
+            @touchend.stop="handleSortHandleTouchEnd"
+            @touchcancel.stop="handleSortHandleTouchEnd"
+            @click.stop="handleSortHandleClick"
+          >
+            <image
+              class="drag-handle-icon"
+              src="/static/actions/drag-handle.svg"
+              mode="aspectFit"
+            />
+          </view>
           <view
             v-if="isEditMode"
             class="card-check"
@@ -177,7 +213,7 @@
 
 <script setup lang="ts">
 import { onLoad, onShow } from '@dcloudio/uni-app';
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { jsonToUrlParam } from '@/utils/jsonToUrl';
 import { batchDeleteCards, batchUpdateCards } from '@/services/cardService';
 import useCardListView from '@/composables/useCardListView';
@@ -194,15 +230,22 @@ const currentPage = ref(1);
 const longPressDuration = 500; // 长按持续时间，单位毫秒
 const longPressMoveThreshold = 12; // 长按移动超过12px则取消长按，避免误触发
 
+// 交互模式：浏览、选择（多选）和排序
+type InteractionMode = 'browse' | 'select' | 'sort';
+
 const inputKeyword = ref('');
 const showQuizSetup = ref(false);
 const selectedSortIndex = ref(0);
+const interactionMode = ref<InteractionMode>('browse');
+const isSortMode = computed(() => interactionMode.value === 'sort');
+const isEditMode = computed(() => interactionMode.value === 'select');
+const activeSortCardId = ref(''); // 当前正在拖拽排序的卡片ID
 /**
  * 长按相关状态:
  * touchedCardId和长按计时一起工作，避免长按触发后，松手时又被后面的点击事件带着跳进详情页
  */
 const longPressTimer = ref<ReturnType<typeof setTimeout> | null>(null);
-const touchedCardId = ref('');
+const touchedCardId = ref(''); // 当前触摸的卡片ID，配合longPressTimer使用，避免长按触发后松手时又被点击事件带着跳进详情页
 const longPressTriggered = ref(false); // 长按是否已触发，避免触发后续点击事件
 const touchStartPoint = ref<{ x: number; y: number } | null>(null); // 触摸起始点
 const touchMoveCanceled = ref(false); // 是否取消长按，避免误触发
@@ -216,7 +259,6 @@ const statusTabs = [
   { label: '未知', value: 'unknown' },
 ] as const;
 
-const isEditMode = ref(false); // 是否处于编辑模式（多选状态）
 const selectedCards = ref<string[]>([]); // 已选择的卡片ID列表
 const categoryOptions = computed(() =>
   categoryList.value.map((category) => ({
@@ -250,6 +292,42 @@ const selectedSortConfig = computed<CardSortConfig>(() => {
 const selectedSortLabel = computed(() => {
   return sortOptionLabels[selectedSortIndex.value] ?? sortOptionLabels[0];
 });
+const currentModeTitle = computed(() => {
+  if (isSortMode.value) {
+    return '排序模式';
+  }
+
+  if (isEditMode.value) {
+    return '多选模式';
+  }
+
+  return '浏览模式';
+});
+const currentModeTag = computed(() => {
+  if (isSortMode.value) {
+    return '拖拽中';
+  }
+
+  if (isEditMode.value) {
+    return '多选中';
+  }
+
+  return '浏览中';
+});
+const currentModeDesc = computed(() => {
+  if (isSortMode.value) {
+    return '拖住卡片左侧手柄调整顺序，完成后可退出排序模式';
+  }
+
+  if (isEditMode.value) {
+    return '当前为多选模式，可批量转移分类或删除';
+  }
+
+  return '长按卡片进入多选模式，或点击拖拽排序';
+});
+const sortModeActionLabel = computed(() => {
+  return isSortMode.value ? '完成排序' : '拖拽排序';
+});
 
 // 定义查询参数类型
 type QueryParams = {
@@ -268,10 +346,45 @@ type PageOptions = {
 const queryParams = reactive<PageOptions>({});
 
 const isSearchResultMode = ref(false);
+const enteredFromHomeSearch = ref(false);
 
 const showQuizAction = computed(() => {
   return Boolean(queryParams.categoryId) && !isSearchResultMode.value;
 });
+
+// 监听：当 categoryId 变化或进入搜索结果模式时，重置交互模式为浏览，并清除排序状态，避免模式冲突和状态残留
+watch([() => queryParams.categoryId, isSearchResultMode], ([categoryId, searchMode]) => {
+  if ((categoryId && !searchMode) || !isSortMode.value) {
+    return;
+  }
+
+  interactionMode.value = 'browse';
+  activeSortCardId.value = '';
+});
+
+// 设置交互模式，并根据模式调整相关状态
+const setInteractionMode = (mode: InteractionMode) => {
+  interactionMode.value = mode;
+
+  if (mode !== 'sort') {
+    activeSortCardId.value = '';
+  }
+
+  if (mode !== 'select') {
+    selectedCards.value = [];
+    closeCategoryDialog();
+  }
+};
+
+// 重置交互模式为浏览，并清除长按相关状态，避免模式冲突和误触发
+const resetInteractionModes = () => {
+  setInteractionMode('browse');
+  clearLongPressState();
+  touchedCardId.value = '';
+  longPressTriggered.value = false;
+  touchMoveCanceled.value = false;
+  touchStartPoint.value = null;
+};
 
 // 解析状态参数，确保它是合法的 CardStatus 值
 const parseStatus = (status?: string): CardStatus | undefined => {
@@ -293,6 +406,10 @@ const parseParams = (options?: PageOptions): QueryParams => {
 
 // 点击卡片多选或进入详情
 const onCardClick = (id: string) => {
+  if (isSortMode.value) {
+    return;
+  }
+
   if (longPressTriggered.value && touchedCardId.value === id) {
     longPressTriggered.value = false;
     touchedCardId.value = '';
@@ -337,7 +454,7 @@ const getTouchPoint = (event: CardTouchEvent) => {
 
 // 处理卡片触摸开始事件，启动长按计时
 const handleCardTouchStart = (id: string, event: CardTouchEvent) => {
-  if (isSearchResultMode.value === true) return;
+  if (isSearchResultMode.value === true || isSortMode.value) return;
   clearLongPressState();
   touchedCardId.value = id;
   longPressTriggered.value = false;
@@ -356,6 +473,10 @@ const handleCardTouchEnd = () => {
 
 // 触摸移动时，如果移动距离超过阈值，则取消长按，避免误触发进入编辑模式
 const handleCardTouchMove = (event: CardTouchEvent) => {
+  if (isSortMode.value) {
+    return;
+  }
+
   if (!touchStartPoint.value) {
     return;
   }
@@ -376,14 +497,7 @@ const handleCardTouchMove = (event: CardTouchEvent) => {
   clearLongPressState();
 };
 
-const goToAddCard = () => {
-  const query = queryParams.categoryId ? `?categoryId=${queryParams.categoryId}` : '';
-
-  uni.navigateTo({
-    url: `/pages/cardEdit/index${query}`,
-  });
-};
-
+// 打开测验设置
 const openQuizSetup = () => {
   showQuizSetup.value = true;
 };
@@ -397,6 +511,7 @@ const startQuizWithCurrentUI = (query: quizQuery) => {
   goToQuizByCategory(query);
 };
 
+// 根据当前分类和查询参数跳转到测验页
 const goToQuizByCategory = (query: quizQuery) => {
   if (!queryParams.categoryId) {
     return;
@@ -406,6 +521,15 @@ const goToQuizByCategory = (query: quizQuery) => {
   });
 };
 
+const goToAddCard = () => {
+  const query = queryParams.categoryId ? `?categoryId=${queryParams.categoryId}` : '';
+
+  uni.navigateTo({
+    url: `/pages/cardEdit/index${query}`,
+  });
+};
+
+// 构建查询参数对象，供加载卡片列表使用
 const buildQuery = (page: number) => ({
   categoryId: queryParams.categoryId,
   keyword: queryParams.keyword,
@@ -435,15 +559,17 @@ const handleScrollToLower = () => {
 
 // 搜索/筛选卡片
 const searchCard = () => {
+  resetInteractionModes();
   const keyword = inputKeyword.value?.trim();
   queryParams.keyword = keyword;
-  isSearchResultMode.value = Boolean(keyword);
+  isSearchResultMode.value = enteredFromHomeSearch.value && Boolean(keyword);
   currentPage.value = 1;
   loadCurrentPages();
 };
 
 // 切换状态筛选
 const toggleStatusFilter = (status?: CardStatus) => {
+  resetInteractionModes();
   queryParams.status = status;
   currentPage.value = 1;
   loadCurrentPages();
@@ -451,24 +577,67 @@ const toggleStatusFilter = (status?: CardStatus) => {
 
 // 切换排序方式
 const handleSortChange = (event: { detail: { value: string } }) => {
+  resetInteractionModes();
   selectedSortIndex.value = Number(event.detail.value);
   currentPage.value = 1;
   loadCurrentPages();
 };
 
+// 排序手柄触摸事件，先设置当前激活的卡片ID，后续会根据这个状态调整样式，真正的拖拽排序功能后续接入
+const handleSortHandleTouchStart = (id: string) => {
+  activeSortCardId.value = id;
+};
+
+// 触摸结束时清除激活状态，避免样式残留
+const handleSortHandleTouchEnd = () => {
+  activeSortCardId.value = '';
+};
+
+// 点击排序手柄时，先提示用户，后续会接入真正的拖拽排序功能
+const handleSortHandleClick = () => {
+  uni.showToast({ title: '下一步接入真实拖拽排序', icon: 'none' });
+};
+
+// 切换排序模式，进入排序模式后会显示拖拽手柄，当前先做视觉和交互骨架，后续接入真正的拖拽排序功能
+const toggleSortMode = () => {
+  if (!queryParams.categoryId || isSearchResultMode.value === true) {
+    uni.showToast({ title: '仅分类列表支持拖拽排序', icon: 'none' });
+    return;
+  }
+
+  // 如果当前不是排序模式，切换到排序模式
+  if (!isSortMode.value) {
+    const customSortIndex = CARD_SORT_OPTIONS.findIndex(
+      (option) => option.value.sortBy === 'customSort',
+    );
+
+    if (customSortIndex >= 0) {
+      selectedSortIndex.value = customSortIndex;
+      currentPage.value = 1;
+      loadCurrentPages();
+    }
+  }
+
+  // 如果当前是排序模式，切换回浏览模式并重置排序选项为默认
+  setInteractionMode(isSortMode.value ? 'browse' : 'sort');
+  clearLongPressState();
+  touchedCardId.value = '';
+  longPressTriggered.value = false;
+  touchMoveCanceled.value = false;
+  touchStartPoint.value = null;
+};
+
 // 进入编辑模式（长按卡片）
 const onEdit = (id: string) => {
   if (isSearchResultMode.value === true) return;
-  isEditMode.value = true;
+  setInteractionMode('select');
   if (!selectedCards.value.includes(id)) {
     selectedCards.value.push(id);
   }
 };
 
 const exitEditMode = () => {
-  isEditMode.value = false;
-  selectedCards.value = [];
-  closeCategoryDialog();
+  setInteractionMode('browse');
 };
 
 // 选择转移的分类
@@ -560,9 +729,8 @@ onLoad((options) => {
   const p = parseParams(options as PageOptions);
   Object.assign(queryParams, p);
   inputKeyword.value = p.keyword || '';
-  if (p.keyword) {
-    isSearchResultMode.value = true;
-  }
+  enteredFromHomeSearch.value = Boolean(p.keyword);
+  isSearchResultMode.value = enteredFromHomeSearch.value;
   currentPage.value = 1;
   loadCurrentPages();
 });
@@ -584,6 +752,10 @@ onShow(() => {
 
 .page-scroll {
   height: 100%;
+}
+
+.page-scroll.is-sorting {
+  overflow-x: visible;
 }
 
 /* 解决h5页面长按出现默认菜单的问题 */
@@ -652,71 +824,131 @@ onShow(() => {
 
 .page-actions {
   min-width: 100%;
-  padding: 22rpx 22rpx 20rpx;
+  padding: 22rpx;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16rpx;
+  flex-direction: column;
+  gap: 14rpx;
   border-radius: 28rpx;
-  background: linear-gradient(135deg, rgba(255, 252, 247, 0.96) 0%, rgba(255, 247, 236, 0.88) 100%);
+  background:
+    radial-gradient(circle at 88% 16%, rgba(31, 94, 255, 0.12), transparent 42%),
+    linear-gradient(138deg, rgba(255, 252, 247, 0.98) 0%, rgba(255, 246, 232, 0.94) 100%);
   border: 1rpx solid rgba(61, 43, 24, 0.12);
-  box-shadow: 0 16rpx 40rpx rgba(80, 55, 25, 0.06);
+  box-shadow:
+    0 12rpx 30rpx rgba(80, 55, 25, 0.08),
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.8);
   box-sizing: border-box;
   flex-shrink: 0;
 }
 
-.page-actions-copy {
-  flex: 1;
-  min-width: 0;
+.page-actions-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14rpx;
 }
 
 .page-actions-title {
   color: #1e1c18;
-  font-size: 28rpx;
+  font-size: 30rpx;
   font-weight: 700;
 }
 
 .page-actions-desc {
-  margin-top: 8rpx;
-  color: #6c645a;
+  color: #72695e;
   font-size: 22rpx;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .page-actions-body {
   display: flex;
   align-items: center;
-  gap: 12rpx;
-  flex-shrink: 0;
+  gap: 10rpx;
+  flex-wrap: nowrap;
 }
 
-.action-tool {
-  width: 96rpx;
-  height: 96rpx;
-  display: inline-flex;
+.sort-state-tag {
+  height: 46rpx;
+  padding: 0 16rpx;
+  display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 999rpx;
-  border: 1rpx solid rgba(61, 43, 24, 0.08);
+  background: rgba(61, 43, 24, 0.08);
+  color: #6c645a;
+  font-size: 21rpx;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sort-state-tag.active {
+  background: rgba(31, 94, 255, 0.14);
+  color: #1f5eff;
+}
+
+.action-pill {
+  height: 76rpx;
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  border-radius: 20rpx;
+  border: 1rpx solid rgba(61, 43, 24, 0.1);
   box-shadow:
-    0 12rpx 26rpx rgba(80, 55, 25, 0.08),
-    inset 0 1rpx 0 rgba(255, 255, 255, 0.72);
+    0 8rpx 20rpx rgba(80, 55, 25, 0.08),
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.74);
   box-sizing: border-box;
-  flex-shrink: 0;
+  padding: 0 12rpx;
   overflow: hidden;
 }
 
 .action-tool-icon-image {
-  width: 66rpx;
-  height: 66rpx;
+  width: 38rpx;
+  height: 38rpx;
 }
 
-.add-btn {
-  background: linear-gradient(135deg, rgba(18, 122, 114, 0.16) 0%, rgba(18, 122, 114, 0.08) 100%);
+.action-pill-icon {
+  width: 32rpx;
+  height: 32rpx;
 }
 
-.quiz-btn {
+.action-pill-label {
+  color: #1e1c18;
+  font-size: 24rpx;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.action-pill-sort {
+  background: linear-gradient(135deg, rgba(61, 43, 24, 0.12) 0%, rgba(61, 43, 24, 0.06) 100%);
+}
+
+.action-pill-sort.active {
+  border-color: rgba(31, 94, 255, 0.24);
+  background: linear-gradient(135deg, rgba(31, 94, 255, 0.2) 0%, rgba(31, 94, 255, 0.1) 100%);
+}
+
+.action-pill-sort.active .action-pill-label {
+  color: #1f5eff;
+}
+
+.action-pill-sort.disabled {
+  opacity: 0.56;
+  border-color: rgba(61, 43, 24, 0.08);
+  background: linear-gradient(135deg, rgba(61, 43, 24, 0.08) 0%, rgba(61, 43, 24, 0.04) 100%);
+}
+
+.action-pill-sort.disabled .action-pill-label {
+  color: #8a7f73;
+}
+
+.action-pill-quiz {
   background: linear-gradient(135deg, rgba(31, 94, 255, 0.16) 0%, rgba(31, 94, 255, 0.08) 100%);
+}
+
+.action-pill-add {
+  background: linear-gradient(135deg, rgba(18, 122, 114, 0.16) 0%, rgba(18, 122, 114, 0.08) 100%);
 }
 
 .filter-row {
@@ -773,13 +1005,13 @@ onShow(() => {
 }
 
 @media (max-width: 360px) {
-  .page-actions {
-    flex-direction: column;
+  .page-actions-body {
+    flex-wrap: wrap;
   }
 
-  .page-actions-body {
-    width: 100%;
-    justify-content: flex-end;
+  .action-pill {
+    flex: unset;
+    width: calc(50% - 5rpx);
   }
 
   .batch-bar {
@@ -851,6 +1083,45 @@ onShow(() => {
 
 .card-item.is-editing {
   padding-left: 84rpx;
+}
+
+.card-list.is-sorting .card-item {
+  padding-left: 84rpx;
+  overflow: visible;
+}
+
+.card-item.is-sort-active {
+  transform: translateY(-4rpx);
+  border-color: rgba(31, 94, 255, 0.62);
+  background:
+    radial-gradient(circle at 10% 10%, rgba(31, 94, 255, 0.12), transparent 36%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(244, 248, 255, 0.96) 100%);
+  box-shadow:
+    0 18rpx 38rpx rgba(31, 94, 255, 0.2),
+    inset 0 0 0 2rpx rgba(31, 94, 255, 0.2);
+}
+
+.drag-handle {
+  position: absolute;
+  left: 24rpx;
+  top: 50%;
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(238, 244, 255, 0.98);
+  box-shadow:
+    0 8rpx 18rpx rgba(31, 94, 255, 0.12),
+    inset 0 0 0 1rpx rgba(31, 94, 255, 0.2);
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+.drag-handle-icon {
+  width: 20rpx;
+  height: 20rpx;
 }
 
 .card-item.is-selected {
