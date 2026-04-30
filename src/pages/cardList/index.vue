@@ -3,7 +3,9 @@
     <scroll-view
       class="page-scroll"
       :class="{ 'is-sorting': isSortMode }"
+      :scroll-top="scrollTop"
       scroll-y
+      @scroll="handlePageScroll"
       @scrolltolower="handleScrollToLower"
       @contextmenu.prevent
     >
@@ -57,7 +59,7 @@
               class="action-pill action-pill-sort"
               :class="{
                 active: isSortMode,
-                disabled: !queryParams.categoryId || isSearchResultMode,
+                disabled: isSortModeDisabled,
               }"
               @click="toggleSortMode"
             >
@@ -96,7 +98,7 @@
           :class="{
             'is-editing': isEditMode,
             'is-selected': selectedCards.includes(value.id),
-            'is-sort-active': activeSortCardId === value.id,
+            'is-sort-active': isSortActive(value.id),
           }"
           @touchstart="handleCardTouchStart(value.id, $event)"
           @touchend="handleCardTouchEnd"
@@ -108,9 +110,10 @@
           <view
             v-if="isSortMode"
             class="drag-handle"
-            @touchstart.stop="handleSortHandleTouchStart(value.id)"
-            @touchend.stop="handleSortHandleTouchEnd"
-            @touchcancel.stop="handleSortHandleTouchEnd"
+            @touchstart.stop.prevent="handleSortHandleTouchStart(value.id)"
+            @touchmove.stop.prevent="handleSortHandleTouchMove($event)"
+            @touchend.stop.prevent="handleSortHandleTouchEnd"
+            @touchcancel.stop.prevent="handleSortHandleTouchEnd"
             @click.stop="handleSortHandleClick"
           >
             <image
@@ -213,44 +216,51 @@
 
 <script setup lang="ts">
 import { onLoad, onShow } from '@dcloudio/uni-app';
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { jsonToUrlParam } from '@/utils/jsonToUrl';
 import { batchDeleteCards, batchUpdateCards } from '@/services/cardService';
 import useCardListView from '@/composables/useCardListView';
+import useCardSortDrag, { type InteractionMode } from '@/composables/useCardSortDrag';
 import BaseDialog from '@/components/BaseDialog.vue';
 import QuizSetupSheet from '@/components/QuizSetupSheet.vue';
 import { CARD_SORT_OPTIONS } from '@/constants/sortConfig';
 import type { CardSortConfig, CardStatus } from '@/types/card';
 import type { quizQuery } from '@/types/quiz';
 
-const { cardViewList, categoryList, loading, hasMore, loadCards, loadAllData } = useCardListView();
+const { cardList, cardViewList, categoryList, loading, hasMore, loadCards, loadAllData } =
+  useCardListView();
 
 const pageSize = 10;
 const currentPage = ref(1);
-const longPressDuration = 500; // 长按持续时间，单位毫秒
-const longPressMoveThreshold = 12; // 长按移动超过12px则取消长按，避免误触发
+const longPressDuration = 500;
+const longPressMoveThreshold = 12;
 
-// 交互模式：浏览、选择（多选）和排序
-type InteractionMode = 'browse' | 'select' | 'sort';
+type CardTouchEvent = Pick<TouchEvent, 'touches' | 'changedTouches'>;
+
+type QueryParams = {
+  categoryId?: string;
+  keyword?: string;
+  status?: CardStatus;
+};
+
+type PageOptions = {
+  categoryId?: string;
+  keyword?: string;
+  status?: string;
+};
 
 const inputKeyword = ref('');
 const showQuizSetup = ref(false);
 const selectedSortIndex = ref(0);
+const scrollTop = ref(0);
 const interactionMode = ref<InteractionMode>('browse');
-const isSortMode = computed(() => interactionMode.value === 'sort');
 const isEditMode = computed(() => interactionMode.value === 'select');
-const activeSortCardId = ref(''); // 当前正在拖拽排序的卡片ID
-/**
- * 长按相关状态:
- * touchedCardId和长按计时一起工作，避免长按触发后，松手时又被后面的点击事件带着跳进详情页
- */
-const longPressTimer = ref<ReturnType<typeof setTimeout> | null>(null);
-const touchedCardId = ref(''); // 当前触摸的卡片ID，配合longPressTimer使用，避免长按触发后松手时又被点击事件带着跳进详情页
-const longPressTriggered = ref(false); // 长按是否已触发，避免触发后续点击事件
-const touchStartPoint = ref<{ x: number; y: number } | null>(null); // 触摸起始点
-const touchMoveCanceled = ref(false); // 是否取消长按，避免误触发
 
-type CardTouchEvent = Pick<TouchEvent, 'touches' | 'changedTouches'>;
+const longPressTimer = ref<ReturnType<typeof setTimeout> | null>(null);
+const touchedCardId = ref('');
+const longPressTriggered = ref(false);
+const touchStartPoint = ref<{ x: number; y: number } | null>(null);
+const touchMoveCanceled = ref(false);
 
 const statusTabs = [
   { label: '全部', value: undefined },
@@ -259,15 +269,19 @@ const statusTabs = [
   { label: '未知', value: 'unknown' },
 ] as const;
 
-const selectedCards = ref<string[]>([]); // 已选择的卡片ID列表
+const queryParams = reactive<PageOptions>({});
+const isSearchResultMode = ref(false);
+const enteredFromHomeSearch = ref(false);
+const selectedCards = ref<string[]>([]);
+const categoryDialogVisible = ref(false);
+const selectedTransferCategoryId = ref('');
+
 const categoryOptions = computed(() =>
   categoryList.value.map((category) => ({
     id: category.id,
     name: category.name,
   })),
 );
-const categoryDialogVisible = ref(false);
-const selectedTransferCategoryId = ref('');
 
 const selectedTransferCategoryIndex = computed(() => {
   const index = categoryOptions.value.findIndex(
@@ -284,7 +298,6 @@ const selectedTransferCategoryName = computed(() => {
   );
 });
 
-// 排序选项标签列表和当前选中排序配置
 const sortOptionLabels = CARD_SORT_OPTIONS.map((option) => option.label);
 const selectedSortConfig = computed<CardSortConfig>(() => {
   return CARD_SORT_OPTIONS[selectedSortIndex.value]?.value ?? CARD_SORT_OPTIONS[0].value;
@@ -292,83 +305,16 @@ const selectedSortConfig = computed<CardSortConfig>(() => {
 const selectedSortLabel = computed(() => {
   return sortOptionLabels[selectedSortIndex.value] ?? sortOptionLabels[0];
 });
-const currentModeTitle = computed(() => {
-  if (isSortMode.value) {
-    return '排序模式';
-  }
 
-  if (isEditMode.value) {
-    return '多选模式';
-  }
-
-  return '浏览模式';
-});
-const currentModeTag = computed(() => {
-  if (isSortMode.value) {
-    return '拖拽中';
-  }
-
-  if (isEditMode.value) {
-    return '多选中';
-  }
-
-  return '浏览中';
-});
-const currentModeDesc = computed(() => {
-  if (isSortMode.value) {
-    return '拖住卡片左侧手柄调整顺序，完成后可退出排序模式';
-  }
-
-  if (isEditMode.value) {
-    return '当前为多选模式，可批量转移分类或删除';
-  }
-
-  return '长按卡片进入多选模式，或点击拖拽排序';
-});
-const sortModeActionLabel = computed(() => {
-  return isSortMode.value ? '完成排序' : '拖拽排序';
-});
-
-// 定义查询参数类型
-type QueryParams = {
-  categoryId?: string;
-  keyword?: string;
-  status?: CardStatus;
-};
-
-// 定义页面接收的查询参数类型
-type PageOptions = {
-  categoryId?: string;
-  keyword?: string;
-  status?: string;
-};
-
-const queryParams = reactive<PageOptions>({});
-
-const isSearchResultMode = ref(false);
-const enteredFromHomeSearch = ref(false);
-
+// 只有分类页里的正常列表才显示“测验”入口；搜索结果页不在这里直接开始测验。
 const showQuizAction = computed(() => {
   return Boolean(queryParams.categoryId) && !isSearchResultMode.value;
 });
+const currentCategoryId = computed(() => queryParams.categoryId);
 
-// 监听：当 categoryId 变化或进入搜索结果模式时，重置交互模式为浏览，并清除排序状态，避免模式冲突和状态残留
-watch([() => queryParams.categoryId, isSearchResultMode], ([categoryId, searchMode]) => {
-  if ((categoryId && !searchMode) || !isSortMode.value) {
-    return;
-  }
-
-  interactionMode.value = 'browse';
-  activeSortCardId.value = '';
-});
-
-// 设置交互模式，并根据模式调整相关状态
+// 页面只保留一个交互模式源，避免多选、排序两个布尔值互相打架。
 const setInteractionMode = (mode: InteractionMode) => {
   interactionMode.value = mode;
-
-  if (mode !== 'sort') {
-    activeSortCardId.value = '';
-  }
 
   if (mode !== 'select') {
     selectedCards.value = [];
@@ -376,9 +322,15 @@ const setInteractionMode = (mode: InteractionMode) => {
   }
 };
 
-// 重置交互模式为浏览，并清除长按相关状态，避免模式冲突和误触发
-const resetInteractionModes = () => {
-  setInteractionMode('browse');
+const clearLongPressState = () => {
+  if (longPressTimer.value) {
+    clearTimeout(longPressTimer.value);
+    longPressTimer.value = null;
+  }
+};
+
+// 长按、多选、拖拽手柄都会用到这组触摸状态；切模式时统一清掉，避免残留。
+const clearTouchState = () => {
   clearLongPressState();
   touchedCardId.value = '';
   longPressTriggered.value = false;
@@ -386,7 +338,6 @@ const resetInteractionModes = () => {
   touchStartPoint.value = null;
 };
 
-// 解析状态参数，确保它是合法的 CardStatus 值
 const parseStatus = (status?: string): CardStatus | undefined => {
   if (status === 'mastered' || status === 'fuzzy' || status === 'unknown') {
     return status;
@@ -395,7 +346,6 @@ const parseStatus = (status?: string): CardStatus | undefined => {
   return undefined;
 };
 
-// 解析页面参数，设置查询参数
 const parseParams = (options?: PageOptions): QueryParams => {
   return {
     categoryId: options?.categoryId || undefined,
@@ -404,7 +354,60 @@ const parseParams = (options?: PageOptions): QueryParams => {
   };
 };
 
-// 点击卡片多选或进入详情
+// 列表页所有重新加载都走这一层，保证筛选、搜索、排序参数始终从同一个地方组装。
+const buildQuery = (page: number) => ({
+  categoryId: queryParams.categoryId,
+  keyword: queryParams.keyword,
+  status: parseStatus(queryParams.status),
+  cardSortConfig: selectedSortConfig.value,
+  page,
+  pageSize,
+});
+
+const loadCurrentPages = () => {
+  loadAllData(buildQuery(currentPage.value));
+};
+
+const {
+  currentModeDesc,
+  currentModeTag,
+  currentModeTitle,
+  isSortModeDisabled,
+  isSortMode,
+  isSortActive,
+  sortModeActionLabel,
+  handleSortHandleTouchStart,
+  handleSortHandleTouchMove,
+  handleSortHandleTouchEnd,
+  handleSortHandleClick,
+  toggleSortMode,
+} = useCardSortDrag({
+  cardList,
+  interactionMode,
+  isEditMode,
+  setInteractionMode,
+  categoryId: currentCategoryId,
+  isSearchResultMode,
+  selectedSortIndex,
+  sortOptions: CARD_SORT_OPTIONS,
+  scrollTop,
+  loadCurrentPages,
+  clearTouchState,
+});
+
+const resetInteractionModes = () => {
+  setInteractionMode('browse');
+  clearTouchState();
+};
+
+// 兼容 touchstart / touchmove / touchend，从不同事件里拿到统一的触摸点。
+const getTouchPoint = (event: CardTouchEvent) => {
+  return event.touches?.[0] || event.changedTouches?.[0] || null;
+};
+
+// 卡片点击要让位给两种场景：
+// 1. 长按刚刚触发完，不要再顺手跳详情。
+// 2. 手指已经移动过，说明用户不是点按，也不要误进详情。
 const onCardClick = (id: string) => {
   if (isSortMode.value) {
     return;
@@ -418,7 +421,6 @@ const onCardClick = (id: string) => {
     return;
   }
 
-  // 如果触摸移动超过阈值，取消长按，并且不进入详情页
   if (touchMoveCanceled.value && touchedCardId.value === id) {
     touchedCardId.value = '';
     touchMoveCanceled.value = false;
@@ -434,31 +436,22 @@ const onCardClick = (id: string) => {
     }
     return;
   }
+
   uni.navigateTo({
     url: `/pages/cardDetail/index?id=${id}`,
   });
 };
 
-// 清除长按状态，避免误触发
-const clearLongPressState = () => {
-  if (longPressTimer.value) {
-    clearTimeout(longPressTimer.value);
-    longPressTimer.value = null;
-  }
-};
-
-// 获取触摸点坐标，兼容 touchstart 和 touchend 事件
-const getTouchPoint = (event: CardTouchEvent) => {
-  return event.touches?.[0] || event.changedTouches?.[0] || null;
-};
-
-// 处理卡片触摸开始事件，启动长按计时
+// 搜索结果页和排序模式都禁用长按多选；
+// 正常分类列表里才允许靠长按进入多选。
 const handleCardTouchStart = (id: string, event: CardTouchEvent) => {
-  if (isSearchResultMode.value === true || isSortMode.value) return;
+  if (isSearchResultMode.value || isSortMode.value) return;
+
   clearLongPressState();
   touchedCardId.value = id;
   longPressTriggered.value = false;
   touchMoveCanceled.value = false;
+
   const point = getTouchPoint(event);
   touchStartPoint.value = point ? { x: point.clientX, y: point.clientY } : null;
   longPressTimer.value = setTimeout(() => {
@@ -471,13 +464,9 @@ const handleCardTouchEnd = () => {
   clearLongPressState();
 };
 
-// 触摸移动时，如果移动距离超过阈值，则取消长按，避免误触发进入编辑模式
+// 一旦移动距离超过阈值，就取消这次长按，避免滚动列表时误切进多选模式。
 const handleCardTouchMove = (event: CardTouchEvent) => {
-  if (isSortMode.value) {
-    return;
-  }
-
-  if (!touchStartPoint.value) {
+  if (isSortMode.value || !touchStartPoint.value) {
     return;
   }
 
@@ -497,7 +486,6 @@ const handleCardTouchMove = (event: CardTouchEvent) => {
   clearLongPressState();
 };
 
-// 打开测验设置
 const openQuizSetup = () => {
   showQuizSetup.value = true;
 };
@@ -511,11 +499,11 @@ const startQuizWithCurrentUI = (query: quizQuery) => {
   goToQuizByCategory(query);
 };
 
-// 根据当前分类和查询参数跳转到测验页
 const goToQuizByCategory = (query: quizQuery) => {
   if (!queryParams.categoryId) {
     return;
   }
+
   uni.navigateTo({
     url: `/pages/quiz/index?${jsonToUrlParam({ ...query, categoryId: queryParams.categoryId })}`,
   });
@@ -529,24 +517,11 @@ const goToAddCard = () => {
   });
 };
 
-// 构建查询参数对象，供加载卡片列表使用
-const buildQuery = (page: number) => ({
-  categoryId: queryParams.categoryId,
-  keyword: queryParams.keyword,
-  status: parseStatus(queryParams.status),
-  cardSortConfig: selectedSortConfig.value,
-  page,
-  pageSize,
-});
-
-const loadCurrentPages = () => {
-  loadAllData(buildQuery(currentPage.value));
-};
-
 const refreshData = () => {
   if (currentPage.value < 1) {
     currentPage.value = 1;
   }
+
   loadCurrentPages();
 };
 
@@ -557,7 +532,12 @@ const handleScrollToLower = () => {
   }
 };
 
-// 搜索/筛选卡片
+const handlePageScroll = (event: { detail: { scrollTop: number } }) => {
+  scrollTop.value = event.detail.scrollTop;
+};
+
+// 这里的搜索本质是列表内筛选。
+// 只有从首页带 keyword 进入时，才把它视为“搜索结果模式”。
 const searchCard = () => {
   resetInteractionModes();
   const keyword = inputKeyword.value?.trim();
@@ -567,7 +547,6 @@ const searchCard = () => {
   loadCurrentPages();
 };
 
-// 切换状态筛选
 const toggleStatusFilter = (status?: CardStatus) => {
   resetInteractionModes();
   queryParams.status = status;
@@ -575,7 +554,6 @@ const toggleStatusFilter = (status?: CardStatus) => {
   loadCurrentPages();
 };
 
-// 切换排序方式
 const handleSortChange = (event: { detail: { value: string } }) => {
   resetInteractionModes();
   selectedSortIndex.value = Number(event.detail.value);
@@ -583,53 +561,10 @@ const handleSortChange = (event: { detail: { value: string } }) => {
   loadCurrentPages();
 };
 
-// 排序手柄触摸事件，先设置当前激活的卡片ID，后续会根据这个状态调整样式，真正的拖拽排序功能后续接入
-const handleSortHandleTouchStart = (id: string) => {
-  activeSortCardId.value = id;
-};
-
-// 触摸结束时清除激活状态，避免样式残留
-const handleSortHandleTouchEnd = () => {
-  activeSortCardId.value = '';
-};
-
-// 点击排序手柄时，先提示用户，后续会接入真正的拖拽排序功能
-const handleSortHandleClick = () => {
-  uni.showToast({ title: '下一步接入真实拖拽排序', icon: 'none' });
-};
-
-// 切换排序模式，进入排序模式后会显示拖拽手柄，当前先做视觉和交互骨架，后续接入真正的拖拽排序功能
-const toggleSortMode = () => {
-  if (!queryParams.categoryId || isSearchResultMode.value === true) {
-    uni.showToast({ title: '仅分类列表支持拖拽排序', icon: 'none' });
-    return;
-  }
-
-  // 如果当前不是排序模式，切换到排序模式
-  if (!isSortMode.value) {
-    const customSortIndex = CARD_SORT_OPTIONS.findIndex(
-      (option) => option.value.sortBy === 'customSort',
-    );
-
-    if (customSortIndex >= 0) {
-      selectedSortIndex.value = customSortIndex;
-      currentPage.value = 1;
-      loadCurrentPages();
-    }
-  }
-
-  // 如果当前是排序模式，切换回浏览模式并重置排序选项为默认
-  setInteractionMode(isSortMode.value ? 'browse' : 'sort');
-  clearLongPressState();
-  touchedCardId.value = '';
-  longPressTriggered.value = false;
-  touchMoveCanceled.value = false;
-  touchStartPoint.value = null;
-};
-
-// 进入编辑模式（长按卡片）
+// 多选入口仍然是长按卡片，但搜索结果页不开放这个模式，避免和“只读结果查看”混在一起。
 const onEdit = (id: string) => {
-  if (isSearchResultMode.value === true) return;
+  if (isSearchResultMode.value) return;
+
   setInteractionMode('select');
   if (!selectedCards.value.includes(id)) {
     selectedCards.value.push(id);
@@ -640,7 +575,6 @@ const exitEditMode = () => {
   setInteractionMode('browse');
 };
 
-// 选择转移的分类
 const onTransferCategoryChange = (event: { detail: { value: string } }) => {
   const index = Number(event.detail.value);
   const category = categoryOptions.value[index];
@@ -667,7 +601,7 @@ const closeCategoryDialog = () => {
   categoryDialogVisible.value = false;
 };
 
-// 选择分类并转移
+// 这里单独保留一层，是为了让模板语义直接对应“转移分类”动作，而不是暴露对话框细节。
 const selectCategory = () => {
   openCategoryDialog();
 };
@@ -698,7 +632,7 @@ const confirmTransferCategory = () => {
   uni.showToast({ title: res.message || '转移失败', icon: 'none' });
 };
 
-// 批量删除
+// 删除前强制二次确认，避免多选模式下误触造成不可恢复的数据丢失。
 const batchDelete = () => {
   if (selectedCards.value.length === 0) {
     uni.showToast({ title: '请至少选择一张卡片', icon: 'none' });
@@ -725,11 +659,13 @@ const batchDelete = () => {
   });
 };
 
+// 首页带 keyword 进入时，页面一开始就是搜索结果模式；
+// 其他入口进入则是普通列表筛选模式。
 onLoad((options) => {
-  const p = parseParams(options as PageOptions);
-  Object.assign(queryParams, p);
-  inputKeyword.value = p.keyword || '';
-  enteredFromHomeSearch.value = Boolean(p.keyword);
+  const parsedParams = parseParams(options as PageOptions);
+  Object.assign(queryParams, parsedParams);
+  inputKeyword.value = parsedParams.keyword || '';
+  enteredFromHomeSearch.value = Boolean(parsedParams.keyword);
   isSearchResultMode.value = enteredFromHomeSearch.value;
   currentPage.value = 1;
   loadCurrentPages();

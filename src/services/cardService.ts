@@ -2,7 +2,7 @@ import cards from '@/data/cards.json';
 import categories from '@/data/category.json';
 import { UNCATEGORIZED_ID } from '@/constants/category';
 import { CARD_STORAGE_KEY } from '@/constants/storageKeys';
-import type { Card, Category, RawCard, CardSortConfig } from '@/types/card';
+import type { Card, Category, RawCard, CardSortConfig, Move } from '@/types/card';
 import type { ServiceResult } from '@/types/service';
 import type { PageResult } from '@/types/common';
 import { success, fail } from './serviceHelper';
@@ -294,5 +294,64 @@ export function batchDeleteCards(ids: string[]): ServiceResult<null> {
 // 保存所有卡片（覆盖式），用于导入时批量保存
 export function saveAllCards(cards: Card[]): ServiceResult<null> {
   saveCardsToStorage(cards);
+  return success(null);
+}
+
+const SORT_STEP = 1000; // 每个卡片之间的默认排序间隔
+
+const compareCardSort = (a: Card, b: Card) => {
+  if (a.sort !== b.sort) {
+    return a.sort - b.sort;
+  }
+
+  return a.createdAt - b.createdAt;
+};
+
+// 更新分类下的卡片排序
+export function updateCardOrderInCategory(categoryId: string, move: Move): ServiceResult<null> {
+  if (!categoryId) {
+    return fail('分类 ID 不能为空');
+  }
+  const currentList = loadCardsFromStorage();
+  // 保存拖拽结果时必须基于分类全量顺序，而不是页面当前已加载片段。
+  const categoryCards = currentList
+    .filter((card) => card.categoryId === categoryId)
+    .sort(compareCardSort);
+
+  const movedIndex = categoryCards.findIndex((card) => card.id === move.movedId);
+  const anchorIndex = categoryCards.findIndex((card) => card.id === move.anchorId);
+
+  if (movedIndex === -1 || anchorIndex === -1) {
+    return fail('排序目标不存在');
+  }
+
+  if (move.position === 'before' && movedIndex < anchorIndex && movedIndex + 1 === anchorIndex) {
+    return success(null);
+  }
+
+  if (move.position === 'after' && movedIndex > anchorIndex && movedIndex === anchorIndex + 1) {
+    return success(null);
+  }
+
+  const nextCategoryCards = [...categoryCards];
+  const [movedCard] = nextCategoryCards.splice(movedIndex, 1);
+  const adjustedAnchorIndex = movedIndex < anchorIndex ? anchorIndex - 1 : anchorIndex;
+  const insertIndex = move.position === 'before' ? adjustedAnchorIndex : adjustedAnchorIndex + 1;
+
+  nextCategoryCards.splice(insertIndex, 0, movedCard);
+
+  // 重写整个分类的 sort，保证 storage 里的顺序和用户最终看到的一致。
+  nextCategoryCards.forEach((card, index) => {
+    card.sort = (index + 1) * SORT_STEP;
+  });
+  // 更新整个卡片列表中对应分类的卡片顺序，其他分类的卡片保持不变
+  const nextList = currentList.map((card) => {
+    if (card.categoryId === categoryId) {
+      const updatedCard = nextCategoryCards.find((c) => c.id === card.id);
+      return updatedCard ? { ...card, sort: updatedCard.sort } : card;
+    }
+    return card;
+  });
+  saveCardsToStorage(nextList);
   return success(null);
 }

@@ -55,3 +55,9 @@ export interface CardSortConfig {
   sortBy: CardSortBy;
   order?: SortOrder;
 }
+
+export type Move = {
+  movedId: string;
+  anchorId: string;
+  position: 'before' | 'after';
+};

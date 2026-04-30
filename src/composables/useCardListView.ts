@@ -25,6 +25,8 @@ export default function useCardListView() {
     if (loading.value) return;
     loading.value = true;
 
+    // 这里维护的是“当前已加载出来的前 N 条”，用于无限滚动显示；
+    // 它不是某个分类下的全量卡片集合，服务层保存排序时不能直接拿它当全量基线。
     const res = getCards({
       ...params,
       page: 1,
