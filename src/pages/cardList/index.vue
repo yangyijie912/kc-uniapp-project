@@ -100,10 +100,10 @@
             'is-selected': selectedCards.includes(value.id),
             'is-sort-active': isSortActive(value.id),
           }"
-          @touchstart="handleCardTouchStart(value.id, $event)"
+          @touchstart.passive="handleCardTouchStart(value.id, $event)"
           @touchend="handleCardTouchEnd"
           @touchcancel="handleCardTouchEnd"
-          @touchmove="handleCardTouchMove($event)"
+          @touchmove.passive="handleCardTouchMove($event)"
           @contextmenu.prevent
           @click="onCardClick(value.id)"
         >
@@ -227,8 +227,16 @@ import { CARD_SORT_OPTIONS } from '@/constants/sortConfig';
 import type { CardSortConfig, CardStatus } from '@/types/card';
 import type { quizQuery } from '@/types/quiz';
 
-const { cardList, cardViewList, categoryList, loading, hasMore, loadCards, loadAllData } =
-  useCardListView();
+const {
+  cardList,
+  cardViewList,
+  categoryList,
+  loading,
+  hasMore,
+  loadCards,
+  reloadCards,
+  loadAllData,
+} = useCardListView();
 
 const pageSize = 10;
 const currentPage = ref(1);
@@ -365,7 +373,7 @@ const buildQuery = (page: number) => ({
 });
 
 const loadCurrentPages = () => {
-  loadAllData(buildQuery(currentPage.value));
+  reloadCards(buildQuery(1), currentPage.value);
 };
 
 const {
@@ -445,7 +453,7 @@ const onCardClick = (id: string) => {
 // 搜索结果页和排序模式都禁用长按多选；
 // 正常分类列表里才允许靠长按进入多选。
 const handleCardTouchStart = (id: string, event: CardTouchEvent) => {
-  if (isSearchResultMode.value || isSortMode.value) return;
+  if (isSearchResultMode.value || isSortMode.value || isEditMode.value) return;
 
   clearLongPressState();
   touchedCardId.value = id;
@@ -466,7 +474,7 @@ const handleCardTouchEnd = () => {
 
 // 一旦移动距离超过阈值，就取消这次长按，避免滚动列表时误切进多选模式。
 const handleCardTouchMove = (event: CardTouchEvent) => {
-  if (isSortMode.value || !touchStartPoint.value) {
+  if (isSortMode.value || isEditMode.value || !touchStartPoint.value) {
     return;
   }
 
@@ -528,7 +536,7 @@ const refreshData = () => {
 const handleScrollToLower = () => {
   if (!loading.value && hasMore.value) {
     currentPage.value += 1;
-    loadCards(buildQuery(currentPage.value));
+    loadCards(buildQuery(currentPage.value), true);
   }
 };
 
