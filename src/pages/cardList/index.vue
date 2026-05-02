@@ -97,6 +97,8 @@
         :mode="interactionMode"
         :selected-ids="selectedCards"
         :sort-active-id="activeSortCardId"
+        :sort-drag-proxy-style="sortDragProxyStyle"
+        :sort-insert-index="sortInsertIndex"
         @card-click="handleCardClick"
         @card-touch-start="handleCardTouchStart"
         @card-touch-end="handleCardTouchEnd"
@@ -283,6 +285,8 @@ const {
   isSortMode,
   isSortActive,
   activeSortCardId,
+  sortDragProxyStyle,
+  sortInsertIndex,
   sortModeActionLabel,
   handleSortHandleTouchStart,
   handleSortHandleTouchMove,

@@ -1,64 +1,107 @@
 <template>
   <view class="card-list-zone">
-    <view class="card-list" :class="{ 'is-editing': isSelectMode, 'is-sorting': isSortMode }">
-      <view
-        v-for="value in cards"
-        :key="value.id"
-        class="card-item"
-        :class="{
-          'is-editing': isSelectMode,
-          'is-selected': selectedIds.includes(value.id),
-          'is-sort-active': sortActiveId === value.id,
-          'is-sorting': isSortMode,
-        }"
-        @touchstart.passive="emit('card-touch-start', value.id, $event)"
-        @touchend="emit('card-touch-end')"
-        @touchcancel="emit('card-touch-end')"
-        @touchmove.passive="emit('card-touch-move', $event)"
-        @contextmenu.prevent
-        @click="emit('card-click', value.id)"
-      >
-        <view
-          v-if="isSortMode"
-          class="drag-handle"
-          @touchstart.stop.prevent="emit('sort-touch-start', value.id)"
-          @touchmove.stop.prevent="emit('sort-touch-move', $event)"
-          @touchend.stop.prevent="emit('sort-touch-end')"
-          @touchcancel.stop.prevent="emit('sort-touch-end')"
-          @click.stop="emit('sort-touch-click')"
-        >
-          <image class="drag-handle-icon" src="/static/actions/drag-handle.svg" mode="aspectFit" />
+    <transition-group
+      v-if="cards.length > 0"
+      class="card-list"
+      :class="{ 'is-editing': isSelectMode, 'is-sorting': isSortMode }"
+      tag="view"
+      move-class="card-item-move"
+    >
+      <template v-for="item in renderItems" :key="item.id">
+        <view v-if="item.type === 'placeholder'" class="card-item card-item-sort-placeholder">
+          <view class="card-item-sort-placeholder-core"></view>
         </view>
-        <view
-          v-if="isSelectMode"
-          class="card-check"
-          :class="{ selected: selectedIds.includes(value.id) }"
-        >
-          <view class="card-check-dot"></view>
-        </view>
-        <view class="card-top">
-          <view class="card-title">
-            <view class="card-category">{{ value.categoryName }}</view>
-          </view>
-          <view class="card-status" :class="`status-${value.status}`">{{
-            value.statusName ?? '新'
-          }}</view>
-        </view>
-        <view class="card-question">{{ value.question }}</view>
-        <text class="card-answer">{{ value.answer }}</text>
-        <view
-          v-if="Array.isArray(value.tags) && value.tags.length > 0"
-          class="card-tag card-tag-bottom"
-        >
-          {{ value.tags.join(' • ') }}
-        </view>
-        <view v-else class="card-empty-tag card-tag-bottom">暂无标签</view>
-      </view>
 
-      <view v-if="cards.length === 0" class="result-banner">
-        <view class="result-title">没有找到相关卡片</view>
-        <view class="result-keyword">试试调整搜索关键词或筛选条件？</view>
+        <view
+          v-else
+          class="card-item card-item-sort-source"
+          :class="{
+            'is-editing': isSelectMode,
+            'is-selected': selectedIds.includes(item.card.id),
+            'is-sort-active': sortActiveId === item.card.id,
+            'is-sorting': isSortMode,
+            'is-dragging-ghost': sortActiveId === item.card.id,
+          }"
+          @touchstart.passive="emit('card-touch-start', item.card.id, $event)"
+          @touchend="emit('card-touch-end')"
+          @touchcancel="emit('card-touch-end')"
+          @touchmove.passive="emit('card-touch-move', $event)"
+          @contextmenu.prevent
+          @click="emit('card-click', item.card.id)"
+        >
+          <view
+            v-if="isSortMode"
+            class="drag-handle"
+            @touchstart.stop.prevent="emit('sort-touch-start', item.card.id, $event)"
+            @touchmove.stop.prevent="emit('sort-touch-move', $event)"
+            @touchend.stop.prevent="emit('sort-touch-end')"
+            @touchcancel.stop="emit('sort-touch-end')"
+            @click.stop="emit('sort-touch-click')"
+          >
+            <image
+              class="drag-handle-icon"
+              src="/static/actions/drag-handle.svg"
+              mode="aspectFit"
+            />
+          </view>
+          <view
+            v-if="isSelectMode"
+            class="card-check"
+            :class="{ selected: selectedIds.includes(item.card.id) }"
+          >
+            <view class="card-check-dot"></view>
+          </view>
+          <view class="card-top">
+            <view class="card-title">
+              <view class="card-category">{{ item.card.categoryName }}</view>
+            </view>
+            <view class="card-status" :class="`status-${item.card.status}`">{{
+              item.card.statusName ?? '新'
+            }}</view>
+          </view>
+          <view class="card-question">{{ item.card.question }}</view>
+          <text class="card-answer">{{ item.card.answer }}</text>
+          <view
+            v-if="Array.isArray(item.card.tags) && item.card.tags.length > 0"
+            class="card-tag card-tag-bottom"
+          >
+            {{ item.card.tags.join(' • ') }}
+          </view>
+          <view v-else class="card-empty-tag card-tag-bottom">暂无标签</view>
+        </view>
+      </template>
+    </transition-group>
+
+    <view
+      v-if="draggingCard && isSortMode"
+      class="card-item dragging-card-proxy is-sorting is-sort-active"
+      :style="sortDragProxyStyle"
+    >
+      <view class="drag-handle">
+        <image class="drag-handle-icon" src="/static/actions/drag-handle.svg" mode="aspectFit" />
       </view>
+      <view class="card-top">
+        <view class="card-title">
+          <view class="card-category">{{ draggingCard.categoryName }}</view>
+        </view>
+        <view class="card-status" :class="`status-${draggingCard.status}`">{{
+          draggingCard.statusName ?? '新'
+        }}</view>
+      </view>
+      <view class="card-question">{{ draggingCard.question }}</view>
+      <text class="card-answer">{{ draggingCard.answer }}</text>
+      <view
+        v-if="Array.isArray(draggingCard.tags) && draggingCard.tags.length > 0"
+        class="card-tag card-tag-bottom"
+      >
+        {{ draggingCard.tags.join(' • ') }}
+      </view>
+      <view v-else class="card-empty-tag card-tag-bottom">暂无标签</view>
+    </view>
+
+    <view v-if="cards.length === 0" class="result-banner">
+      <view class="result-title">没有找到相关卡片</view>
+      <view class="result-keyword">试试调整搜索关键词或筛选条件？</view>
     </view>
 
     <view class="list-footer">
@@ -77,6 +120,19 @@ import type { InteractionMode } from '@/types/card';
 
 type CardTouchEvent = Pick<TouchEvent, 'touches' | 'changedTouches'>;
 
+type RenderCardItem = {
+  type: 'card';
+  id: string;
+  card: CardView;
+};
+
+type RenderPlaceholderItem = {
+  type: 'placeholder';
+  id: string;
+};
+
+type RenderItem = RenderCardItem | RenderPlaceholderItem;
+
 type Props = {
   cards: CardView[];
   hasMore: boolean;
@@ -84,6 +140,8 @@ type Props = {
   mode: InteractionMode;
   selectedIds: string[];
   sortActiveId: string;
+  sortDragProxyStyle: Record<string, string> | null;
+  sortInsertIndex: number;
 };
 
 const props = defineProps<Props>();
@@ -93,7 +151,7 @@ const emit = defineEmits<{
   (event: 'card-touch-start', id: string, touchEvent: CardTouchEvent): void;
   (event: 'card-touch-end'): void;
   (event: 'card-touch-move', touchEvent: CardTouchEvent): void;
-  (event: 'sort-touch-start', id: string): void;
+  (event: 'sort-touch-start', id: string, touchEvent: TouchEvent): void;
   (event: 'sort-touch-move', touchEvent: TouchEvent): void;
   (event: 'sort-touch-end'): void;
   (event: 'sort-touch-click'): void;
@@ -101,6 +159,34 @@ const emit = defineEmits<{
 
 const isSelectMode = computed(() => props.mode === 'select');
 const isSortMode = computed(() => props.mode === 'sort');
+const draggingCard = computed(() => props.cards.find((card) => card.id === props.sortActiveId));
+const visibleCards = computed(() => {
+  if (!isSortMode.value || !props.sortActiveId) {
+    return props.cards;
+  }
+
+  return props.cards.filter((card) => card.id !== props.sortActiveId);
+});
+
+const renderItems = computed<RenderItem[]>(() => {
+  const baseItems = visibleCards.value.map((card) => ({
+    type: 'card' as const,
+    id: card.id,
+    card,
+  })) as RenderItem[];
+
+  if (!isSortMode.value || props.sortInsertIndex < 0) {
+    return baseItems;
+  }
+
+  const insertIndex = Math.min(Math.max(props.sortInsertIndex, 0), baseItems.length);
+  baseItems.splice(insertIndex, 0, {
+    type: 'placeholder' as const,
+    id: 'sort-placeholder',
+  });
+
+  return baseItems;
+});
 </script>
 
 <style scoped>
@@ -112,6 +198,30 @@ const isSortMode = computed(() => props.mode === 'sort');
   display: flex;
   flex-direction: column;
   gap: 18rpx;
+}
+
+.card-item-move {
+  will-change: transform;
+  transition:
+    transform 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.26s ease,
+    border-color 0.26s ease;
+}
+
+.card-item.card-item-sort-placeholder {
+  min-height: 228rpx;
+  padding: 22rpx;
+  box-sizing: border-box;
+  border-radius: 22rpx;
+  border: 2rpx dashed #1f5eff !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: visible;
+}
+
+.card-item.card-item-sort-placeholder .card-item-sort-placeholder-core {
+  min-height: 184rpx;
+  background: transparent;
 }
 
 /* 解决h5页面长按出现默认菜单的问题 */
@@ -187,8 +297,8 @@ const isSortMode = computed(() => props.mode === 'sort');
     0 10rpx 24rpx rgba(80, 55, 25, 0.08),
     inset 0 1rpx 0 rgba(255, 255, 255, 0.85);
   overflow: hidden;
+  will-change: transform;
   transition:
-    transform 0.18s ease,
     border-color 0.18s ease,
     background-color 0.18s ease,
     box-shadow 0.18s ease;
@@ -204,7 +314,7 @@ const isSortMode = computed(() => props.mode === 'sort');
 }
 
 .card-item.is-sort-active {
-  transform: translateY(-4rpx);
+  transform: translate3d(0, -10rpx, 0) scale(1.015);
   border-color: rgba(31, 94, 255, 0.62);
   background:
     radial-gradient(circle at 10% 10%, rgba(31, 94, 255, 0.12), transparent 36%),
@@ -212,6 +322,25 @@ const isSortMode = computed(() => props.mode === 'sort');
   box-shadow:
     0 18rpx 38rpx rgba(31, 94, 255, 0.2),
     inset 0 0 0 2rpx rgba(31, 94, 255, 0.2);
+  z-index: 10;
+  transition:
+    border-color 0.12s ease,
+    background-color 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.card-item.is-dragging-ghost {
+  display: none;
+}
+
+.dragging-card-proxy {
+  position: fixed;
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 999;
+  transform: none;
 }
 
 .drag-handle {
@@ -230,6 +359,7 @@ const isSortMode = computed(() => props.mode === 'sort');
     inset 0 0 0 1rpx rgba(31, 94, 255, 0.2);
   transform: translateY(-50%);
   z-index: 1;
+  touch-action: none;
 }
 
 .drag-handle-icon {
@@ -373,6 +503,7 @@ const isSortMode = computed(() => props.mode === 'sort');
   line-clamp: 2;
   overflow: hidden;
   word-break: break-word;
+
   opacity: 0.94;
 }
 </style>
