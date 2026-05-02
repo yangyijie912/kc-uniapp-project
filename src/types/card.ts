@@ -61,3 +61,6 @@ export type Move = {
   anchorId: string;
   position: 'before' | 'after';
 };
+
+// 卡片列表的交互模式
+export type InteractionMode = 'browse' | 'select' | 'sort';

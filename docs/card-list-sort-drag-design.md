@@ -12,11 +12,16 @@
 这次实现覆盖的主要文件：
 
 - src/pages/cardList/index.vue
+- src/composables/useCardListInteraction.ts
+- src/composables/useCardSelection.ts
 - src/composables/useCardSortDrag.ts
 - src/composables/useCardListView.ts
 - src/services/cardService.ts
 - src/utils/cardSort.ts
 - src/types/card.ts
+- src/pages/cardList/components/CardList.vue
+- src/pages/cardList/components/CardBatchActions.vue
+- src/pages/cardList/components/TransferCategoryDialog.vue
 
 ## 2. 问题定义
 
@@ -99,6 +104,8 @@
 - 单一模式源更容易做切换时的清理，例如退出多选时清空 selectedCards，退出拖拽时清空拖拽态。
 - 页面上所有“先退出其他模式再做下一步”的逻辑都能统一收口。
 
+`InteractionMode` 的实际类型定义现在放在 `src/types/card.ts`，不再让排序 composable 充当类型来源。
+
 对应实现：
 
 - 页面层保留 `interactionMode` 作为唯一模式源。
@@ -178,13 +185,15 @@ type Move = {
 - 解析页面参数。
 - 统一组装查询参数 `buildQuery(page)`。
 - 承接搜索、状态筛选、排序切换、分页加载。
-- 维护多选相关状态。
+- 通过 `useCardListInteraction` 持有唯一模式源。
+- 通过 `useCardSelection` 承接长按进入多选、选中切换和退出清理。
 - 把拖拽排序相关逻辑委托给 `useCardSortDrag`。
+- 编排 `CardList`、`CardBatchActions` 和 `TransferCategoryDialog`，不再把这些块混在同一个大模板里。
 
 页面层保留的关键原则：
 
 - 所有重新加载都走 `loadCurrentPages()`。
-- 搜索、筛选、排序切换前先 `resetInteractionModes()`。
+- 搜索、筛选、排序切换前先显式清理选择态，再把模式切回浏览态。
 - 页面只关心“当前是什么模式”，不直接处理拖拽命中和自动滚动细节。
 
 ### 5.2 useCardListView：负责“当前已加载前缀列表”
@@ -276,9 +285,43 @@ type Move = {
 
 这样做的目的是让两种滚动在时间上错峰，而不是同时抢控制权。
 
-## 7. 踩坑记录
+## 7. 后续收口补充
 
-### 7.1 排序参数误参与精确过滤，直接导致空列表
+这份复盘最初只记录了“排序拖拽如何工作”，但后来卡片列表页又继续做了结构收口，所以这里补一层，避免后续只看这份文档时误以为多选和批量操作还绑在页面里。
+
+### 7.1 交互模式的类型来源被统一
+
+`InteractionMode` 最终保留在 `src/types/card.ts`。这样做的原因是：
+
+- 它本质是卡片列表交互的公共语义，不属于排序 composable 独占。
+- 多选逻辑、排序逻辑、页面模式切换都要共用这个类型。
+- 类型放在共享模型层，比放在某个具体行为 composable 里更稳定。
+
+### 7.2 多选逻辑从页面里拆出去，但退出语义收口到页面
+
+后续为了让页面主文件更轻，多选逻辑被挪到 `useCardSelection`，但保留了一个关键原则：
+
+- `useCardSelection` 负责清理选择态和触摸态。
+- 页面负责决定什么时候切回浏览态。
+
+这样做的好处是语义清晰：
+
+- “退出多选”只表示把选择相关状态清掉。
+- “回到浏览态”是页面级决策，不会被子逻辑偷偷完成。
+
+### 7.3 列表、批量操作和弹窗被拆成独立 UI 块
+
+后续列表展示又进一步拆成：
+
+- `CardList`：只负责列表视觉和事件。
+- `CardBatchActions`：只负责批量操作栏。
+- `TransferCategoryDialog`：只负责分类转移弹窗。
+
+这一步不是为了继续切碎，而是为了让“排序拖拽设计”不再和“批量操作 UI”纠缠在同一个模板里。
+
+## 8. 踩坑记录
+
+### 8.1 排序参数误参与精确过滤，直接导致空列表
 
 这是最先暴露出来的问题。现象是“排序接上后卡片一张都没出来”，根因是：
 
@@ -288,13 +331,13 @@ type Move = {
 
 - 在服务层先把 `cardSortConfig` 解构出去，只对剩余字段做精确匹配。
 
-### 7.2 把页面局部列表误当成分类全量顺序
+### 8.2 把页面局部列表误当成分类全量顺序
 
 这是排序持久化里最大的结构性风险。
 
 最开始如果沿着“页面已经排好了，直接保存页面顺序”这个思路走，会天然踩到分页前缀列表的坑。后面明确改成 `Move + 服务层全量回放`，就是为了解这个问题。
 
-### 7.3 文案和真实行为不一致
+### 8.3 文案和真实行为不一致
 
 中途出现过“完成排序”这类文案，但实际行为并不是“点击后统一提交排序”，而是：
 
@@ -304,7 +347,7 @@ type Move = {
 
 所以后来把文案改成“拖拽排序 / 退出拖拽”，避免 UI 暗示错误的交互模型。
 
-### 7.4 粗暴禁用滚动并不能解决拖拽问题
+### 8.4 粗暴禁用滚动并不能解决拖拽问题
 
 一开始很容易走到一个表面正确的方案：
 
@@ -316,7 +359,7 @@ type Move = {
 
 最终还是回到“保留原生滚动，但用静默窗口协调程序滚动”的方案。
 
-### 7.5 手柄事件必须优先接管
+### 8.5 手柄事件必须优先接管
 
 如果不在手柄上使用 `touchstart/touchmove/touchend` 的 `stop + prevent`，拖拽过程中父级卡片的点击、长按、多选逻辑就很容易混进来，导致：
 
@@ -325,7 +368,7 @@ type Move = {
 
 所以最终明确采用“点中手柄，优先手柄”的事件策略。
 
-## 8. 这次方案的边界
+## 9. 这次方案的边界
 
 当前实现明确不处理这些能力：
 
@@ -336,7 +379,7 @@ type Move = {
 
 这些不是遗漏，而是当前数据模型和交互模型下的主动约束。
 
-## 9. 验证情况
+## 10. 验证情况
 
 这轮改动完成后，已做过的校验包括：
 
@@ -348,7 +391,7 @@ type Move = {
 - 项目全量 `type-check` 仍受 tsconfig 中 `ignoreDeprecations: "6.0"` 影响，现阶段无法作为有效收口校验。
 - 拖拽手感参数（如边缘触发距离、滚动步长、静默窗口）仍然是体验参数，需要继续在真机和长列表场景里微调。
 
-## 10. 后续可继续演进的方向
+## 11. 后续可继续演进的方向
 
 如果后续要继续做这块，建议按下面的顺序推进：
 

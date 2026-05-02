@@ -9,8 +9,7 @@ import {
 } from 'vue';
 import { updateCardOrderInCategory } from '@/services/cardService';
 import type { Card, CardSortConfig, Move } from '@/types/card';
-
-export type InteractionMode = 'browse' | 'select' | 'sort';
+import type { InteractionMode } from '@/types/card';
 
 type SortOption = {
   label: string;
@@ -25,7 +24,6 @@ type DragTarget = {
 type UseCardSortDragOptions = {
   cardList: Ref<Card[]>;
   interactionMode: Ref<InteractionMode>;
-  isEditMode: ComputedRef<boolean>;
   setInteractionMode: (mode: InteractionMode) => void;
   categoryId: ComputedRef<string | undefined>;
   isSearchResultMode: Ref<boolean>;
@@ -40,7 +38,6 @@ export default function useCardSortDrag(options: UseCardSortDragOptions) {
   const {
     cardList,
     interactionMode,
-    isEditMode,
     setInteractionMode,
     categoryId,
     isSearchResultMode,
@@ -78,7 +75,20 @@ export default function useCardSortDrag(options: UseCardSortDragOptions) {
   // 只要还没过这个时间点，就不要把这次 scrollTop 变化误判成用户原生滚动。
   const programmaticScrollUntil = ref(0);
 
+  // 拖拽结束、模式退出或分类上下文变化时，都要把这一轮拖拽会话的临时态一次性回收。
+  const resetSortState = () => {
+    activeSortCardId.value = '';
+    draggingCardId.value = '';
+    currentMove.value = null;
+    cardRects.value = [];
+    scrollViewportRect.value = null;
+    lastAutoScrollAt.value = 0;
+    lastNativeScrollAt.value = 0;
+    programmaticScrollUntil.value = 0;
+  };
+
   const isSortMode = computed(() => interactionMode.value === 'sort');
+  const isSelectMode = computed(() => interactionMode.value === 'select');
   const canUseSortMode = computed(() => {
     return Boolean(categoryId.value) && !isSearchResultMode.value;
   });
@@ -102,7 +112,7 @@ export default function useCardSortDrag(options: UseCardSortDragOptions) {
       return '排序模式';
     }
 
-    if (isEditMode.value) {
+    if (isSelectMode.value) {
       return '多选模式';
     }
 
@@ -113,7 +123,7 @@ export default function useCardSortDrag(options: UseCardSortDragOptions) {
       return '拖拽中';
     }
 
-    if (isEditMode.value) {
+    if (isSelectMode.value) {
       return '多选中';
     }
 
@@ -124,7 +134,7 @@ export default function useCardSortDrag(options: UseCardSortDragOptions) {
       return '拖住卡片左侧手柄调整顺序，完成后可退出拖拽';
     }
 
-    if (isEditMode.value) {
+    if (isSelectMode.value) {
       return '当前为多选模式，可批量转移分类或删除';
     }
 
@@ -139,14 +149,14 @@ export default function useCardSortDrag(options: UseCardSortDragOptions) {
     }
 
     setInteractionMode('browse');
-    activeSortCardId.value = '';
-    draggingCardId.value = '';
-    currentMove.value = null;
-    cardRects.value = [];
-    scrollViewportRect.value = null;
-    lastAutoScrollAt.value = 0;
-    lastNativeScrollAt.value = 0;
-    programmaticScrollUntil.value = 0;
+    resetSortState();
+  });
+
+  watch(interactionMode, (nextMode, previousMode) => {
+    if (previousMode === 'sort' && nextMode !== 'sort') {
+      // 只要离开排序模式，就清掉拖拽态，避免下次进入时沿用旧的命中和滚动状态。
+      resetSortState();
+    }
   });
 
   // 拖拽期间只要 scrollTop 变化，卡片在屏幕里的实际位置就变了，必须重新采集 rect。
@@ -358,14 +368,7 @@ export default function useCardSortDrag(options: UseCardSortDragOptions) {
     const currentCategoryId = categoryId.value;
     const move = currentMove.value;
 
-    activeSortCardId.value = '';
-    draggingCardId.value = '';
-    currentMove.value = null;
-    cardRects.value = [];
-    scrollViewportRect.value = null;
-    lastAutoScrollAt.value = 0;
-    lastNativeScrollAt.value = 0;
-    programmaticScrollUntil.value = 0;
+    resetSortState();
 
     if (!currentCategoryId || !move) {
       return;
@@ -416,6 +419,7 @@ export default function useCardSortDrag(options: UseCardSortDragOptions) {
   };
 
   return {
+    activeSortCardId,
     currentModeDesc,
     currentModeTag,
     currentModeTitle,
