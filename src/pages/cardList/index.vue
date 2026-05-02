@@ -159,8 +159,18 @@
         <view v-else-if="!hasMore" class="list-footer-text">没有更多了</view>
       </view>
 
-      <view v-if="isEditMode" class="bottom-placeholder"> </view>
+      <view v-if="isEditMode || isSortMode" class="bottom-placeholder"> </view>
     </scroll-view>
+
+    <view v-if="isSortMode" class="sort-bar">
+      <view class="sort-summary">
+        <view class="sort-title">拖拽中</view>
+        <view class="sort-desc">已按自定义顺序排序，完成后可直接退出拖拽</view>
+      </view>
+      <view class="sort-actions">
+        <view class="sort-btn sort-btn-secondary" @click="toggleSortMode">退出拖拽</view>
+      </view>
+    </view>
 
     <view v-if="isEditMode" class="batch-bar">
       <view class="batch-summary">
@@ -972,6 +982,61 @@ onShow(() => {
 
 .bottom-placeholder {
   height: calc(200rpx + env(safe-area-inset-bottom));
+}
+
+.sort-bar {
+  position: fixed;
+  left: 28rpx;
+  right: 28rpx;
+  bottom: calc(20rpx + env(safe-area-inset-bottom));
+  z-index: 5;
+  padding: 20rpx 20rpx 18rpx;
+  border-radius: 30rpx;
+  background: rgba(255, 252, 247, 0.96);
+  border: 1rpx solid rgba(61, 43, 24, 0.12);
+  box-shadow: 0 18rpx 42rpx rgba(80, 55, 25, 0.12);
+  backdrop-filter: blur(12px);
+  box-sizing: border-box;
+}
+
+.sort-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.sort-title {
+  color: #1e1c18;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.sort-desc {
+  color: #6c645a;
+  font-size: 22rpx;
+  line-height: 1.5;
+}
+
+.sort-actions {
+  margin-top: 16rpx;
+  display: flex;
+}
+
+.sort-btn {
+  flex: 1;
+  height: 76rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+.sort-btn-secondary {
+  background: rgba(31, 94, 255, 0.1);
+  color: #1f5eff;
+  border: 1rpx solid rgba(31, 94, 255, 0.12);
 }
 
 .edit-list-footer {
