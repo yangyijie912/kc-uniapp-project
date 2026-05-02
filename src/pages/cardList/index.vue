@@ -121,7 +121,7 @@
     <CardBatchActions
       v-if="isSelectMode"
       :selected-count="selectedCards.length"
-      @cancel="selection.exitSelectMode"
+      @cancel="handleCancelSelect"
       @transfer="openCategoryDialog"
       @delete="batchDelete"
     />
@@ -294,9 +294,13 @@ const {
 // 页面是唯一的模式决策点：这里负责把选择态和拖拽态一起收回到浏览态。
 const resetInteractionModes = () => {
   selection.resetSelectionState();
-  if (interactionMode.value === 'sort') {
-    interaction.setInteractionMode('browse');
-  }
+  interaction.setInteractionMode('browse');
+};
+
+// “取消”要同时清空多选结果并退出多选态，否则按钮虽然消失了，模式还会残留。
+const handleCancelSelect = () => {
+  selection.exitSelectMode();
+  interaction.setInteractionMode('browse');
 };
 
 const openCategoryDialog = () => {
