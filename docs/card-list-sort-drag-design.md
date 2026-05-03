@@ -266,24 +266,65 @@ type Move = {
 - 拖动时顺序跳变。
 - 到边缘后拖拽目标突然失准。
 
-### 6.3 如何区分原生滚动和程序自动滚动
+APP 端还额外要求：rect 不能只按数组下标和 `cardList` 对齐。拖拽时会同时出现本地重排、透明源节点、占位卡、分页追加，所以下标很容易失真。当前设计要求卡片节点带 `data-card-id`，rect 采集时读取 `dataset`，命中前按屏幕 `top` 排序，避免新页节点或 APP 返回顺序导致错位。
+
+分页追加也属于 rect 必须重建的场景。拖拽中允许触发分页加载，但加载完成后必须立刻重采 rect，并用当前触点刷新占位；不能继续拿旧页 rect 命中新页。
+
+### 6.3 APP 拖拽视觉层：源节点保留，代理卡显示
+
+H5 端可以把拖拽源卡片从列表里隐藏，再用代理卡显示浮起状态。但 APP 端不能简单移除或 `display: none` 源节点，因为原生触摸链路可能绑定在最初按住的节点上。源节点一旦消失，后续 `touchmove` 可能中断。
+
+因此 APP 端采用：
+
+- 源卡片保留在 DOM 中，通过 `is-app-detached-drag-source` 透明并移出文档流。
+- 用户看到的浮起卡片由 `CardDragProxy.vue` 渲染。
+- APP 列表不使用 `transition-group`，改用普通 `view + v-for`，降低节点替换导致的触摸中断风险。
+
+这个设计的责任分离是：
+
+- 源节点负责维持触摸事件。
+- 代理卡负责视觉跟手。
+- 占位卡负责表达最终落点。
+
+### 6.4 占位卡下标为什么是显式状态
+
+早期 `sortInsertIndex` 由 computed 每帧根据当前触点和 rect 现场计算。APP 真机长列表里，这会出现两个问题：
+
+- 某一帧命中失败，computed 返回 `-1`，占位卡瞬间消失。
+- 某一路径只更新了 `sortDragPreviewMove`，没有同步更新下标，导致占位卡停在旧位置。
+
+当前设计改为显式状态：只有 `applySortDragTarget` 拿到有效锚点时，才同时更新 `sortDragPreviewMove` 和 `sortInsertIndex`。命中失败、命中自己、锚点暂时不可用时，不主动清空占位，而是保留上一帧有效落点。
+
+### 6.5 尾部落点为什么单独处理
+
+尾部和顶部看起来对称，但交互上不对称：
+
+- 顶部落点只要进入第一张非源卡的上半区，就能表达 `before`。
+- 尾部落点通常需要越过最后一张的下半区或底边，才能表达 `after`。
+- APP 底部固定操作栏不占列表布局，却会盖住最后一张卡的自然 after 区域。
+- 当拖拽源卡片本身是最后一张时，命中列表排除源卡，尾部锚点容易退化成倒数第二张。
+
+因此当前尾部规则是：下拖时，如果命中点进入最后一个可见锚点的下半区，直接判定为插入当前已加载列表尾部；尾部 fallback 使用当前已加载列表里的最后一张非源卡，而不是最后一个 rect。
+
+### 6.6 如何区分原生滚动和程序自动滚动
 
 这部分是这轮里最容易踩坑的实现点。
 
-当前方案使用三个时间状态协同：
+当前方案使用这些状态协同：
 
 - `lastAutoScrollAt`：最近一次程序自动滚动的时间。
-- `lastNativeScrollAt`：最近一次被判定为原生滚动的时间。
 - `programmaticScrollUntil`：代码修改 `scrollTop` 后的回响保护窗口。
+- `scrollTop`：由 `@scroll` 记录真实滚动位置。
+- `scrollTopTarget`：只作为程序推进 `scroll-view` 的目标值。
 
 工作方式：
 
-1. 程序推进 `scrollTop` 时，写入 `programmaticScrollUntil = now + autoScrollCooldown`。
-2. `watch(scrollTop)` 收到变化时，如果当前时间还没超过这个值，就只刷新 rect，不记成原生滚动。
-3. 超过这个窗口后收到的滚动变化，才判定为用户手势滚动，并更新 `lastNativeScrollAt`。
-4. `autoScrollIfNeeded` 内再根据 `nativeScrollQuietWindow` 短暂停止程序自动滚动。
+1. 程序推进时只写 `scrollTopTarget`，不直接把真实 `scrollTop` 当目标值混用。
+2. `@scroll` 回来后只更新真实 `scrollTop`。
+3. `watch(scrollTop)` 先用滚动差值平移缓存 rect，再安排真实 rect 重采。
+4. 自动滚动循环每推进一次视口，都用当前触点刷新一次占位。
 
-这样做的目的是让两种滚动在时间上错峰，而不是同时抢控制权。
+这样做的目的是避免 APP 端 `@scroll` 回写吞掉程序滚动目标，同时保证“视口在滚”和“落点在更新”不脱节。
 
 ## 7. 后续收口补充
 
@@ -382,7 +423,7 @@ type Move = {
 
 后续修正保留了自动滚动，但不再让它阻断同一帧里的命中计算和本地重排。这样做的目标不是让滚动更激进，而是让“视口在滚、卡片在换位”这两件事继续同步。
 
-这次更细的排障过程和验证步骤单独收在 [docs/card-list-sort-drag-debug.md](docs/card-list-sort-drag-debug.md) 里，方便后续直接按现象回看根因。若要看从“手感改造”到“顶边死锁修复”的完整过程，去看 [docs/card-list-sort-drag-full-record.md](docs/card-list-sort-drag-full-record.md)。
+这次更细的排障过程和验证步骤单独收在 [./card-list-sort-drag-debug.md](./card-list-sort-drag-debug.md) 里，方便后续直接按现象回看根因。若要看从“手感改造”到“顶边死锁修复”的完整过程，去看 [./card-list-sort-drag-full-record.md](./card-list-sort-drag-full-record.md)。
 
 ## 9. 这次方案的边界
 

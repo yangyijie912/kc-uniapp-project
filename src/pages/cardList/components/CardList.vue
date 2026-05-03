@@ -1,7 +1,7 @@
 <template>
   <view class="card-list-zone">
     <transition-group
-      v-if="cards.length > 0"
+      v-if="!isAppPlatform && cards.length > 0"
       class="card-list"
       :class="{ 'is-editing': isSelectMode, 'is-sorting': isSortMode }"
       tag="view"
@@ -14,13 +14,18 @@
 
         <view
           v-else
-          class="card-item card-item-sort-source"
+          :id="`sort-card-${item.card.id}`"
+          :data-card-id="item.card.id"
+          class="card-item"
           :class="{
+            'card-item-sort-source': !isAppDetachedDragSource(item.card.id),
             'is-editing': isSelectMode,
             'is-selected': selectedIds.includes(item.card.id),
             'is-sort-active': sortActiveId === item.card.id,
             'is-sorting': isSortMode,
-            'is-dragging-ghost': sortActiveId === item.card.id,
+            'is-dragging-ghost':
+              !isAppPlatform && isDragProxyReady && sortActiveId === item.card.id,
+            'is-app-detached-drag-source': isAppDetachedDragSource(item.card.id),
           }"
           @touchstart.passive="emit('card-touch-start', item.card.id, $event)"
           @touchend="emit('card-touch-end')"
@@ -73,30 +78,78 @@
     </transition-group>
 
     <view
-      v-if="draggingCard && isSortMode"
-      class="card-item dragging-card-proxy is-sorting is-sort-active"
-      :style="sortDragProxyStyle"
+      v-else-if="cards.length > 0"
+      class="card-list"
+      :class="{ 'is-editing': isSelectMode, 'is-sorting': isSortMode }"
     >
-      <view class="drag-handle">
-        <image class="drag-handle-icon" src="/static/actions/drag-handle.svg" mode="aspectFit" />
-      </view>
-      <view class="card-top">
-        <view class="card-title">
-          <view class="card-category">{{ draggingCard.categoryName }}</view>
+      <template v-for="item in renderItems" :key="item.id">
+        <view v-if="item.type === 'placeholder'" class="card-item card-item-sort-placeholder">
+          <view class="card-item-sort-placeholder-core"></view>
         </view>
-        <view class="card-status" :class="`status-${draggingCard.status}`">{{
-          draggingCard.statusName ?? '新'
-        }}</view>
-      </view>
-      <view class="card-question">{{ draggingCard.question }}</view>
-      <text class="card-answer">{{ draggingCard.answer }}</text>
-      <view
-        v-if="Array.isArray(draggingCard.tags) && draggingCard.tags.length > 0"
-        class="card-tag card-tag-bottom"
-      >
-        {{ draggingCard.tags.join(' • ') }}
-      </view>
-      <view v-else class="card-empty-tag card-tag-bottom">暂无标签</view>
+
+        <view
+          v-else
+          :id="`sort-card-${item.card.id}`"
+          :data-card-id="item.card.id"
+          class="card-item"
+          :class="{
+            'card-item-sort-source': !isAppDetachedDragSource(item.card.id),
+            'is-editing': isSelectMode,
+            'is-selected': selectedIds.includes(item.card.id),
+            'is-sort-active': sortActiveId === item.card.id,
+            'is-sorting': isSortMode,
+            'is-dragging-ghost':
+              !isAppPlatform && isDragProxyReady && sortActiveId === item.card.id,
+            'is-app-detached-drag-source': isAppDetachedDragSource(item.card.id),
+          }"
+          @touchstart.passive="emit('card-touch-start', item.card.id, $event)"
+          @touchend="emit('card-touch-end')"
+          @touchcancel="emit('card-touch-end')"
+          @touchmove.passive="emit('card-touch-move', $event)"
+          @contextmenu.prevent
+          @click="emit('card-click', item.card.id)"
+        >
+          <view
+            v-if="isSortMode"
+            class="drag-handle"
+            @touchstart.stop.prevent="emit('sort-touch-start', item.card.id, $event)"
+            @touchmove.stop.prevent="emit('sort-touch-move', $event)"
+            @touchend.stop.prevent="emit('sort-touch-end')"
+            @touchcancel.stop="emit('sort-touch-end')"
+            @click.stop="emit('sort-touch-click')"
+          >
+            <image
+              class="drag-handle-icon"
+              src="/static/actions/drag-handle.svg"
+              mode="aspectFit"
+            />
+          </view>
+          <view
+            v-if="isSelectMode"
+            class="card-check"
+            :class="{ selected: selectedIds.includes(item.card.id) }"
+          >
+            <view class="card-check-dot"></view>
+          </view>
+          <view class="card-top">
+            <view class="card-title">
+              <view class="card-category">{{ item.card.categoryName }}</view>
+            </view>
+            <view class="card-status" :class="`status-${item.card.status}`">{{
+              item.card.statusName ?? '新'
+            }}</view>
+          </view>
+          <view class="card-question">{{ item.card.question }}</view>
+          <text class="card-answer">{{ item.card.answer }}</text>
+          <view
+            v-if="Array.isArray(item.card.tags) && item.card.tags.length > 0"
+            class="card-tag card-tag-bottom"
+          >
+            {{ item.card.tags.join(' • ') }}
+          </view>
+          <view v-else class="card-empty-tag card-tag-bottom">暂无标签</view>
+        </view>
+      </template>
     </view>
 
     <view v-if="cards.length === 0" class="result-banner">
@@ -159,9 +212,29 @@ const emit = defineEmits<{
 
 const isSelectMode = computed(() => props.mode === 'select');
 const isSortMode = computed(() => props.mode === 'sort');
-const draggingCard = computed(() => props.cards.find((card) => card.id === props.sortActiveId));
+const systemInfo = uni.getSystemInfoSync() as UniApp.GetSystemInfoResult & {
+  uniPlatform?: string;
+};
+const isAppPlatform =
+  systemInfo.uniPlatform === 'app' ||
+  systemInfo.platform === 'android' ||
+  systemInfo.platform === 'ios';
+// APP 的 touchmove 会绑定在最初按住的节点上；拖拽期间保留这个节点，只把它透明并移出文档流。
+// H5 没有这个限制，可以继续隐藏源卡片，让 transition-group 的移动动画更干净。
+const isDragProxyReady = computed(
+  () => Boolean(props.sortDragProxyStyle) && Boolean(props.sortActiveId),
+);
+
+const isAppDetachedDragSource = (id: string) => {
+  return isAppPlatform && isDragProxyReady.value && props.sortActiveId === id;
+};
+
 const visibleCards = computed(() => {
-  if (!isSortMode.value || !props.sortActiveId) {
+  if (!isSortMode.value || !props.sortActiveId || !isDragProxyReady.value) {
+    return props.cards;
+  }
+
+  if (isAppPlatform) {
     return props.cards;
   }
 
@@ -179,7 +252,17 @@ const renderItems = computed<RenderItem[]>(() => {
     return baseItems;
   }
 
-  const insertIndex = Math.min(Math.max(props.sortInsertIndex, 0), baseItems.length);
+  const sourceIndex = baseItems.findIndex((item) => {
+    return item.type === 'card' && item.card.id === props.sortActiveId;
+  });
+  // sortInsertIndex 是按“排除拖拽源卡片后的列表”计算的。
+  // APP 为了保住 touchmove 会把源卡片留在 DOM 里，所以源卡片如果排在插入点前面，
+  // 需要把真正的 DOM 插入下标往后挪一位，避免占位卡越滚越偏。
+  const adjustedInsertIndex =
+    isAppPlatform && sourceIndex >= 0 && sourceIndex <= props.sortInsertIndex
+      ? props.sortInsertIndex + 1
+      : props.sortInsertIndex;
+  const insertIndex = Math.min(Math.max(adjustedInsertIndex, 0), baseItems.length);
   baseItems.splice(insertIndex, 0, {
     type: 'placeholder' as const,
     id: 'sort-placeholder',
@@ -195,6 +278,7 @@ const renderItems = computed<RenderItem[]>(() => {
 }
 
 .card-list {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 18rpx;
@@ -258,7 +342,7 @@ const renderItems = computed<RenderItem[]>(() => {
 }
 
 .bottom-placeholder {
-  height: calc(200rpx + env(safe-area-inset-bottom));
+  height: calc(240rpx + env(safe-area-inset-bottom));
 }
 
 .list-footer-text {
@@ -333,14 +417,16 @@ const renderItems = computed<RenderItem[]>(() => {
   display: none;
 }
 
-.dragging-card-proxy {
-  position: fixed;
-  top: 0;
+.card-item.is-app-detached-drag-source {
+  position: absolute;
+  display: grid;
   left: 0;
-  box-sizing: border-box;
+  right: 0;
+  width: 100%;
+  opacity: 0;
   pointer-events: none;
-  z-index: 999;
   transform: none;
+  z-index: -1;
 }
 
 .drag-handle {

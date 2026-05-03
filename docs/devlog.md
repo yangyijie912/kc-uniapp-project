@@ -248,3 +248,7 @@
 - 定位并修复卡片列表拖拽排序的顶边上拖死锁问题：自动滚动不再早退中断同帧命中，本地重排和占位刷新继续按当前触点推进；同时把上拖/下拖命中边界改成方向感阈值，减少顶边附近踩线抖动。
 - 新增独立排障文档 [card-list-sort-drag-debug.md](./card-list-sort-drag-debug.md)，把这次“鬼打墙”的现象、根因、修复方式和验证步骤单独记下来，方便后续复盘追溯。
 - 再补一份完整记录 [card-list-sort-drag-full-record.md](./card-list-sort-drag-full-record.md)，把从“拖拽手感改造”到“顶边上拖死锁”的整条链路按时间线写清楚，避免以后只剩摘要没有过程。
+- 额外修正 App 端拖拽刚开始时的空白态：只有拖拽代理样式就绪后才隐藏 active card，避免代理晚一拍时页面先空掉。
+- App 端列表层再做一次保守降级：原生端不走 `transition-group`，改成普通 `view + v-for`，避免拖拽或分页更新时把整组节点短暂渲染成空白。
+- App 平台判断改成运行时系统信息读取，不再依赖编译宏，避免降级分支在原生端没真正生效。
+- 继续修复 App 端触摸链路、分页追加、代理卡、显式占位状态和尾卡落点等问题，具体见 [card-list-sort-drag-full-record.md](./card-list-sort-drag-full-record.md)和 [card-list-sort-drag-app-notes.md](./card-list-sort-drag-app-notes.md)。

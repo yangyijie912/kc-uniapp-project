@@ -3,7 +3,7 @@
     <scroll-view
       class="page-scroll"
       :class="{ 'is-sorting': isSortMode }"
-      :scroll-top="scrollTop"
+      :scroll-top="scrollTopTarget"
       scroll-y
       @scroll="handlePageScroll"
       @scrolltolower="handleScrollToLower"
@@ -110,6 +110,18 @@
       />
     </scroll-view>
 
+    <view class="drag-proxy-layer">
+      <CardDragProxy
+        v-if="draggingCard && isSortMode && sortDragProxyStyle"
+        :card="draggingCard"
+        :proxy-style="sortDragProxyStyle"
+      />
+    </view>
+
+    <view v-if="showSortDebugPanel && isSortMode" class="sort-debug-panel">
+      <text class="sort-debug-text">{{ sortDragDebugText }}</text>
+    </view>
+
     <view v-if="isSortMode" class="sort-bar">
       <view class="sort-summary">
         <view class="sort-title">拖拽中</view>
@@ -156,6 +168,7 @@ import useCardSelection from '@/composables/useCardSelection';
 import useCardSortDrag from '@/composables/useCardSortDrag';
 import QuizSetupSheet from '@/components/QuizSetupSheet.vue';
 import CardBatchActions from './components/CardBatchActions.vue';
+import CardDragProxy from './components/CardDragProxy.vue';
 import CardList from './components/CardList.vue';
 import TransferCategoryDialog from './components/TransferCategoryDialog.vue';
 import { CARD_SORT_OPTIONS } from '@/constants/sortConfig';
@@ -193,6 +206,9 @@ const inputKeyword = ref('');
 const showQuizSetup = ref(false);
 const selectedSortIndex = ref(0);
 const scrollTop = ref(0);
+const scrollTopTarget = ref(0);
+// 只有在 APP 真机排查拖拽排序时，才临时改成 true。
+const showSortDebugPanel = false;
 const interaction = useCardListInteraction();
 const isSearchResultMode = ref(false);
 const selection = useCardSelection({
@@ -273,6 +289,7 @@ const sortDrag = useCardSortDrag({
   selectedSortIndex,
   sortOptions: CARD_SORT_OPTIONS,
   scrollTop,
+  scrollTopTarget,
   loadCurrentPages,
   clearTouchState: selection.resetSelectionState,
 });
@@ -286,6 +303,7 @@ const {
   isSortActive,
   activeSortCardId,
   sortDragProxyStyle,
+  sortDragDebugText,
   sortInsertIndex,
   sortModeActionLabel,
   handleSortHandleTouchStart,
@@ -294,6 +312,10 @@ const {
   handleSortHandleClick,
   toggleSortMode,
 } = sortDrag;
+
+const draggingCard = computed(() => {
+  return cardViewList.value.find((card) => card.id === activeSortCardId.value) || null;
+});
 
 // 页面是唯一的模式决策点：这里负责把选择态和拖拽态一起收回到浏览态。
 const resetInteractionModes = () => {
@@ -490,6 +512,36 @@ onShow(() => {
 
 .page-scroll.is-sorting {
   overflow-x: visible;
+}
+
+.drag-proxy-layer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.sort-debug-panel {
+  position: fixed;
+  left: 20rpx;
+  right: 20rpx;
+  bottom: calc(250rpx + env(safe-area-inset-bottom));
+  z-index: 1200;
+  padding: 12rpx 14rpx;
+  border-radius: 12rpx;
+  background: rgba(20, 24, 35, 0.86);
+  border: 1rpx solid rgba(255, 255, 255, 0.16);
+  pointer-events: none;
+}
+
+.sort-debug-text {
+  color: #fff;
+  font-size: 18rpx;
+  line-height: 1.45;
+  word-break: break-all;
 }
 
 /* 解决h5页面长按出现默认菜单的问题 */

@@ -1,6 +1,6 @@
 # 卡片列表拖拽排序上拖死锁排障记录
 
-这份文档单独记录这次顶边上拖“鬼打墙”的定位过程、根因和修复点。它不是设计总览，而是给后续复盘和排查留的可追溯记录。要看从手感改造到最终修复的完整时间线，去看 [docs/card-list-sort-drag-full-record.md](docs/card-list-sort-drag-full-record.md)。
+这份文档单独记录这次顶边上拖“鬼打墙”的定位过程、根因和修复点。它不是设计总览，而是给后续复盘和排查留的可追溯记录。要看从手感改造到最终修复的完整时间线，去看 [./card-list-sort-drag-full-record.md](./card-list-sort-drag-full-record.md)。
 
 ## 1. 现象
 
@@ -17,7 +17,7 @@
 
 - 不是 `touchcancel` 的 H5 报错。
 - 不是 placeholder 渲染丢失。
-- 不是分页追加把 rect 彻底打乱。
+- 不是分页追加把 rect 彻底打乱。这里限定的是早期 H5/通用拖拽优化阶段里的“顶边上拖死锁”问题；后续 APP 长列表占位消失另有专项记录。
 - 不是列表组件把 active card 直接从 DOM 里删掉导致命中错位。
 
 这些问题前面已经各自处理过，但并不能解释“为什么一到上边缘就不往前推进”。
@@ -72,3 +72,13 @@
 4. 再继续贴边拖几次，看上面的卡片是否能稳定下移。
 
 如果这里仍然卡住，下一层就只需要看 `getDragTargetByTouchY` 的边界和 `currentMove` 的兜底是否一致，不需要重新怀疑整条拖拽链。
+
+## 8. 文档边界
+
+这份文档保留早期 H5/通用拖拽优化阶段里的“顶边上拖死锁”排障记录。当时的重点是占位卡、同帧命中、本地重排和边缘自动滚动之间的控制链，并没有覆盖后续 APP 真机专项问题。
+
+后续 APP 端又单独暴露了触摸链路、分页追加、代理卡、显式占位状态和尾卡落点等问题。那些内容不要继续堆进本文，避免时间线混乱：
+
+- APP 端专项结论看 [./card-list-sort-drag-app-notes.md](./card-list-sort-drag-app-notes.md)。
+- 从 H5/通用优化到 APP 专项修复的完整时间线看 [./card-list-sort-drag-full-record.md](./card-list-sort-drag-full-record.md)。
+- 设计层面的当前最终方案看 [./card-list-sort-drag-design.md](./card-list-sort-drag-design.md)。

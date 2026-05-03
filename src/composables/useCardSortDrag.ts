@@ -20,6 +20,16 @@ type DragTarget = {
   position: 'before' | 'after';
 };
 
+type DragTouchEvent = Pick<TouchEvent, 'touches' | 'changedTouches'>;
+
+type CardRect = UniApp.NodeInfo & {
+  cardId?: string;
+  dataset?: {
+    cardId?: string;
+    cardid?: string;
+  };
+};
+
 type UseCardSortDragOptions = {
   cardList: Ref<Card[]>;
   interactionMode: Ref<InteractionMode>;
@@ -29,6 +39,7 @@ type UseCardSortDragOptions = {
   selectedSortIndex: Ref<number>;
   sortOptions: SortOption[];
   scrollTop: Ref<number>;
+  scrollTopTarget: Ref<number>;
   loadCurrentPages: () => void;
   clearTouchState: () => void;
 };
@@ -43,6 +54,7 @@ export default function useCardSortDrag(options: UseCardSortDragOptions) {
     selectedSortIndex,
     sortOptions,
     scrollTop,
+    scrollTopTarget,
     loadCurrentPages,
     clearTouchState,
   } = options;
@@ -63,31 +75,75 @@ export default function useCardSortDrag(options: UseCardSortDragOptions) {
   const sortDragMoveFrameId = ref<number | null>(null);
   const sortDragMoveInFlight = ref(false);
   const sortDragRectRefreshFrameId = ref<number | null>(null);
-  const sortDragEdgeScrollFrameId = ref<number | null>(null);
+  const sortDragEdgeScrollTimerId = ref<ReturnType<typeof setTimeout> | null>(null);
   // 拖拽过程中只保留“最新一次相对锚点的移动”，松手时再交给服务层按全量顺序回放。
   const currentMove = ref<Move | null>(null);
   // 给列表占位用的“当前预览移动”。它会在命中当帧就更新，不等本地重排完成。
   const sortDragPreviewMove = ref<Move | null>(null);
-  const cardRects = ref<UniApp.NodeInfo[]>([]);
+  const sortInsertIndex = ref(-1);
+  const sortDragDebugText = ref('拖拽调试：空闲');
+  const cardRects = ref<CardRect[]>([]);
   const scrollViewportRect = ref<UniApp.NodeInfo | null>(null);
-  // 每次自动滚动推进的像素值。值太小会显得拖不动，值太大又会导致命中区域跳得太快。
-  const autoScrollStep = 48;
   // 手指进入视口上下边缘多少像素后开始自动滚动。
-  // 这里故意放宽一点，避免必须贴到最边缘才触发，手感会太紧。
-  const autoScrollEdgePadding = 88;
+  // 下边缘热区不能太大，否则只是稍微往下拖就会误触发快速滚动。
+  const autoScrollTopEdgePadding = 110;
+  const autoScrollBottomEdgePadding = 190;
   // 两次程序自动滚动之间至少间隔多久，单位 ms。
   // 这是节流，不然 touchmove 高频触发时 scrollTop 会被连续推得过猛。
-  const autoScrollCooldown = 72;
-  // 原生滚动刚发生后的静默窗口，单位 ms。
-  // 在这个窗口里禁止程序自动滚动，避免用户手势滚动和代码滚动互相抢控制权。
-  const nativeScrollQuietWindow = 140;
+  const autoScrollCooldown = 52;
+  const programmaticScrollQuietWindow = 320;
+  const autoScrollMaxStep = 66;
+  const autoScrollMinStep = 14;
   // 最近一次程序自动滚动发生的时间，用于 autoScrollCooldown 节流。
   const lastAutoScrollAt = ref(0);
-  // 最近一次被判定为“原生滚动”的时间，用于 nativeScrollQuietWindow 静默判定。
-  const lastNativeScrollAt = ref(0);
   // 程序主动改写 scrollTop 后，在这之前收到的 scroll 变化都视为“自己触发的后续回响”。
   // 只要还没过这个时间点，就不要把这次 scrollTop 变化误判成用户原生滚动。
   const programmaticScrollUntil = ref(0);
+
+  const getTouchPoint = (event: DragTouchEvent) => {
+    return event.touches?.[0] || event.changedTouches?.[0] || null;
+  };
+
+  const getTouchY = (event: DragTouchEvent) => {
+    const touch = getTouchPoint(event);
+
+    if (!touch) {
+      return null;
+    }
+
+    const rawY = touch.clientY ?? touch.pageY ?? touch.screenY;
+
+    return typeof rawY === 'number' && Number.isFinite(rawY) ? rawY : null;
+  };
+
+  const formatDebugNumber = (value: unknown) => {
+    return typeof value === 'number' && Number.isFinite(value) ? Math.round(value) : '-';
+  };
+
+  const writeSortDragDebug = (label: string, extra: Record<string, unknown> = {}) => {
+    const viewportRect = scrollViewportRect.value;
+    const touchY = sortDragLastTouchY.value;
+    const viewportTop = viewportRect?.top;
+    const viewportBottom =
+      typeof viewportRect?.top === 'number' && typeof viewportRect?.height === 'number'
+        ? viewportRect.top + viewportRect.height
+        : undefined;
+    const touchLabel =
+      touchY === null
+        ? '手指=-'
+        : `手指=${formatDebugNumber(touchY)} 上边缘=${formatDebugNumber(
+            (viewportTop ?? 0) + autoScrollTopEdgePadding,
+          )} 下边缘=${formatDebugNumber((viewportBottom ?? 0) - autoScrollBottomEdgePadding)}`;
+
+    sortDragDebugText.value = [
+      label,
+      touchLabel,
+      `视口=${formatDebugNumber(viewportTop)}-${formatDebugNumber(viewportBottom)}`,
+      `滚动=${formatDebugNumber(scrollTop.value)} 目标=${formatDebugNumber(scrollTopTarget.value)}`,
+      `节点=${cardRects.value.length}`,
+      ...Object.entries(extra).map(([key, value]) => `${key}=${String(value)}`),
+    ].join(' | ');
+  };
 
   const shiftCachedCardRectsByScrollDelta = (scrollDelta: number) => {
     if (!scrollDelta || cardRects.value.length === 0) {
@@ -104,6 +160,31 @@ export default function useCardSortDrag(options: UseCardSortDragOptions) {
         top: rect.top - scrollDelta,
       };
     });
+  };
+
+  const getCardIdFromRect = (rect: CardRect) => {
+    const datasetId = rect.dataset?.cardId || rect.dataset?.cardid || rect.cardId || '';
+    if (datasetId) {
+      return datasetId;
+    }
+
+    const rectId = (rect as UniApp.NodeInfo & { id?: string }).id || '';
+    return rectId.startsWith('sort-card-') ? rectId.replace(/^sort-card-/, '') : '';
+  };
+
+  const getSortInsertIndexByMove = (move: Move | null) => {
+    if (!move) {
+      return -1;
+    }
+
+    const visibleCardList = cardList.value.filter((card) => card.id !== activeSortCardId.value);
+    const anchorIndex = visibleCardList.findIndex((card) => card.id === move.anchorId);
+
+    if (anchorIndex === -1) {
+      return -1;
+    }
+
+    return move.position === 'before' ? anchorIndex : anchorIndex + 1;
   };
 
   // 拖拽结束、模式退出或分类上下文变化时，都要把这一轮拖拽会话的临时态一次性回收。
@@ -126,18 +207,19 @@ export default function useCardSortDrag(options: UseCardSortDragOptions) {
       cancelAnimationFrame(sortDragRectRefreshFrameId.value);
       sortDragRectRefreshFrameId.value = null;
     }
-    if (sortDragEdgeScrollFrameId.value !== null) {
-      cancelAnimationFrame(sortDragEdgeScrollFrameId.value);
-      sortDragEdgeScrollFrameId.value = null;
+    if (sortDragEdgeScrollTimerId.value !== null) {
+      clearTimeout(sortDragEdgeScrollTimerId.value);
+      sortDragEdgeScrollTimerId.value = null;
     }
     sortDragMoveInFlight.value = false;
     currentMove.value = null;
     sortDragPreviewMove.value = null;
+    sortInsertIndex.value = -1;
     cardRects.value = [];
     scrollViewportRect.value = null;
     lastAutoScrollAt.value = 0;
-    lastNativeScrollAt.value = 0;
     programmaticScrollUntil.value = 0;
+    sortDragDebugText.value = '拖拽调试：已重置';
   };
 
   const isSortMode = computed(() => interactionMode.value === 'sort');
@@ -218,49 +300,17 @@ export default function useCardSortDrag(options: UseCardSortDragOptions) {
     };
   });
 
-  const sortInsertIndex = computed(() => {
-    const touchY = sortDragLastTouchY.value;
-
-    if (!isSortMode.value || !activeSortCardId.value || touchY === null) {
-      return -1;
+  const getDragHitY = (touchY: number) => {
+    if (sortDragGrabOffsetY.value === null || sortDragProxyHeight.value <= 0) {
+      return touchY;
     }
 
-    // sortInsertIndex 直接驱动列表里的占位卡位置，决定用户看到的“卡片要插到哪”。
-    // 这里不能简单等价于当前帧命中的 dragTarget：
-    // - 自动滚动后，rect 可能会先进入一帧过渡状态；
-    // - 这时如果立刻把占位清掉，视觉上会像拖拽断线；
-    // - 所以在“暂时算不到新目标”时，沿用上一帧的有效 move，让占位继续站住。
-    const dragTarget = getDragTargetByTouchY(touchY);
-    if (!dragTarget) {
-      const fallbackMove = currentMove.value;
-      if (!fallbackMove) {
-        return -1;
-      }
+    const proxyTop = touchY - sortDragGrabOffsetY.value;
+    const hitRatio =
+      sortDragLastTouchDeltaY.value > 0 ? 0.78 : sortDragLastTouchDeltaY.value < 0 ? 0.28 : 0.5;
 
-      const visibleCardList = cardList.value.filter((card) => card.id !== activeSortCardId.value);
-      const fallbackAnchorIndex = visibleCardList.findIndex(
-        (card) => card.id === fallbackMove.anchorId,
-      );
-
-      if (fallbackAnchorIndex === -1) {
-        return -1;
-      }
-
-      return fallbackMove.position === 'before' ? fallbackAnchorIndex : fallbackAnchorIndex + 1;
-    }
-
-    if (dragTarget.anchorId === activeSortCardId.value) {
-      return -1;
-    }
-
-    const visibleCardList = cardList.value.filter((card) => card.id !== activeSortCardId.value);
-    const anchorIndex = visibleCardList.findIndex((card) => card.id === dragTarget.anchorId);
-    if (anchorIndex === -1) {
-      return -1;
-    }
-
-    return dragTarget.position === 'before' ? anchorIndex : anchorIndex + 1;
-  });
+    return proxyTop + sortDragProxyHeight.value * hitRatio;
+  };
 
   const sortInsertGuideStyle = computed<Record<string, string> | null>(() => {
     const move = sortDragPreviewMove.value ?? currentMove.value;
@@ -322,42 +372,50 @@ export default function useCardSortDrag(options: UseCardSortDragOptions) {
     }
   });
 
-  watch(cardList, (nextList, previousList) => {
-    if (!draggingCardId.value || nextList.length === previousList.length) {
-      return;
+  const forceRefreshCardRects = async () => {
+    if (sortDragRectRefreshFrameId.value !== null) {
+      cancelAnimationFrame(sortDragRectRefreshFrameId.value);
+      sortDragRectRefreshFrameId.value = null;
     }
 
-    scheduleRefreshCardRects();
+    await refreshCardRects();
 
     if (sortDragLastTouchY.value !== null) {
       updateSortDragPreviewByTouchY(sortDragLastTouchY.value);
+      sortDragPendingTouchY.value = sortDragLastTouchY.value;
     }
-  });
+  };
 
-  // 拖拽期间只要 scrollTop 变化，卡片在屏幕里的实际位置就变了，必须重新采集 rect。
-  // 这里顺手把滚动来源分成两类：
-  // 1. 代码刚刚自己改过 scrollTop，这次变化只更新 rect，不记成“原生滚动”
-  // 2. 超过 programmaticScrollUntil 之后发生的变化，才记成用户原生滚动
-  // 这样 autoScrollIfNeeded 才知道现在该不该暂停程序滚动，让用户手势优先。
+  watch(
+    cardList,
+    async (nextList, previousList) => {
+      if (!draggingCardId.value || nextList.length === previousList.length) {
+        return;
+      }
+
+      writeSortDragDebug('拖拽中列表变化', {
+        旧数量: previousList.length,
+        新数量: nextList.length,
+      });
+      await forceRefreshCardRects();
+    },
+    { flush: 'post' },
+  );
+
+  // 拖拽期间只要 scrollTop 变化，卡片在屏幕里的实际位置就变了。
+  // 这里先用滚动差值平移缓存 rect，让命中计算马上跟上视口；真正的 rect 重采由后续帧补齐。
   watch(scrollTop, async (nextValue, previousValue) => {
     if (nextValue === previousValue || !draggingCardId.value) {
       return;
     }
 
-    const now = Date.now();
-    if (now > programmaticScrollUntil.value) {
-      lastNativeScrollAt.value = now;
-    }
-
     shiftCachedCardRectsByScrollDelta(nextValue - previousValue);
-
-    if (sortDragMoveInFlight.value) {
-      return;
-    }
 
     if (sortDragLastTouchY.value !== null) {
       updateSortDragPreviewByTouchY(sortDragLastTouchY.value);
     }
+
+    scheduleRefreshCardRects();
   });
 
   // 重新采集 scroll-view 视口和每张卡片的屏幕位置。
@@ -370,22 +428,20 @@ export default function useCardSortDrag(options: UseCardSortDragOptions) {
 
     await nextTick();
 
-    const queryResult = await new Promise<[UniApp.NodeInfo | null, UniApp.NodeInfo[]]>(
-      (resolve) => {
-        uni
-          .createSelectorQuery()
-          .in(instance.proxy)
-          .select('.page-scroll')
-          .boundingClientRect()
-          .selectAll('.card-list .card-item-sort-source')
-          .boundingClientRect()
-          .exec((result) => {
-            const viewportRect = (result?.[0] as UniApp.NodeInfo | undefined) ?? null;
-            const itemRects = (result?.[1] as UniApp.NodeInfo[] | undefined) ?? [];
-            resolve([viewportRect, itemRects]);
-          });
-      },
-    );
+    const queryResult = await new Promise<[UniApp.NodeInfo | null, CardRect[]]>((resolve) => {
+      uni
+        .createSelectorQuery()
+        .in(instance.proxy)
+        .select('.page-scroll')
+        .boundingClientRect()
+        .selectAll('.card-list .card-item-sort-source')
+        .fields({ id: true, dataset: true, rect: true, size: true }, () => {})
+        .exec((result) => {
+          const viewportRect = (result?.[0] as UniApp.NodeInfo | undefined) ?? null;
+          const itemRects = (result?.[1] as CardRect[] | undefined) ?? [];
+          resolve([viewportRect, itemRects]);
+        });
+    });
 
     scrollViewportRect.value = queryResult[0];
     cardRects.value = queryResult[1];
@@ -410,55 +466,107 @@ export default function useCardSortDrag(options: UseCardSortDragOptions) {
     });
   };
 
-  // 只有拖拽中的手指进入视口上下边缘时，才尝试推进 scrollTop。
-  // 这里有两层保护：
-  // 1. autoScrollCooldown：防止一次 touchmove 链路里连推很多次 scrollTop
-  // 2. nativeScrollQuietWindow：如果用户刚刚自己滚过，就短暂停掉程序自动滚动
-  // 这样保留“手柄优先”的同时，不会把正常滚动手势完全抢死。
-  const autoScrollIfNeeded = (clientY: number) => {
+  // 只有拖拽中的手指进入视口上下边缘时，才由程序推进 scrollTopTarget。
+  // 排序拖拽优先吃住手势，边缘滚动只作为拖拽会话的一部分发生，避免和原生滑动互相抢控制权。
+  const getAutoScrollDelta = (clientY: number) => {
     const viewportRect = scrollViewportRect.value;
-    const now = Date.now();
 
     if (
       !viewportRect ||
       typeof viewportRect.top !== 'number' ||
       typeof viewportRect.height !== 'number'
     ) {
-      return false;
-    }
-
-    if (now - lastAutoScrollAt.value < autoScrollCooldown) {
-      return false;
-    }
-
-    if (now - lastNativeScrollAt.value < nativeScrollQuietWindow) {
-      return false;
+      return 0;
     }
 
     const viewportTop = viewportRect.top;
     const viewportBottom = viewportRect.top + viewportRect.height;
 
-    if (clientY <= viewportTop + autoScrollEdgePadding) {
-      const nextScrollTop = Math.max(scrollTop.value - autoScrollStep, 0);
-      if (nextScrollTop === scrollTop.value) {
-        return false;
-      }
-
-      lastAutoScrollAt.value = now;
-      programmaticScrollUntil.value = now + autoScrollCooldown;
-      scrollTop.value = nextScrollTop;
-      return true;
+    if (clientY <= viewportTop + autoScrollTopEdgePadding) {
+      const edgeRatio = Math.min(
+        Math.max((viewportTop + autoScrollTopEdgePadding - clientY) / autoScrollTopEdgePadding, 0),
+        1,
+      );
+      const step = autoScrollMinStep + (autoScrollMaxStep - autoScrollMinStep) * edgeRatio;
+      return -Math.max(autoScrollMinStep, Math.round(step));
     }
 
-    if (clientY >= viewportBottom - autoScrollEdgePadding) {
-      const nextScrollTop = scrollTop.value + autoScrollStep;
-      lastAutoScrollAt.value = now;
-      programmaticScrollUntil.value = now + autoScrollCooldown;
-      scrollTop.value = nextScrollTop;
-      return true;
+    if (clientY >= viewportBottom - autoScrollBottomEdgePadding) {
+      const edgeRatio = Math.min(
+        Math.max(
+          (clientY - (viewportBottom - autoScrollBottomEdgePadding)) / autoScrollBottomEdgePadding,
+          0,
+        ),
+        1,
+      );
+      const step = autoScrollMinStep + (autoScrollMaxStep - autoScrollMinStep) * edgeRatio;
+      return Math.max(autoScrollMinStep, Math.round(step));
     }
 
-    return false;
+    return 0;
+  };
+
+  const setProgrammaticScrollTop = (nextScrollTop: number) => {
+    const normalizedScrollTop = Math.max(Math.round(nextScrollTop), 0);
+    if (!Number.isFinite(normalizedScrollTop)) {
+      return false;
+    }
+
+    if (
+      normalizedScrollTop === Math.round(scrollTopTarget.value) &&
+      normalizedScrollTop === Math.round(scrollTop.value)
+    ) {
+      writeSortDragDebug('滚动目标未变化', { 下一个: normalizedScrollTop });
+      return false;
+    }
+
+    const now = Date.now();
+    lastAutoScrollAt.value = now;
+    programmaticScrollUntil.value = now + programmaticScrollQuietWindow;
+    // scrollTop 由 @scroll 记录真实位置，scrollTopTarget 专门作为 scroll-view 的程序滚动目标。
+    // APP 端这两个值如果混用，@scroll 回写很容易吞掉拖拽边缘滚动的目标值。
+    scrollTopTarget.value = normalizedScrollTop;
+    writeSortDragDebug('设置滚动目标', { 下一个: normalizedScrollTop });
+    return true;
+  };
+
+  const autoScrollIfNeeded = (clientY: number) => {
+    const now = Date.now();
+    if (now - lastAutoScrollAt.value < autoScrollCooldown) {
+      writeSortDragDebug('自动滚动冷却中', {
+        等待: autoScrollCooldown - (now - lastAutoScrollAt.value),
+      });
+      return false;
+    }
+
+    const scrollDelta = getAutoScrollDelta(clientY);
+    if (!scrollDelta) {
+      writeSortDragDebug('未进入边缘滚动区');
+      return false;
+    }
+
+    const targetGap = Math.abs(scrollTopTarget.value - scrollTop.value);
+    const canTrustPendingTarget = targetGap < 900;
+    const scrollBase = canTrustPendingTarget
+      ? scrollDelta > 0
+        ? Math.max(scrollTop.value, scrollTopTarget.value)
+        : Math.min(scrollTop.value, scrollTopTarget.value)
+      : scrollTop.value;
+    const nextScrollTop = Math.max(Math.round(scrollBase + scrollDelta), 0);
+
+    if (nextScrollTop === 0 && Math.round(scrollTop.value) === 0 && scrollDelta < 0) {
+      writeSortDragDebug('已到顶部', { 距离: scrollDelta });
+      return false;
+    }
+
+    const didSetScrollTop = setProgrammaticScrollTop(nextScrollTop);
+    writeSortDragDebug('触发自动滚动', {
+      距离: scrollDelta,
+      基准: Math.round(scrollBase),
+      已设置: didSetScrollTop,
+    });
+
+    return didSetScrollTop;
   };
 
   const isTouchNearAutoScrollEdge = (clientY: number) => {
@@ -475,18 +583,18 @@ export default function useCardSortDrag(options: UseCardSortDragOptions) {
     const viewportTop = viewportRect.top;
     const viewportBottom = viewportRect.top + viewportRect.height;
     return (
-      clientY <= viewportTop + autoScrollEdgePadding ||
-      clientY >= viewportBottom - autoScrollEdgePadding
+      clientY <= viewportTop + autoScrollTopEdgePadding ||
+      clientY >= viewportBottom - autoScrollBottomEdgePadding
     );
   };
 
   const runAutoScrollFrame = () => {
-    if (sortDragEdgeScrollFrameId.value !== null) {
+    if (sortDragEdgeScrollTimerId.value !== null) {
       return;
     }
 
-    sortDragEdgeScrollFrameId.value = requestAnimationFrame(() => {
-      sortDragEdgeScrollFrameId.value = null;
+    sortDragEdgeScrollTimerId.value = setTimeout(() => {
+      sortDragEdgeScrollTimerId.value = null;
 
       if (!draggingCardId.value) {
         return;
@@ -494,49 +602,74 @@ export default function useCardSortDrag(options: UseCardSortDragOptions) {
 
       const touchY = sortDragLastTouchY.value;
       if (touchY === null || !isTouchNearAutoScrollEdge(touchY)) {
-        if (sortDragEdgeScrollFrameId.value !== null) {
-          cancelAnimationFrame(sortDragEdgeScrollFrameId.value);
-          sortDragEdgeScrollFrameId.value = null;
+        writeSortDragDebug('自动滚动循环停止');
+        if (sortDragEdgeScrollTimerId.value !== null) {
+          clearTimeout(sortDragEdgeScrollTimerId.value);
+          sortDragEdgeScrollTimerId.value = null;
         }
         return;
       }
 
-      const viewportRect = scrollViewportRect.value;
-      const canKeepAutoScrolling =
-        !!viewportRect &&
-        typeof viewportRect.top === 'number' &&
-        (touchY >= viewportRect.top + autoScrollEdgePadding || scrollTop.value > 0);
+      const scrollDelta = getAutoScrollDelta(touchY);
+      const canKeepAutoScrolling = scrollDelta > 0 || scrollTop.value > 0;
 
       const didAutoScroll = autoScrollIfNeeded(touchY);
+      updateSortDragPreviewByTouchY(touchY);
 
       if (
         canKeepAutoScrolling &&
-        sortDragEdgeScrollFrameId.value === null &&
+        sortDragEdgeScrollTimerId.value === null &&
         draggingCardId.value
       ) {
         runAutoScrollFrame();
       }
-    });
+    }, autoScrollCooldown);
   };
 
-  // 根据手指当前的 y 坐标，算出“命中的锚点卡片”和“插入到它前/后”。
+  // 根据拖拽命中点的 y 坐标，算出“命中的锚点卡片”和“插入到它前/后”。
   // 上半区记为 before，下半区记为 after，这样一张卡片就能提供两个落点。
+  // 这里必须从 rect 自己的 DOM id 反推卡片 id，不能用 cardRects[index] 对齐 cardList[index]：
+  // 拖拽时 cardList 会本地重排，APP 端还会保留透明源节点并插入占位卡，数组下标很容易错位。
   const getDragTargetByTouchY = (clientY: number): DragTarget | null => {
-    const rectCards = draggingCardId.value
-      ? cardList.value.filter((card) => card.id !== draggingCardId.value)
-      : cardList.value;
+    const validRects = cardRects.value
+      .filter((rect) => {
+        return (
+          rect &&
+          getCardIdFromRect(rect) &&
+          typeof rect.top === 'number' &&
+          typeof rect.height === 'number'
+        );
+      })
+      .sort((a, b) => (a.top ?? 0) - (b.top ?? 0));
 
-    const firstValidIndex = cardRects.value.findIndex((rect) => {
-      return rect && typeof rect.top === 'number' && typeof rect.height === 'number';
-    });
-
-    if (firstValidIndex === -1) {
+    if (validRects.length === 0) {
       return null;
     }
 
-    for (let index = firstValidIndex; index < cardRects.value.length; index += 1) {
-      const rect = cardRects.value[index];
-      const anchorId = rectCards[index]?.id || '';
+    const loadedCardsWithoutSource = cardList.value.filter(
+      (card) => card.id !== draggingCardId.value,
+    );
+    const loadedTailCard = loadedCardsWithoutSource[loadedCardsWithoutSource.length - 1];
+    const visibleTailRect = validRects[validRects.length - 1];
+
+    // 尾部是特殊落点：底部有固定操作栏，手指和代理卡常常无法真正越过最后一张卡的底边。
+    // 所以下拖时只要命中点进入最后一个可见锚点的下半区，就直接视为“插到已加载列表尾部”。
+    if (
+      sortDragLastTouchDeltaY.value > 0 &&
+      loadedTailCard &&
+      visibleTailRect &&
+      typeof visibleTailRect.top === 'number' &&
+      typeof visibleTailRect.height === 'number' &&
+      clientY >= visibleTailRect.top + visibleTailRect.height * 0.45
+    ) {
+      return {
+        anchorId: loadedTailCard.id,
+        position: 'after',
+      };
+    }
+
+    for (const rect of validRects) {
+      const anchorId = getCardIdFromRect(rect);
 
       if (!rect || !anchorId || typeof rect.top !== 'number' || typeof rect.height !== 'number') {
         continue;
@@ -568,23 +701,49 @@ export default function useCardSortDrag(options: UseCardSortDragOptions) {
       }
     }
 
-    const lastIndex = cardRects.value.length - 1;
-    const lastAnchorId = rectCards[lastIndex]?.id || '';
-    const lastRect = cardRects.value[lastIndex];
-
-    if (
-      !lastRect ||
-      !lastAnchorId ||
-      typeof lastRect.top !== 'number' ||
-      typeof lastRect.height !== 'number'
-    ) {
+    if (!loadedTailCard) {
       return null;
     }
 
     return {
-      anchorId: lastAnchorId,
+      anchorId: loadedTailCard.id,
       position: 'after',
     };
+  };
+
+  const applySortDragTarget = (
+    dragTarget: DragTarget | null,
+    clientY: number,
+    label = '更新占位',
+  ) => {
+    if (!dragTarget || !draggingCardId.value || dragTarget.anchorId === draggingCardId.value) {
+      return false;
+    }
+
+    const nextMove = {
+      movedId: draggingCardId.value,
+      anchorId: dragTarget.anchorId,
+      position: dragTarget.position,
+    };
+    const nextInsertIndex = getSortInsertIndexByMove(nextMove);
+    if (nextInsertIndex < 0) {
+      writeSortDragDebug('占位锚点未加载', {
+        anchorId: dragTarget.anchorId,
+        position: dragTarget.position,
+        命中Y: Math.round(getDragHitY(clientY)),
+      });
+      return false;
+    }
+
+    sortDragPreviewMove.value = nextMove;
+    sortInsertIndex.value = nextInsertIndex;
+    writeSortDragDebug(label, {
+      anchorId: dragTarget.anchorId,
+      position: dragTarget.position,
+      下标: nextInsertIndex,
+      命中Y: Math.round(getDragHitY(clientY)),
+    });
+    return true;
   };
 
   const updateSortDragPreviewByTouchY = (clientY: number) => {
@@ -592,14 +751,8 @@ export default function useCardSortDrag(options: UseCardSortDragOptions) {
       return;
     }
 
-    const dragTarget = getDragTargetByTouchY(clientY);
-    if (dragTarget && dragTarget.anchorId !== draggingCardId.value) {
-      sortDragPreviewMove.value = {
-        movedId: draggingCardId.value,
-        anchorId: dragTarget.anchorId,
-        position: dragTarget.position,
-      };
-    }
+    const dragTarget = getDragTargetByTouchY(getDragHitY(clientY));
+    applySortDragTarget(dragTarget, clientY);
   };
 
   // 本地重排只负责让界面马上跟手。
@@ -671,15 +824,10 @@ export default function useCardSortDrag(options: UseCardSortDragOptions) {
       sortDragPendingTouchY.value = touchY;
     }
 
-    const dragTarget = getDragTargetByTouchY(touchY);
-    if (dragTarget && dragTarget.anchorId !== draggingCardId.value) {
+    const dragTarget = getDragTargetByTouchY(getDragHitY(touchY));
+    if (applySortDragTarget(dragTarget, touchY, '帧内更新占位') && dragTarget) {
       // 先更新预览，再做本地重排：前者负责占位卡“马上亮出来”，后者负责把列表真的挪过去。
       // 两步都做，是为了避免用户只看到代理卡在动，却看不到列表真正跟手。
-      sortDragPreviewMove.value = {
-        movedId: draggingCardId.value,
-        anchorId: dragTarget.anchorId,
-        position: dragTarget.position,
-      };
       await moveCardLocally(draggingCardId.value, dragTarget.anchorId, dragTarget.position);
     }
 
@@ -696,27 +844,27 @@ export default function useCardSortDrag(options: UseCardSortDragOptions) {
   // 手柄 touchstart 是一次拖拽会话的起点。
   // 这里会清空上一轮残留状态，并立即采集一次 rect，给后续命中计算做基线。
   const handleSortHandleTouchStart = async (id: string, event: TouchEvent) => {
-    const touch = event.touches?.[0];
+    const touchY = getTouchY(event);
 
     currentMove.value = null;
     lastAutoScrollAt.value = 0;
-    lastNativeScrollAt.value = 0;
     programmaticScrollUntil.value = 0;
+    scrollTopTarget.value = scrollTop.value;
     sortDragLastTouchY.value = null;
-    await refreshCardRects();
 
     activeSortCardId.value = id;
     draggingCardId.value = id;
+    await refreshCardRects();
+    writeSortDragDebug('开始触摸', { id });
 
-    if (!touch) {
+    if (touchY === null) {
       sortDragGrabOffsetY.value = null;
       return;
     }
 
-    const activeIndex = cardList.value.findIndex((card) => card.id === id);
-    const activeRect = cardRects.value[activeIndex];
+    const activeRect = cardRects.value.find((rect) => getCardIdFromRect(rect) === id);
 
-    if (activeIndex === -1 || !activeRect || typeof activeRect.top !== 'number') {
+    if (!activeRect || typeof activeRect.top !== 'number') {
       sortDragGrabOffsetY.value = null;
       return;
     }
@@ -725,7 +873,14 @@ export default function useCardSortDrag(options: UseCardSortDragOptions) {
     sortDragProxyTop.value = activeRect.top;
     sortDragProxyWidth.value = typeof activeRect.width === 'number' ? activeRect.width : 0;
     sortDragProxyHeight.value = typeof activeRect.height === 'number' ? activeRect.height : 0;
-    sortDragGrabOffsetY.value = touch.clientY - activeRect.top;
+    sortDragGrabOffsetY.value = touchY - activeRect.top;
+
+    writeSortDragDebug('拖拽准备完成', {
+      id,
+      代理顶部: Math.round(sortDragProxyTop.value),
+      手指偏移: Math.round(sortDragGrabOffsetY.value),
+    });
+    updateSortDragPreviewByTouchY(touchY);
   };
 
   // 每次 touchmove 都按“先滚，再算命中，再本地重排”的顺序走：
@@ -737,8 +892,8 @@ export default function useCardSortDrag(options: UseCardSortDragOptions) {
       return;
     }
 
-    const touch = event.touches?.[0];
-    if (!touch) {
+    const touchY = getTouchY(event);
+    if (touchY === null) {
       return;
     }
 
@@ -747,10 +902,22 @@ export default function useCardSortDrag(options: UseCardSortDragOptions) {
     }
 
     const previousTouchY = sortDragLastTouchY.value;
-    sortDragPendingTouchY.value = touch.clientY;
-    sortDragLastTouchDeltaY.value = previousTouchY === null ? 0 : touch.clientY - previousTouchY;
-    sortDragLastTouchY.value = touch.clientY;
-    updateSortDragPreviewByTouchY(touch.clientY);
+    sortDragProxyTop.value = touchY - sortDragGrabOffsetY.value;
+    sortDragPendingTouchY.value = touchY;
+    sortDragLastTouchDeltaY.value = previousTouchY === null ? 0 : touchY - previousTouchY;
+    sortDragLastTouchY.value = touchY;
+    updateSortDragPreviewByTouchY(touchY);
+    const didAutoScrollNow = autoScrollIfNeeded(touchY);
+    if (isTouchNearAutoScrollEdge(touchY)) {
+      runAutoScrollFrame();
+    }
+    writeSortDragDebug('触摸移动', {
+      位移: Math.round(sortDragLastTouchDeltaY.value),
+      命中Y: Math.round(getDragHitY(touchY)),
+      自动距离: getAutoScrollDelta(touchY),
+      靠近边缘: isTouchNearAutoScrollEdge(touchY),
+      本次滚动: didAutoScrollNow,
+    });
 
     if (sortDragMoveFrameId.value === null) {
       sortDragMoveFrameId.value = requestAnimationFrame(() => {
@@ -766,7 +933,25 @@ export default function useCardSortDrag(options: UseCardSortDragOptions) {
   // 这里故意不直接拿当前 cardList 全量保存，因为页面里的列表只是已加载片段，不是分类全量。
   const handleSortHandleTouchEnd = () => {
     const currentCategoryId = categoryId.value;
-    const move = currentMove.value;
+    const lastTouchY = sortDragLastTouchY.value;
+    const finalTarget = lastTouchY === null ? null : getDragTargetByTouchY(getDragHitY(lastTouchY));
+    const finalMove =
+      finalTarget && draggingCardId.value && finalTarget.anchorId !== draggingCardId.value
+        ? {
+            movedId: draggingCardId.value,
+            anchorId: finalTarget.anchorId,
+            position: finalTarget.position,
+          }
+        : null;
+    // 松手时优先保存“最后一次视觉落点”。APP 边缘滚动后，本地重排帧可能还没来得及
+    // 把 preview 写入 currentMove；如果只保存 currentMove，就会出现看着拖到了但顺序没落库。
+    const move = finalMove ?? sortDragPreviewMove.value ?? currentMove.value;
+
+    writeSortDragDebug('松手保存', {
+      movedId: move?.movedId || '-',
+      anchorId: move?.anchorId || '-',
+      position: move?.position || '-',
+    });
 
     resetSortState();
 
@@ -827,6 +1012,7 @@ export default function useCardSortDrag(options: UseCardSortDragOptions) {
     isSortMode,
     isSortActive,
     sortDragProxyStyle,
+    sortDragDebugText,
     sortInsertGuideStyle,
     sortInsertIndex,
     sortDragProxyHeight,
