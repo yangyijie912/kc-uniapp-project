@@ -140,6 +140,11 @@ function mergeMissingCardFields(card: Card): Card {
 
 // 从本地存储加载卡片列表，如果没有则使用默认卡片，并保存到本地存储
 function loadCardsFromStorage(): Card[] {
+  // 已经加载过了就直接返回，避免重复解析和克隆
+  if (cardList.length > 0) {
+    return cardList.map(cloneCard);
+  }
+
   const saved = uni.getStorageSync(CARD_STORAGE_KEY);
   if (saved) {
     const savedCards = JSON.parse(saved) as Card[];

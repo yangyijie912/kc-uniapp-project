@@ -252,3 +252,11 @@
 - App 端列表层再做一次保守降级：原生端不走 `transition-group`，改成普通 `view + v-for`，避免拖拽或分页更新时把整组节点短暂渲染成空白。
 - App 平台判断改成运行时系统信息读取，不再依赖编译宏，避免降级分支在原生端没真正生效。
 - 继续修复 App 端触摸链路、分页追加、代理卡、显式占位状态和尾卡落点等问题，具体见 [card-list-sort-drag-full-record.md](./card-list-sort-drag-full-record.md)和 [card-list-sort-drag-app-notes.md](./card-list-sort-drag-app-notes.md)。
+
+**05.05**
+
+- 修正APP端拖拽插入点计算逻辑，确保源卡片位置正确。
+- 修复卡片列表没有按照分类sort排序的问题。
+- 修复App端按钮样式因为 inset 高光出现白色上边缘的问题。
+- 导出文件名字数限制调整为20。
+- 修复App端下拉加载的卡顿问题。
