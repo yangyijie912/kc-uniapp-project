@@ -256,10 +256,10 @@ const renderItems = computed<RenderItem[]>(() => {
     return item.type === 'card' && item.card.id === props.sortActiveId;
   });
   // sortInsertIndex 是按“排除拖拽源卡片后的列表”计算的。
-  // APP 为了保住 touchmove 会把源卡片留在 DOM 里，所以源卡片如果排在插入点前面，
+  // APP 为了保住 touchmove 会把源卡片留在 DOM 里，所以只有源卡片严格排在插入点前面时，
   // 需要把真正的 DOM 插入下标往后挪一位，避免占位卡越滚越偏。
   const adjustedInsertIndex =
-    isAppPlatform && sourceIndex >= 0 && sourceIndex <= props.sortInsertIndex
+    isAppPlatform && sourceIndex >= 0 && sourceIndex < props.sortInsertIndex
       ? props.sortInsertIndex + 1
       : props.sortInsertIndex;
   const insertIndex = Math.min(Math.max(adjustedInsertIndex, 0), baseItems.length);
