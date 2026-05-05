@@ -680,9 +680,7 @@ onShow(() => {
   gap: 8rpx;
   border-radius: 20rpx;
   border: 1rpx solid rgba(61, 43, 24, 0.1);
-  box-shadow:
-    0 8rpx 20rpx rgba(80, 55, 25, 0.08),
-    inset 0 1rpx 0 rgba(255, 255, 255, 0.74);
+  box-shadow: 0 8rpx 20rpx rgba(80, 55, 25, 0.08);
   box-sizing: border-box;
   padding: 0 12rpx;
   overflow: hidden;

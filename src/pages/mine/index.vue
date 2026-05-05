@@ -54,7 +54,7 @@ import type { ImportMode } from '@/types/migration';
 const exportDialogVisible = ref(false);
 const exportFileName = ref('');
 const pendingExport = ref(false);
-const MAX_EXPORT_FILE_NAME_LENGTH = 10; // 最大文件名长度（不包含扩展名）
+const MAX_EXPORT_FILE_NAME_LENGTH = 20; // 最大文件名长度（不包含扩展名）
 
 function chooseImportMode(): Promise<ImportMode | null> {
   return new Promise((resolve) => {

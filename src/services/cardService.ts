@@ -1,6 +1,7 @@
 import cards from '@/data/cards.json';
 import categories from '@/data/category.json';
 import { UNCATEGORIZED_ID } from '@/constants/category';
+import { CATEGORY_STORAGE_KEY } from '@/constants/storageKeys';
 import { CARD_STORAGE_KEY } from '@/constants/storageKeys';
 import type { Card, Category, RawCard, CardSortConfig, Move } from '@/types/card';
 import type { ServiceResult } from '@/types/service';
@@ -10,9 +11,31 @@ import { generateUUID } from '@/utils/uuid';
 import { sortCards } from '@/utils/cardSort';
 
 const defaultCategories = categories as Category[];
+
+// 默认种子数据/历史数据迁移时把分类名映射成分类 ID，后续新增的卡片和正常导入的卡片都会有分类ID，业务主路径不依赖它
 const defaultCategoryIdByName = new Map(
   defaultCategories.map((category) => [category.name, category.id]),
 );
+
+// 别只拿静态的 category.json 做分类顺序基准，而是使用当前实际存储的分类顺序
+function loadCategoriesForSort(): Category[] {
+  const saved = uni.getStorageSync(CATEGORY_STORAGE_KEY);
+
+  if (!saved) {
+    return [...defaultCategories];
+  }
+
+  try {
+    const savedList = JSON.parse(saved) as Category[];
+    if (!Array.isArray(savedList) || savedList.length === 0) {
+      return [...defaultCategories];
+    }
+
+    return [...savedList];
+  } catch {
+    return [...defaultCategories];
+  }
+}
 
 // 只把静态默认卡片映射成可存储的 categoryId，不处理导入时的分类冲突。
 function resolveDefaultCategoryId(rawCard: RawCard): string {
@@ -183,10 +206,12 @@ export function getCards(params?: CardQueryParams): ServiceResult<PageResult<Car
   });
 
   // 排序
-  if (cardSortConfig) {
-    const { sortBy, order } = cardSortConfig;
-    result = sortCards(result, sortBy, order, defaultCategories);
-  }
+  const defaultSortConfig: CardSortConfig = {
+    sortBy: 'customSort',
+    order: 'asc',
+  };
+  const { sortBy, order } = cardSortConfig || defaultSortConfig;
+  result = sortCards(result, sortBy, order, loadCategoriesForSort());
 
   let paginatedResult = result;
   // 分页计算
