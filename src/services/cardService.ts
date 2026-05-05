@@ -17,23 +17,88 @@ const defaultCategoryIdByName = new Map(
   defaultCategories.map((category) => [category.name, category.id]),
 );
 
+type CategorySortCache = {
+  snapshot: string;
+  categories: Category[];
+};
+
+// 同一份分类存储在查询期间不会频繁变化，所以这里缓存一份可用于排序的快照。
+type CardQueryCache = {
+  version: number;
+  signature: string; // 基于查询参数构建的签名，用来判断能不能复用这个缓存结果
+  result: Card[];
+};
+
+// 这个版本号用来判断卡片数据有没有发生写入变化，写入后需要让查询缓存失效。
+let cardDataVersion = 0;
+// 分类排序缓存，避免每次取卡片都重复读分类 storage。
+let categorySortCache: CategorySortCache | null = null;
+// 卡片查询缓存，同一组筛选和排序条件重复翻页时直接复用结果。
+let cardQueryCache: CardQueryCache | null = null;
+
+// 复制分类对象，防止外部修改影响缓存里的原始数据。
+function cloneCategory(category: Category): Category {
+  return { ...category };
+}
+
 // 别只拿静态的 category.json 做分类顺序基准，而是使用当前实际存储的分类顺序
-function loadCategoriesForSort(): Category[] {
+function loadCategoriesForSort(): CategorySortCache {
   const saved = uni.getStorageSync(CATEGORY_STORAGE_KEY);
+  const snapshot = saved || '__empty__';
+
+  if (categorySortCache && categorySortCache.snapshot === snapshot) {
+    return {
+      snapshot: categorySortCache.snapshot,
+      categories: categorySortCache.categories.map(cloneCategory),
+    };
+  }
 
   if (!saved) {
-    return [...defaultCategories];
+    const nextCache = {
+      snapshot,
+      categories: [...defaultCategories],
+    };
+    categorySortCache = nextCache;
+    return {
+      snapshot: nextCache.snapshot,
+      categories: nextCache.categories.map(cloneCategory),
+    };
   }
 
   try {
     const savedList = JSON.parse(saved) as Category[];
+    // 如果解析失败或者数据不合法，就回退成默认分类列表，避免整个卡片查询功能都受影响。
     if (!Array.isArray(savedList) || savedList.length === 0) {
-      return [...defaultCategories];
+      const nextCache = {
+        snapshot,
+        categories: [...defaultCategories],
+      };
+      categorySortCache = nextCache;
+      return {
+        snapshot: nextCache.snapshot,
+        categories: nextCache.categories.map(cloneCategory),
+      };
     }
-
-    return [...savedList];
+    // 正常解析到合法的分类列表，缓存起来供排序使用。
+    const nextCache = {
+      snapshot,
+      categories: savedList.map(cloneCategory),
+    };
+    categorySortCache = nextCache;
+    return {
+      snapshot: nextCache.snapshot,
+      categories: nextCache.categories.map(cloneCategory),
+    };
   } catch {
-    return [...defaultCategories];
+    const nextCache = {
+      snapshot,
+      categories: [...defaultCategories],
+    };
+    categorySortCache = nextCache;
+    return {
+      snapshot: nextCache.snapshot,
+      categories: nextCache.categories.map(cloneCategory),
+    };
   }
 }
 
@@ -162,6 +227,9 @@ function saveCardsToStorage(list: Card[]) {
   const normalizedList = list.map(normalizeCard);
   uni.setStorageSync(CARD_STORAGE_KEY, JSON.stringify(normalizedList));
   cardList = normalizedList.map(cloneCard);
+  // 卡片数据发生了写入变化，更新版本号让查询缓存失效。
+  cardDataVersion += 1;
+  cardQueryCache = null;
 }
 
 loadCardsFromStorage();
@@ -172,6 +240,89 @@ type CardQueryParams = Partial<Card> & {
   pageSize?: number;
   cardSortConfig?: CardSortConfig;
 };
+
+// 把查询条件拼成稳定的签名，用来判断这次查询能不能直接复用缓存结果。
+function buildCardQuerySignature(params: {
+  keyword?: string;
+  filters: Partial<Card>;
+  sortBy: CardSortConfig['sortBy'];
+  order: CardSortConfig['order'];
+  categorySnapshot: string;
+}): string {
+  const filterEntries = Object.entries(params.filters)
+    .filter(([, value]) => value !== undefined)
+    .sort(([key1], [key2]) => key1.localeCompare(key2));
+
+  return [
+    `keyword:${params.keyword || ''}`,
+    `sortBy:${params.sortBy}`,
+    `order:${params.order || 'asc'}`,
+    `categorySnapshot:${params.categorySnapshot}`,
+    ...filterEntries.map(([key, value]) => `${key}:${String(value)}`),
+  ].join('|');
+}
+
+// 先做过滤，再做排序；这个结果会被缓存，给下拉翻页直接复用。
+function getMatchedCards(params: CardQueryParams): Card[] {
+  const { keyword, page, pageSize, cardSortConfig, ...filters } = params;
+  const normalizedKeyword = keyword?.trim().toLowerCase();
+  const defaultSortConfig: CardSortConfig = {
+    sortBy: 'customSort',
+    order: 'asc',
+  };
+  const { sortBy, order } = cardSortConfig || defaultSortConfig;
+  const categorySortState = loadCategoriesForSort();
+  // 构建查询签名，判断能不能复用缓存结果。
+  const querySignature = buildCardQuerySignature({
+    keyword: normalizedKeyword,
+    filters,
+    sortBy,
+    order,
+    categorySnapshot: categorySortState.snapshot,
+  });
+  // 如果缓存的版本和签名都匹配，就直接复用缓存结果，避免重复过滤和排序。
+  if (
+    cardQueryCache &&
+    cardQueryCache.version === cardDataVersion &&
+    cardQueryCache.signature === querySignature
+  ) {
+    return cardQueryCache.result;
+  }
+
+  const currentList = loadCardsFromStorage();
+  const filteredList = currentList.filter((card) => {
+    // 关键词查询，匹配题目、答案、内容和标签，模糊匹配不区分大小写。
+    if (normalizedKeyword) {
+      const matchKeyword =
+        card.question.toLowerCase().includes(normalizedKeyword) ||
+        card.answer.toLowerCase().includes(normalizedKeyword) ||
+        card.content?.toLowerCase().includes(normalizedKeyword) ||
+        card.tags?.some((tag) => tag.toLowerCase().includes(normalizedKeyword));
+
+      if (!matchKeyword) return false;
+    }
+    // 精准过滤，如果参数中有这个字段，并且卡片的对应字段不等于这个值，则过滤掉这个卡片
+    for (const key of Object.keys(filters) as Array<keyof Card>) {
+      const value = filters[key];
+
+      if (value !== undefined && card[key] !== value) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  // 对过滤后的结果进行排序，得到最终的查询结果。
+  const sortedList = sortCards(filteredList, sortBy, order, categorySortState.categories);
+  cardQueryCache = {
+    version: cardDataVersion,
+    signature: querySignature,
+    result: sortedList,
+  };
+
+  return sortedList;
+}
 
 // 根据参数获取卡片
 export function getCards(params?: CardQueryParams): ServiceResult<PageResult<Card>> {
@@ -184,39 +335,8 @@ export function getCards(params?: CardQueryParams): ServiceResult<PageResult<Car
       pageSize: currentList.length,
     });
   }
-  const { keyword, page = 1, pageSize, cardSortConfig, ...filters } = params;
-  const k = keyword?.trim().toLowerCase();
-  let result = currentList.filter((card) => {
-    // keyword 模糊搜索
-    if (k) {
-      const matchKeyword =
-        card.question.toLowerCase().includes(k) ||
-        card.answer.toLowerCase().includes(k) ||
-        card.content?.toLowerCase().includes(k) ||
-        card.tags?.some((tag) => tag.toLowerCase().includes(k));
-
-      if (!matchKeyword) return false;
-    }
-
-    // 精确过滤
-    for (const key of Object.keys(filters) as Array<keyof Card>) {
-      const value = filters[key];
-      // 如果参数中有这个字段，并且卡片的对应字段不等于这个值，则过滤掉这个卡片
-      if (value !== undefined && card[key] !== value) {
-        return false;
-      }
-    }
-
-    return true;
-  });
-
-  // 排序
-  const defaultSortConfig: CardSortConfig = {
-    sortBy: 'customSort',
-    order: 'asc',
-  };
-  const { sortBy, order } = cardSortConfig || defaultSortConfig;
-  result = sortCards(result, sortBy, order, loadCategoriesForSort());
+  const { page = 1, pageSize } = params;
+  const result = getMatchedCards(params);
 
   let paginatedResult = result;
   // 分页计算
