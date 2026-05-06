@@ -5,6 +5,11 @@
       <view class="panel-subtitle">数据统计和维护入口</view>
 
       <view class="action-grid">
+        <view class="action-card action-card-stats" @click="goToStats">
+          <view class="action-title">统计</view>
+          <view class="action-desc">查看学习概览与分类表现</view>
+        </view>
+
         <view class="action-card action-card-import" @click="importData">
           <view class="action-title">数据导入</view>
           <view class="action-desc">支持从 JSON 文件恢复卡片与分类</view>
@@ -254,6 +259,12 @@ const exportData = async () => {
     });
   }
 };
+
+const goToStats = () => {
+  uni.navigateTo({
+    url: '/pages/stats/index',
+  });
+};
 </script>
 
 <style scoped>
@@ -308,6 +319,11 @@ const exportData = async () => {
 .action-card-export {
   border: 1rpx solid rgba(18, 122, 114, 0.14);
   background: linear-gradient(135deg, rgba(18, 122, 114, 0.1), rgba(255, 255, 255, 0.72));
+}
+
+.action-card-stats {
+  border: 1rpx solid rgba(239, 125, 66, 0.14);
+  background: linear-gradient(135deg, rgba(239, 125, 66, 0.12), rgba(255, 255, 255, 0.72));
 }
 
 .action-title {
