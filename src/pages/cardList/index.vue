@@ -258,10 +258,35 @@ const parseStatus = (status?: string): CardStatus | undefined => {
   return undefined;
 };
 
+// APP 端的路由传递链路把整个地址里的参数都 encodeURIComponent 了一层，导致在列表页接收到的 keyword 参数是被编码过的字符串
+// 为了兼容这种情况，在这里做一次解码，保证后续拿到的都是正常的中文字符串。
+const normalizeQueryValue = (value?: string) => {
+  if (!value) {
+    return undefined;
+  }
+
+  let currentValue = value;
+  // 最多循环两次，每次都尝试执行一次解码
+  for (let i = 0; i < 2; i += 1) {
+    try {
+      // 如果解码前后字符串相同，说明已经完全解码了，可以停止继续解码，否则就用新值继续下一轮解码
+      const decodedValue = decodeURIComponent(currentValue);
+      if (decodedValue === currentValue) {
+        break;
+      }
+      currentValue = decodedValue;
+    } catch {
+      break;
+    }
+  }
+
+  return currentValue;
+};
+
 const parseParams = (options?: PageOptions): QueryParams => {
   return {
     categoryId: options?.categoryId || undefined,
-    keyword: options?.keyword || undefined,
+    keyword: normalizeQueryValue(options?.keyword),
     status: parseStatus(options?.status),
   };
 };

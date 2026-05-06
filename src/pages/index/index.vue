@@ -100,7 +100,7 @@ const searchCard = () => {
     return;
   }
   uni.navigateTo({
-    url: '/pages/cardList/index?keyword=' + encodeURIComponent(searchQuery.value),
+    url: '/pages/cardList/index?keyword=' + encodeURIComponent(searchQuery.value.trim()),
   });
 };
 
