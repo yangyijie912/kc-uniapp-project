@@ -258,8 +258,7 @@ const parseStatus = (status?: string): CardStatus | undefined => {
   return undefined;
 };
 
-// APP 端的路由传递链路把整个地址里的参数都 encodeURIComponent 了一层，导致在列表页接收到的 keyword 参数是被编码过的字符串
-// 为了兼容这种情况，在这里做一次解码，保证后续拿到的都是正常的中文字符串。
+// 不同平台的 URL 解码行为不太一样，做一次安全的多轮解码，保证拿到正确的搜索关键词。
 const normalizeQueryValue = (value?: string) => {
   if (!value) {
     return undefined;
