@@ -48,9 +48,9 @@
             <view class="today-side-tip">较昨日 +{{ todayStats.practiceDelta }}</view>
           </view>
           <view class="today-side-card today-side-card-correct">
-            <view class="today-side-label">答对题数</view>
+            <view class="today-side-label">掌握题数</view>
             <view class="today-side-value">{{ todayStats.correctCount }}</view>
-            <view class="today-side-tip">正确率 {{ todayStats.correctRate }}%</view>
+            <view class="today-side-tip">掌握率 {{ todayStats.correctRate }}%</view>
           </view>
         </view>
       </view>
