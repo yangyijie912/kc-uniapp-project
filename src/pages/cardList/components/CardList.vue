@@ -154,10 +154,10 @@
 
     <view v-if="cards.length === 0" class="result-banner">
       <view class="result-title">没有找到相关卡片</view>
-      <view class="result-keyword">试试调整搜索关键词或筛选条件？</view>
+      <view class="result-keyword">试试调整搜索关键词或筛选条件，或者新增卡片</view>
     </view>
 
-    <view class="list-footer">
+    <view class="list-footer" v-if="cards.length !== 0">
       <view v-if="loading" class="list-footer-text is-loading">正在加载更多...</view>
       <view v-else-if="!hasMore" class="list-footer-text">没有更多了</view>
     </view>
