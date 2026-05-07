@@ -283,7 +283,7 @@ function insertLink(text = '链接文字', url = 'https://example.com') {
 }
 
 // 插入代码
-function insertCodeBlock(code: string, language = 'ts') {
+function insertCodeBlock(code: string, language = 'javascript') {
   const codeBlock = `\`\`\`${language}\n${code}\n\`\`\``;
   appendContent(codeBlock);
 }
