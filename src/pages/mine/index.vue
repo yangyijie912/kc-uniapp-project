@@ -46,6 +46,101 @@
         />
       </view>
     </BaseDialog>
+
+    <BaseDialog
+      :open="importDialogVisible"
+      title="导入设置"
+      cancelText="取消"
+      :confirmText="pendingImport ? '导入中' : '开始导入'"
+      @close="closeImportDialog"
+      @confirm="confirmImport"
+    >
+      <view class="import-dialog">
+        <view class="import-section">
+          <view class="import-section-title">导入模式</view>
+          <view class="import-option-row">
+            <view
+              class="import-option-chip"
+              :class="{ active: importMode === 'merge' }"
+              @click="importMode = 'merge'"
+            >
+              合并导入
+            </view>
+            <view
+              class="import-option-chip"
+              :class="{ active: importMode === 'overwrite' }"
+              @click="importMode = 'overwrite'"
+            >
+              覆盖导入
+            </view>
+          </view>
+          <view class="import-section-tip">
+            {{
+              importMode === 'merge'
+                ? '保留当前数据，并按你的规则处理冲突卡片。'
+                : '用导入文件整体替换当前分类和卡片。'
+            }}
+          </view>
+        </view>
+
+        <view v-if="importMode === 'merge'" class="import-section">
+          <view class="import-section-title">冲突卡片</view>
+          <view class="import-option-column">
+            <view
+              class="import-choice-card"
+              :class="{ active: importConfig.conflictStrategy === 'skip' }"
+              @click="importConfig.conflictStrategy = 'skip'"
+            >
+              <view class="import-choice-title">跳过冲突</view>
+              <view class="import-choice-desc">同 ID 卡片保留本地数据，不做覆盖。</view>
+            </view>
+            <view
+              class="import-choice-card"
+              :class="{ active: importConfig.conflictStrategy === 'overwrite' }"
+              @click="importConfig.conflictStrategy = 'overwrite'"
+            >
+              <view class="import-choice-title">直接覆盖</view>
+              <view class="import-choice-desc">同 ID 卡片以新导入的数据为准。</view>
+            </view>
+          </view>
+        </view>
+
+        <view v-if="importMode === 'merge'" class="import-section">
+          <view class="import-section-title">导入状态</view>
+          <view class="import-option-column">
+            <view
+              class="import-choice-card"
+              :class="{ active: importConfig.statusStrategy === 'imported' }"
+              @click="importConfig.statusStrategy = 'imported'"
+            >
+              <view class="import-choice-title">保留导入状态</view>
+              <view class="import-choice-desc">适合导入你自己另一套题库，保留卡片状态。</view>
+            </view>
+            <view
+              class="import-choice-card"
+              :class="{ active: importConfig.statusStrategy === 'clear' }"
+              @click="importConfig.statusStrategy = 'clear'"
+            >
+              <view class="import-choice-title">清空导入状态</view>
+              <view class="import-choice-desc">适合别人的题库，只导入题目内容，不带学习状态。</view>
+            </view>
+          </view>
+        </view>
+
+        <view class="import-dialog-note">
+          <view class="import-dialog-note-title">
+            {{ importMode === 'merge' ? '合并导入提醒' : '覆盖导入提醒' }}
+          </view>
+          <view class="import-dialog-note-text">
+            {{
+              importMode === 'merge'
+                ? '请认准选项。默认会跳过同 ID 冲突卡片，并保留导入文件中的卡片状态。只有新增卡片会直接导入。'
+                : '覆盖导入会整体替换当前分类和卡片，导入文件里的内容和状态都会直接生效。'
+            }}
+          </view>
+        </view>
+      </view>
+    </BaseDialog>
   </view>
 </template>
 
@@ -54,36 +149,19 @@ import { ref } from 'vue';
 import BaseDialog from '@/components/BaseDialog.vue';
 import { buildExportJson, exportToJsonApp, exportToJsonH5 } from '@/services/exportService';
 import { pickImportDataApp, pickImportDataH5, importFromJsonFile } from '@/services/importService';
-import type { ImportMode } from '@/types/migration';
+import type { ImportMode, MergeConfig } from '@/types/migration';
 
 const exportDialogVisible = ref(false);
 const exportFileName = ref('');
 const pendingExport = ref(false);
+const importDialogVisible = ref(false);
+const pendingImport = ref(false);
+const importMode = ref<ImportMode>('merge');
+const importConfig = ref<MergeConfig>({
+  statusStrategy: 'imported',
+  conflictStrategy: 'skip',
+});
 const MAX_EXPORT_FILE_NAME_LENGTH = 20; // 最大文件名长度（不包含扩展名）
-
-function chooseImportMode(): Promise<ImportMode | null> {
-  return new Promise((resolve) => {
-    uni.showActionSheet({
-      itemList: ['合并导入', '覆盖导入'],
-      success: (res) => {
-        if (res.tapIndex === 0) {
-          resolve('merge');
-          return;
-        }
-
-        if (res.tapIndex === 1) {
-          resolve('overwrite');
-          return;
-        }
-
-        resolve(null);
-      },
-      fail: () => {
-        resolve(null);
-      },
-    });
-  });
-}
 
 function showImportResult(
   result: Awaited<ReturnType<typeof importFromJsonFile>>,
@@ -122,6 +200,15 @@ const openExportDialog = () => {
   exportDialogVisible.value = true;
 };
 
+const openImportDialog = () => {
+  importMode.value = 'merge';
+  importConfig.value = {
+    statusStrategy: 'imported',
+    conflictStrategy: 'skip',
+  };
+  importDialogVisible.value = true;
+};
+
 const closeExportDialog = () => {
   if (pendingExport.value) {
     return;
@@ -129,6 +216,14 @@ const closeExportDialog = () => {
 
   exportDialogVisible.value = false;
   exportFileName.value = '';
+};
+
+const closeImportDialog = () => {
+  if (pendingImport.value) {
+    return;
+  }
+
+  importDialogVisible.value = false;
 };
 
 const confirmExport = async () => {
@@ -171,39 +266,18 @@ const confirmExport = async () => {
   }
 };
 
-const importData = async () => {
+const confirmImport = async () => {
   try {
-    const mode = await chooseImportMode();
-    if (!mode) {
-      return;
-    }
+    pendingImport.value = true;
+    importDialogVisible.value = false;
 
-    if (mode === 'overwrite') {
-      const confirmOverwrite = await new Promise<boolean>((resolve) => {
-        uni.showModal({
-          title: '确认覆盖导入',
-          content: '覆盖导入会先清空当前分类和卡片，再导入选中的文件，继续吗？',
-          confirmText: '继续',
-          cancelText: '取消',
-          success: (res) => {
-            resolve(Boolean(res.confirm));
-          },
-          fail: () => {
-            resolve(false);
-          },
-        });
-      });
-
-      if (!confirmOverwrite) {
-        return;
-      }
-    }
+    const mergeConfig = importMode.value === 'merge' ? importConfig.value : undefined;
 
     // #ifdef H5
     {
       const jsonStrH5 = await pickImportDataH5();
-      const importResultH5 = await importFromJsonFile(jsonStrH5, mode);
-      showImportResult(importResultH5, mode);
+      const importResultH5 = await importFromJsonFile(jsonStrH5, importMode.value, mergeConfig);
+      showImportResult(importResultH5, importMode.value);
     }
     // #endif
 
@@ -211,8 +285,8 @@ const importData = async () => {
     {
       uni.showLoading({ title: '导入中' });
       const jsonStrApp = await pickImportDataApp();
-      const importResultApp = await importFromJsonFile(jsonStrApp, mode);
-      showImportResult(importResultApp, mode);
+      const importResultApp = await importFromJsonFile(jsonStrApp, importMode.value, mergeConfig);
+      showImportResult(importResultApp, importMode.value);
       uni.hideLoading();
     }
     // #endif
@@ -223,7 +297,13 @@ const importData = async () => {
       title: e instanceof Error ? e.message : '导入失败',
       icon: 'none',
     });
+  } finally {
+    pendingImport.value = false;
   }
+};
+
+const importData = () => {
+  openImportDialog();
 };
 
 const exportData = async () => {
@@ -343,6 +423,107 @@ const goToStats = () => {
   display: flex;
   flex-direction: column;
   gap: 20rpx;
+}
+
+.import-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.import-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+}
+
+.import-section-title {
+  color: #1e1c18;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.import-section-tip {
+  color: #8f877b;
+  font-size: 22rpx;
+  line-height: 1.6;
+}
+
+.import-option-row {
+  display: flex;
+  gap: 12rpx;
+}
+
+.import-option-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.import-option-chip {
+  min-width: 140rpx;
+  padding: 12rpx 20rpx;
+  border-radius: 999rpx;
+  border: 1rpx solid rgba(61, 43, 24, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+  color: #6c645a;
+  font-size: 24rpx;
+  line-height: 1.3;
+  text-align: center;
+  font-weight: 600;
+  box-sizing: border-box;
+}
+
+.import-option-chip.active {
+  border-color: rgba(31, 94, 255, 0.18);
+  background: rgba(31, 94, 255, 0.12);
+  color: #1f5eff;
+}
+
+.import-choice-card {
+  padding: 18rpx 20rpx;
+  border-radius: 22rpx;
+  border: 1rpx solid rgba(61, 43, 24, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.import-choice-card.active {
+  border-color: rgba(18, 122, 114, 0.18);
+  background: linear-gradient(135deg, rgba(52, 194, 187, 0.2), rgba(255, 255, 255, 0.8));
+}
+
+.import-choice-title {
+  color: #1e1c18;
+  font-size: 26rpx;
+  font-weight: 700;
+}
+
+.import-choice-desc {
+  margin-top: 8rpx;
+  color: #6c645a;
+  font-size: 22rpx;
+  line-height: 1.6;
+}
+
+.import-dialog-note {
+  padding: 18rpx 20rpx;
+  border-radius: 22rpx;
+  border: 1rpx solid rgba(239, 125, 66, 0.18);
+  background: linear-gradient(135deg, rgba(239, 125, 66, 0.12), rgba(255, 255, 255, 0.82));
+}
+
+.import-dialog-note-title {
+  color: #1e1c18;
+  font-size: 24rpx;
+  line-height: 1.5;
+  font-weight: 700;
+}
+
+.import-dialog-note-text {
+  margin-top: 8rpx;
+  color: #7b5d35;
+  font-size: 22rpx;
+  line-height: 1.7;
 }
 
 .export-dialog-tip {

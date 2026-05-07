@@ -3,7 +3,7 @@ import { getCards, saveAllCards } from './cardService';
 import { fail, success } from './serviceHelper';
 import { generateUUID } from '@/utils/uuid';
 import { UNCATEGORIZED_ID, UNCATEGORIZED_NAME } from '@/constants/category';
-import type { ImportData, ImportResult, ImportMode } from '@/types/migration';
+import type { ImportData, ImportResult, ImportMode, MergeConfig } from '@/types/migration';
 import type { RawCard, Card, Category } from '@/types/card';
 import type { ServiceResult } from '@/types/service';
 
@@ -332,7 +332,11 @@ function transformImportedCategoryId(rawCard: RawCard, mergeResult: MergeCategor
 }
 
 // 把导入的原始卡片数据转换成系统的卡片数据结构
-function normalizeImportedCard(rawCard: RawCard, mergeResult: MergeCategoriesResult): Card | null {
+function normalizeImportedCard(
+  rawCard: RawCard,
+  mergeResult: MergeCategoriesResult,
+  config?: MergeConfig,
+): Card | null {
   if (!rawCard.question || !rawCard.answer) {
     console.warn(
       `[importService] 导入卡片数据不完整，缺少 question 或 answer 字段，已跳过。rawCard=${JSON.stringify(rawCard)}`,
@@ -342,6 +346,11 @@ function normalizeImportedCard(rawCard: RawCard, mergeResult: MergeCategoriesRes
   }
 
   const createdAt = rawCard?.createdAt || Date.now();
+  const status = config
+    ? config.statusStrategy === 'imported'
+      ? rawCard?.status
+      : undefined
+    : rawCard?.status;
 
   return {
     id: rawCard.id || generateUUID(),
@@ -350,7 +359,7 @@ function normalizeImportedCard(rawCard: RawCard, mergeResult: MergeCategoriesRes
     answer: rawCard?.answer,
     content: rawCard?.content,
     tags: rawCard?.tags,
-    status: rawCard?.status,
+    status,
     createdAt,
     updatedAt: rawCard?.updatedAt || createdAt,
     sort: rawCard?.sort ?? Number.MAX_SAFE_INTEGER, // 没有排序值的卡片放到最后
@@ -362,18 +371,30 @@ function mergeCards(
   importedCards: ImportData['cards'],
   currentCards: Card[],
   mergeResult: MergeCategoriesResult,
+  config?: MergeConfig,
 ): Card[] {
   const cardsMap = new Map(currentCards.map((card) => [card.id, card]));
+
   for (const rawCard of importedCards) {
-    const normalizedCard = normalizeImportedCard(rawCard, mergeResult);
-    if (normalizedCard) {
-      const existed = cardsMap.has(normalizedCard.id);
-      cardsMap.set(normalizedCard.id, normalizedCard); // ID 冲突时覆盖原有卡片
-      if (existed) {
-        countTotal.overwrittenCardCount += 1;
-      } else {
-        countTotal.newCardCount += 1;
-      }
+    const normalizedCard = normalizeImportedCard(rawCard, mergeResult, config);
+    if (!normalizedCard) {
+      continue;
+    }
+
+    const existed = cardsMap.has(normalizedCard.id);
+
+    if (existed && config?.conflictStrategy === 'skip') {
+      countTotal.skippedCardCount += 1;
+      continue;
+    }
+
+    // 新卡和允许覆盖的冲突卡都要写入结果映射。
+    cardsMap.set(normalizedCard.id, normalizedCard);
+
+    if (existed) {
+      countTotal.overwrittenCardCount += 1;
+    } else {
+      countTotal.newCardCount += 1;
     }
   }
 
@@ -406,6 +427,7 @@ const ensureCategoriesSort = (categories: Category[]): Category[] => {
 export async function importFromJsonFile(
   jsonStr: string,
   mode: ImportMode = 'merge',
+  config?: MergeConfig,
 ): Promise<ServiceResult<ImportResult>> {
   // 重置计数器，确保每次导入都是独立统计
   countTotal.newCategoryCount = 0;
@@ -429,7 +451,7 @@ export async function importFromJsonFile(
       // 3、合并分类和卡片数据，并处理分类ID映射关系
       const mergeResult = mergeCategories(importData.categories, currentCategories);
       mergedCategories = mergeResult.mergedCategories;
-      mergedCards = mergeCards(importData.cards, currentCards, mergeResult);
+      mergedCards = mergeCards(importData.cards, currentCards, mergeResult, config);
     }
     // 覆盖模式
     if (mode === 'overwrite') {

@@ -29,3 +29,8 @@ export interface ImportResult {
 }
 
 export type ImportMode = 'merge' | 'overwrite';
+
+export type MergeConfig = {
+  statusStrategy?: 'imported' | 'clear'; // 状态策略：保留导入状态/清空状态
+  conflictStrategy?: 'overwrite' | 'skip'; // 卡片冲突策略：覆盖/跳过
+};
