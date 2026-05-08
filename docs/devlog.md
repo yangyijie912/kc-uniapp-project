@@ -271,3 +271,13 @@
 - 合并导入补充功能: 增加状态策略和冲突策略选项，允许在合并导入时选择是否覆盖同 ID 卡片以及是否保留导入文件中的卡片状态。
 - 修改插入代码块的默认语言为JavaScript
 - 修改空数据提示文案，区分没有更多了和没有找到相关卡片两种情况判断条件。
+
+**05.08**
+
+- 统计页开始接真实数据，不再只展示占位信息；分类统计和状态分布统一复用 useCategoryView 聚合，避免页面层重复计算。
+- 为方案 A 补充卡片时间字段：statusUpdatedAt、masteredAt、contentUpdatedAt，用来分别承接状态变化、掌握时间和内容编辑时间；保留 updatedAt 作为通用最后变更时间。
+- 接通时间字段写入链路：测验页改状态时写入 statusUpdatedAt / masteredAt，编辑页保存内容时写入 contentUpdatedAt，卡片服务补齐新字段的存储和读取。
+- 统计口径先按方案 A 落地：今日刷题数、7 天 / 30 天“刷题”按 statusUpdatedAt 去重统计卡片数；“掌握”按 masteredAt 统计；“更新”按 contentUpdatedAt 统计。
+- 为避免打开统计页时误创建当日每日测验记录，新增 getStoredDailyQuizSession，只读取已有 session，不在统计场景触发初始化副作用。
+- 重整 useCategoryView 的统计职责：除分类列表外，同时聚合总卡片数、状态分布、每日测验进度、学习活跃度和分类表现，作为统计页的单一数据源。
+- 收紧排序语义：列表里的“更新时间排序”切换为按 contentUpdatedAt 排序，不再因为刷题改状态、转分类等非内容操作打乱内容编辑顺序；同时兼容旧配置里 sortBy = updatedAt 的历史值，以及旧卡片缺少 contentUpdatedAt 的回退场景。

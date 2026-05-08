@@ -220,7 +220,7 @@ function save() {
   let res = undefined;
 
   if (cardId.value) {
-    res = updateCard({ id: cardId.value, ...params });
+    res = updateCard({ id: cardId.value, contentUpdatedAt: Date.now(), ...params });
   } else {
     res = addCard(params);
   }

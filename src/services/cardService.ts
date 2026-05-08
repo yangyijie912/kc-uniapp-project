@@ -3,6 +3,7 @@ import categories from '@/data/category.json';
 import { UNCATEGORIZED_ID } from '@/constants/category';
 import { CATEGORY_STORAGE_KEY } from '@/constants/storageKeys';
 import { CARD_STORAGE_KEY } from '@/constants/storageKeys';
+import { SORT_STEP } from '@/constants/sortConfig';
 import type { Card, Category, RawCard, CardSortConfig, Move } from '@/types/card';
 import type { ServiceResult } from '@/types/service';
 import type { PageResult } from '@/types/common';
@@ -149,6 +150,9 @@ function normalizeCard(card: Card): Card {
     status: card.status,
     createdAt: card.createdAt,
     updatedAt: card.updatedAt,
+    statusUpdatedAt: card.statusUpdatedAt,
+    masteredAt: card.masteredAt,
+    contentUpdatedAt: card.contentUpdatedAt,
     sort: card.sort,
   };
 }
@@ -169,6 +173,9 @@ function toCard(rawCard: RawCard): Card {
     status: rawCard.status,
     createdAt: rawCard?.createdAt ?? createdAt,
     updatedAt: rawCard?.updatedAt ?? createdAt,
+    statusUpdatedAt: rawCard?.statusUpdatedAt,
+    masteredAt: rawCard?.masteredAt,
+    contentUpdatedAt: rawCard?.contentUpdatedAt,
     sort: rawCard?.sort ?? Number.MAX_SAFE_INTEGER,
   };
 }
@@ -362,7 +369,18 @@ export function getCardById(id: string): ServiceResult<Card | undefined> {
 }
 
 // 添加新卡片
-export function addCard(card: Omit<Card, 'id'>): ServiceResult<Card> {
+export function addCard(
+  card: Omit<
+    Card,
+    | 'id'
+    | 'createdAt'
+    | 'updatedAt'
+    | 'statusUpdatedAt'
+    | 'masteredAt'
+    | 'contentUpdatedAt'
+    | 'sort'
+  >,
+): ServiceResult<Card> {
   const currentList = loadCardsFromStorage();
   const createdAt = Date.now();
   const newCard: Card = {
@@ -370,6 +388,7 @@ export function addCard(card: Omit<Card, 'id'>): ServiceResult<Card> {
     ...card,
     createdAt,
     updatedAt: createdAt,
+    sort: currentList.length > 0 ? (currentList.length + 1) * SORT_STEP : SORT_STEP,
   };
   const updatedList = [...currentList, newCard];
   saveCardsToStorage(updatedList);
@@ -446,8 +465,6 @@ export function saveAllCards(cards: Card[]): ServiceResult<null> {
   saveCardsToStorage(cards);
   return success(null);
 }
-
-const SORT_STEP = 1000; // 每个卡片之间的默认排序间隔
 
 const compareCardSort = (a: Card, b: Card) => {
   if (a.sort !== b.sort) {

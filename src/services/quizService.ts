@@ -152,6 +152,17 @@ function readDailyQuizSession(): DailyQuizSession | null {
   }
 }
 
+// 统计页只需要读取当天已有进度，不应该因为查看统计而创建新的每日测验 session。
+export function getStoredDailyQuizSession(): DailyQuizSession | null {
+  const session = readDailyQuizSession();
+  if (!session) {
+    return null;
+  }
+
+  const todayKey = getDateKey(new Date());
+  return session.dateKey === todayKey ? session : null;
+}
+
 // 保存每日测验进度数据到本地存储
 function saveDailyQuizSession(session: DailyQuizSession) {
   uni.setStorageSync(DAILY_QUIZ_SESSION_KEY, JSON.stringify(session));

@@ -361,7 +361,10 @@ function normalizeImportedCard(
     tags: rawCard?.tags,
     status,
     createdAt,
-    updatedAt: rawCard?.updatedAt || createdAt,
+    updatedAt: rawCard?.updatedAt ?? createdAt,
+    statusUpdatedAt: rawCard?.statusUpdatedAt,
+    masteredAt: rawCard?.masteredAt,
+    contentUpdatedAt: rawCard?.contentUpdatedAt,
     sort: rawCard?.sort ?? Number.MAX_SAFE_INTEGER, // 没有排序值的卡片放到最后
   };
 }

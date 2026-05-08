@@ -8,6 +8,18 @@ const compareNumber = (a: number, b: number, order: SortOrder = 'asc'): number =
   return order === 'asc' ? a - b : b - a;
 };
 
+const getSortValue = (card: Card, sortBy: CardSortBy): number => {
+  if (sortBy === 'contentUpdatedAt' || sortBy === 'updatedAt') {
+    return getSafeNumber(card.contentUpdatedAt ?? card.updatedAt, 0);
+  }
+
+  if (sortBy === 'createdAt') {
+    return getSafeNumber(card.createdAt, 0);
+  }
+
+  return 0;
+};
+
 export const sortCards = (
   cards: Card[],
   sortBy: CardSortBy,
@@ -19,8 +31,8 @@ export const sortCards = (
   }
 
   return [...cards].sort((a, b) => {
-    const aValue = getSafeNumber(a[sortBy], 0);
-    const bValue = getSafeNumber(b[sortBy], 0);
+    const aValue = getSortValue(a, sortBy);
+    const bValue = getSortValue(b, sortBy);
 
     const result = compareNumber(aValue, bValue, order);
 

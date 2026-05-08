@@ -22,17 +22,19 @@ export const CARD_SORT_OPTIONS: Array<{ label: string; value: CardSortConfig }> 
     },
   },
   {
-    label: '更新时间升序',
+    label: '内容更新时间升序',
     value: {
-      sortBy: 'updatedAt',
+      sortBy: 'contentUpdatedAt',
       order: 'asc',
     },
   },
   {
-    label: '更新时间降序',
+    label: '内容更新时间降序',
     value: {
-      sortBy: 'updatedAt',
+      sortBy: 'contentUpdatedAt',
       order: 'desc',
     },
   },
 ];
+
+export const SORT_STEP = 1000; // 每次排序调整的步长，确保有足够的空间进行插入排序

@@ -181,7 +181,12 @@ function buildQueue() {
 // 状态更新接口
 const changeStatus = (cardId: string | undefined, status: CardStatus) => {
   if (!cardId) return;
-  const res = updateCard({ id: cardId, status });
+  const res = updateCard({
+    id: cardId,
+    status,
+    statusUpdatedAt: Date.now(),
+    ...(status === 'mastered' ? { masteredAt: Date.now() } : {}),
+  });
   if (!res.success) {
     uni.showToast({
       title: res.message || '状态更新失败',

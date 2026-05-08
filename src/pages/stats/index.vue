@@ -6,19 +6,19 @@
       <view class="summary-grid">
         <view class="summary-card summary-card-total">
           <view class="summary-label">总卡片数</view>
-          <view class="summary-value">248</view>
+          <view class="summary-value">{{ totalCards }}</view>
         </view>
         <view class="summary-card summary-card-review">
           <view class="summary-label">待复习</view>
-          <view class="summary-value">69</view>
+          <view class="summary-value">{{ reviewCards }}</view>
         </view>
         <view class="summary-card summary-card-mastered">
           <view class="summary-label">掌握数</view>
-          <view class="summary-value">178</view>
+          <view class="summary-value">{{ masteredCards }}</view>
         </view>
         <view class="summary-card summary-card-rate">
           <view class="summary-label">掌握率</view>
-          <view class="summary-value">72%</view>
+          <view class="summary-value">{{ masteredRate }}</view>
         </view>
       </view>
     </view>
@@ -31,9 +31,7 @@
           <view class="today-main-head">
             <view>
               <view class="today-main-label">今日测验进度</view>
-              <view class="today-main-tip"
-                >{{ todayStats.quizDone }} / {{ todayStats.quizTarget }} 已完成</view
-              >
+              <view class="today-main-tip">{{ todayStats.progressText }}</view>
             </view>
             <view class="today-main-badge">{{ todayStats.quizRate }}%</view>
           </view>
@@ -45,7 +43,7 @@
           <view class="today-side-card today-side-card-practice">
             <view class="today-side-label">今日刷题数</view>
             <view class="today-side-value">{{ todayStats.practiceCount }}</view>
-            <view class="today-side-tip">较昨日 +{{ todayStats.practiceDelta }}</view>
+            <view class="today-side-tip">按卡片去重统计</view>
           </view>
           <view class="today-side-card today-side-card-correct">
             <view class="today-side-label">掌握题数</view>
@@ -60,37 +58,13 @@
     <view class="section">
       <view class="section-title">卡片状态分布</view>
       <view class="status-distribution">
-        <view class="dist-item">
+        <view v-for="item in statusDistribution" :key="item.key" class="dist-item">
           <view class="dist-item-head">
-            <view class="dist-dot dist-dot-mastered"></view>
-            <view class="dist-name">掌握</view>
+            <view class="dist-dot" :class="item.dotClass"></view>
+            <view class="dist-name">{{ item.label }}</view>
           </view>
-          <view class="dist-value">178 张</view>
-          <view class="dist-percent">71.8%</view>
-        </view>
-        <view class="dist-item">
-          <view class="dist-item-head">
-            <view class="dist-dot dist-dot-fuzzy"></view>
-            <view class="dist-name">模糊</view>
-          </view>
-          <view class="dist-value">45 张</view>
-          <view class="dist-percent">18.1%</view>
-        </view>
-        <view class="dist-item">
-          <view class="dist-item-head">
-            <view class="dist-dot dist-dot-unknown"></view>
-            <view class="dist-name">未知</view>
-          </view>
-          <view class="dist-value">20 张</view>
-          <view class="dist-percent">8.1%</view>
-        </view>
-        <view class="dist-item">
-          <view class="dist-item-head">
-            <view class="dist-dot dist-dot-undefined"></view>
-            <view class="dist-name">未设置</view>
-          </view>
-          <view class="dist-value">5 张</view>
-          <view class="dist-percent">2.0%</view>
+          <view class="dist-value">{{ item.count }} 张</view>
+          <view class="dist-percent">{{ item.percent }}</view>
         </view>
       </view>
     </view>
@@ -145,60 +119,11 @@
           <view class="th-review">待复习</view>
         </view>
 
-        <view class="table-row">
-          <view class="td-name">React 核心</view>
-          <view class="td-cards">48</view>
-          <view class="td-rate">85%</view>
-          <view class="td-review">7</view>
-        </view>
-
-        <view class="table-row">
-          <view class="td-name">Vue 3</view>
-          <view class="td-cards">42</view>
-          <view class="td-rate">78%</view>
-          <view class="td-review">9</view>
-        </view>
-
-        <view class="table-row">
-          <view class="td-name">TypeScript</view>
-          <view class="td-cards">38</view>
-          <view class="td-rate">71%</view>
-          <view class="td-review">11</view>
-        </view>
-
-        <view class="table-row">
-          <view class="td-name">JavaScript 进阶</view>
-          <view class="td-cards">35</view>
-          <view class="td-rate">65%</view>
-          <view class="td-review">12</view>
-        </view>
-
-        <view class="table-row">
-          <view class="td-name">CSS 布局</view>
-          <view class="td-cards">32</view>
-          <view class="td-rate">62%</view>
-          <view class="td-review">12</view>
-        </view>
-
-        <view class="table-row">
-          <view class="td-name">HTTP 协议</view>
-          <view class="td-cards">28</view>
-          <view class="td-rate">58%</view>
-          <view class="td-review">12</view>
-        </view>
-
-        <view class="table-row">
-          <view class="td-name">浏览器原理</view>
-          <view class="td-cards">25</view>
-          <view class="td-rate">56%</view>
-          <view class="td-review">11</view>
-        </view>
-
-        <view class="table-row">
-          <view class="td-name">性能优化</view>
-          <view class="td-cards">20</view>
-          <view class="td-rate">50%</view>
-          <view class="td-review">10</view>
+        <view v-for="row in categoryRows" :key="row.id" class="table-row">
+          <view class="td-name">{{ row.name }}</view>
+          <view class="td-cards">{{ row.cards }}</view>
+          <view class="td-rate">{{ row.rate }}</view>
+          <view class="td-review">{{ row.review }}</view>
         </view>
       </view>
     </view>
@@ -208,40 +133,112 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
+import useCategoryView from '@/composables/useCategoryView';
 
 const activityRange = ref<'7d' | '30d'>('7d');
+const { categoryViewList, loadAllData, stats } = useCategoryView();
 
-const activityStatsMap = {
+function formatRate(value: number, total: number) {
+  if (total <= 0) {
+    return '0%';
+  }
+
+  return `${Math.round((value / total) * 100)}%`;
+}
+
+const totalCards = computed(() => stats.value.total);
+const masteredCards = computed(() => stats.value.mastered);
+const reviewCards = computed(() => Math.max(stats.value.total - stats.value.mastered, 0));
+const masteredRate = computed(() => formatRate(stats.value.mastered, stats.value.total));
+const undefinedCards = computed(() =>
+  Math.max(stats.value.total - stats.value.mastered - stats.value.fuzzy - stats.value.unknown, 0),
+);
+
+const todayStats = computed(() => {
+  const quizDone = stats.value.dailyQuizCurrentIndex;
+  const quizTarget = stats.value.dailyQuizLimit;
+  const quizRate = quizTarget > 0 ? Math.round((quizDone / quizTarget) * 100) : 0;
+  const practiceCount = stats.value.dailyStudied ?? 0;
+  const correctCount = stats.value.dailyMastered ?? 0;
+  const correctRate = practiceCount > 0 ? Math.round((correctCount / practiceCount) * 100) : 0;
+
+  return {
+    quizDone,
+    quizTarget,
+    quizRate,
+    progressText: quizTarget > 0 ? `${quizDone} / ${quizTarget} 已完成` : '今日还没有开始每日测验',
+    practiceCount,
+    correctCount,
+    correctRate,
+  };
+});
+
+const statusDistribution = computed(() => [
+  {
+    key: 'mastered',
+    label: '掌握',
+    count: stats.value.mastered,
+    percent: formatRate(stats.value.mastered, stats.value.total),
+    dotClass: 'dist-dot-mastered',
+  },
+  {
+    key: 'fuzzy',
+    label: '模糊',
+    count: stats.value.fuzzy,
+    percent: formatRate(stats.value.fuzzy, stats.value.total),
+    dotClass: 'dist-dot-fuzzy',
+  },
+  {
+    key: 'unknown',
+    label: '未知',
+    count: stats.value.unknown,
+    percent: formatRate(stats.value.unknown, stats.value.total),
+    dotClass: 'dist-dot-unknown',
+  },
+  {
+    key: 'undefined',
+    label: '未设置',
+    count: undefinedCards.value,
+    percent: formatRate(undefinedCards.value, stats.value.total),
+    dotClass: 'dist-dot-undefined',
+  },
+]);
+
+const activityStatsMap = computed(() => ({
   '7d': {
-    added: 12,
-    updated: 8,
-    practice: 45,
-    mastered: 28,
+    added: stats.value.activityStats?.['7day'].added ?? 0,
+    updated: stats.value.activityStats?.['7day'].updated ?? 0,
+    practice: stats.value.activityStats?.['7day'].practice ?? 0,
+    mastered: stats.value.activityStats?.['7day'].mastered ?? 0,
   },
   '30d': {
-    added: 48,
-    updated: 35,
-    practice: 168,
-    mastered: 96,
+    added: stats.value.activityStats?.['30day'].added ?? 0,
+    updated: stats.value.activityStats?.['30day'].updated ?? 0,
+    practice: stats.value.activityStats?.['30day'].practice ?? 0,
+    mastered: stats.value.activityStats?.['30day'].mastered ?? 0,
   },
-};
+}));
 
-// 今日状态先用静态演示数据占位，后续接入真实测验与练习记录。
-const todayStats = {
-  quizDone: 18,
-  quizTarget: 30,
-  quizRate: 60,
-  practiceCount: 42,
-  practiceDelta: 6,
-  correctCount: 34,
-  correctRate: 81,
-};
+const currentActivityStats = computed(() => activityStatsMap.value[activityRange.value]);
 
-// 先用静态演示数据承接交互，后续再替换成真实统计结果。
-const currentActivityStats = computed(() => activityStatsMap[activityRange.value]);
+const categoryRows = computed(() =>
+  categoryViewList.value.map((category) => {
+    const categoryStats = stats.value.categoryStats[category.id];
+    const total = categoryStats?.total ?? category.cardCount ?? 0;
+    const mastered = categoryStats?.mastered ?? 0;
+
+    return {
+      id: category.id,
+      name: category.name,
+      cards: total,
+      rate: formatRate(mastered, total),
+      review: Math.max(total - mastered, 0),
+    };
+  }),
+);
 
 onShow(() => {
-  // 后续接入真实数据逻辑
+  loadAllData();
 });
 </script>
 
