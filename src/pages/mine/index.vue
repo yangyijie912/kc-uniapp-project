@@ -92,7 +92,6 @@
               @click="importConfig.conflictStrategy = 'skip'"
             >
               <view class="import-choice-title">跳过冲突</view>
-              <view class="import-choice-desc">同 ID 卡片保留本地数据，不做覆盖。</view>
             </view>
             <view
               class="import-choice-card"
@@ -100,8 +99,14 @@
               @click="importConfig.conflictStrategy = 'overwrite'"
             >
               <view class="import-choice-title">直接覆盖</view>
-              <view class="import-choice-desc">同 ID 卡片以新导入的数据为准。</view>
             </view>
+          </view>
+          <view class="import-choice-desc">
+            {{
+              importConfig.conflictStrategy === 'skip'
+                ? ' ID 卡片保留本地数据，不做覆盖。'
+                : '同 ID 卡片以新导入的数据为准。'
+            }}
           </view>
         </view>
 
@@ -114,7 +119,6 @@
               @click="importConfig.statusStrategy = 'imported'"
             >
               <view class="import-choice-title">保留导入状态</view>
-              <view class="import-choice-desc">适合导入你自己另一套题库，保留卡片状态。</view>
             </view>
             <view
               class="import-choice-card"
@@ -122,21 +126,21 @@
               @click="importConfig.statusStrategy = 'clear'"
             >
               <view class="import-choice-title">清空导入状态</view>
-              <view class="import-choice-desc">适合别人的题库，只导入题目内容，不带学习状态。</view>
             </view>
+          </view>
+          <view class="import-choice-desc">
+            {{
+              importConfig.statusStrategy === 'imported'
+                ? '适合导入你自己另一套题库，保留卡片状态。'
+                : '适合别人的题库，只导入题目内容，不带学习状态。'
+            }}
           </view>
         </view>
 
-        <view class="import-dialog-note">
-          <view class="import-dialog-note-title">
-            {{ importMode === 'merge' ? '合并导入提醒' : '覆盖导入提醒' }}
-          </view>
+        <view class="import-dialog-note" v-if="importMode !== 'merge'">
+          <view class="import-dialog-note-title"> 覆盖导入提醒 </view>
           <view class="import-dialog-note-text">
-            {{
-              importMode === 'merge'
-                ? '请认准选项。默认会跳过同 ID 冲突卡片，并保留导入文件中的卡片状态。只有新增卡片会直接导入。'
-                : '覆盖导入会整体替换当前分类和卡片，导入文件里的内容和状态都会直接生效。'
-            }}
+            覆盖导入会整体替换当前分类和卡片，导入文件里的内容和状态都会直接生效。
           </view>
         </view>
       </view>
@@ -456,7 +460,6 @@ const goToStats = () => {
 
 .import-option-column {
   display: flex;
-  flex-direction: column;
   gap: 12rpx;
 }
 
@@ -481,10 +484,12 @@ const goToStats = () => {
 }
 
 .import-choice-card {
-  padding: 18rpx 20rpx;
+  padding: 12rpx 16rpx;
   border-radius: 22rpx;
   border: 1rpx solid rgba(61, 43, 24, 0.12);
   background: rgba(255, 255, 255, 0.72);
+  width: 50%;
+  text-align: center;
 }
 
 .import-choice-card.active {
@@ -495,7 +500,7 @@ const goToStats = () => {
 .import-choice-title {
   color: #1e1c18;
   font-size: 26rpx;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .import-choice-desc {
