@@ -45,7 +45,23 @@ npm run build:h5
 
 # 类型检查
 npm run type-check
+
+# TS7 快速检查
+npm run type-check:tsgo
+
+# TS 命令行编译器
+npm run tsc
+
+# TS6 兼容入口
+npm run tsc6
 ```
+
+## TypeScript 命令说明
+
+- `npm run tsc`：走 TypeScript 7 beta 的 `tsgo`，适合日常命令行编译、快速 TS 级检查。
+- `npm run tsc6`：走 TypeScript 6.0.3 兼容入口，适合回退对比和排查老链路问题。
+- `npm run type-check`：继续使用 `vue-tsc`，保留 `.vue` 文件的完整类型检查。
+- `npm run type-check:tsgo`：只跑 TS7 beta 的快速检查，不依赖 `vue-tsc`，适合先看 TS 侧报错和性能。
 
 ## 数据导入与导出
 
