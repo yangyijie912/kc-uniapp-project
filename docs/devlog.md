@@ -281,3 +281,10 @@
 - 为避免打开统计页时误创建当日每日测验记录，新增 getStoredDailyQuizSession，只读取已有 session，不在统计场景触发初始化副作用。
 - 重整 useCategoryView 的统计职责：除分类列表外，同时聚合总卡片数、状态分布、每日测验进度、学习活跃度和分类表现，作为统计页的单一数据源。
 - 收紧排序语义：列表里的“更新时间排序”切换为按 contentUpdatedAt 排序，不再因为刷题改状态、转分类等非内容操作打乱内容编辑顺序；同时兼容旧配置里 sortBy = updatedAt 的历史值，以及旧卡片缺少 contentUpdatedAt 的回退场景。
+
+**05.09**
+
+- 升级 TypeScript 7 beta，调整相关配置和命令，验证兼容性和开发体验。
+- 继续对齐 TS7 默认行为：把 strict、module: esnext、target: esnext、noUncheckedSideEffectImports 统一放到共享 tsconfig 中，减少 TS7/TS6 两套配置的割裂感。
+- 保留 stableTypeOrdering 作为 TS7 专属项，只放在 tsgo 配置里，避免影响现有 vue-tsc 类型检查链路。
+- 验证 type-check 和 type-check:tsgo 都能正常通过，当前 TS7 入口和 Vue 兼容入口都保持可用。
