@@ -44,11 +44,11 @@
       </view>
 
       <view class="bottom-row">
-        <view class="status-btn status-unknown" @click="onQuiz(cardStatusTextMap.unknown)"
+        <view class="status-btn status-unknown" @click="onQuiz(CARD_STATUS_LABELS.unknown)"
           >不会</view
         >
-        <view class="status-btn status-fuzzy" @click="onQuiz(cardStatusTextMap.fuzzy)">模糊</view>
-        <view class="status-btn status-mastered" @click="onQuiz(cardStatusTextMap.mastered)"
+        <view class="status-btn status-fuzzy" @click="onQuiz(CARD_STATUS_LABELS.fuzzy)">模糊</view>
+        <view class="status-btn status-mastered" @click="onQuiz(CARD_STATUS_LABELS.mastered)"
           >掌握</view
         >
       </view>
@@ -68,8 +68,8 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
-import { cardStatusTextMap } from '@/constants/cardStatus';
-import { updateCard } from '@/services/cardService';
+import { CARD_STATUS_LABELS } from '@/constants/cardStatus';
+import { updateDailyLearningStats } from '@/services/cardService';
 import {
   getFreedomQuizQuestions,
   getDailyQuizSession,
@@ -181,12 +181,7 @@ function buildQueue() {
 // 状态更新接口
 const changeStatus = (cardId: string | undefined, status: CardStatus) => {
   if (!cardId) return;
-  const res = updateCard({
-    id: cardId,
-    status,
-    statusUpdatedAt: Date.now(),
-    ...(status === 'mastered' ? { masteredAt: Date.now() } : {}),
-  });
+  const res = updateDailyLearningStats(cardId, status);
   if (!res.success) {
     uni.showToast({
       title: res.message || '状态更新失败',
@@ -209,17 +204,17 @@ const nextQuestion = () => {
 // 选择状态
 const onQuiz = (status: string) => {
   switch (status) {
-    case cardStatusTextMap.unknown:
+    case CARD_STATUS_LABELS.unknown:
       changeStatus(currentCard.value?.id, 'unknown');
       quizResult.unknown += 1;
       nextQuestion();
       break;
-    case cardStatusTextMap.fuzzy:
+    case CARD_STATUS_LABELS.fuzzy:
       changeStatus(currentCard.value?.id, 'fuzzy');
       quizResult.fuzzy += 1;
       nextQuestion();
       break;
-    case cardStatusTextMap.mastered:
+    case CARD_STATUS_LABELS.mastered:
       changeStatus(currentCard.value?.id, 'mastered');
       quizResult.mastered += 1;
       nextQuestion();

@@ -6,18 +6,11 @@ import type { Card, CardView } from '@/types/card';
 import type { DailyQuizSession, quizQuery, QuizResultSummary } from '@/types/quiz';
 import { getCategories } from './categoryService';
 import { toCardViews } from '@/utils/cardView';
+import { readDailyQuizSession } from '@/utils/storage';
+import { getDateKey } from '@/utils/date';
 
 // 每日测验的题目数量限制，默认值为10
 export const dailyQuizLimit = 10;
-
-// 获取当天的日期键，用于存储和比较每日测验数据
-export function getDateKey(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const dateKey = `${year}-${month}-${day}`;
-  return dateKey;
-}
 
 // 从本地存储加载卡片列表
 function loadCardList(): Card[] {
@@ -137,30 +130,6 @@ function createEmptyQuizResult(total = 0): QuizResultSummary {
     fuzzy: 0,
     mastered: 0,
   };
-}
-
-// 读取每日测验进度数据，如果不存在或解析失败则返回null
-function readDailyQuizSession(): DailyQuizSession | null {
-  const stored = uni.getStorageSync(DAILY_QUIZ_SESSION_KEY);
-  if (!stored) {
-    return null;
-  }
-  try {
-    return JSON.parse(stored) as DailyQuizSession;
-  } catch {
-    return null;
-  }
-}
-
-// 统计页只需要读取当天已有进度，不应该因为查看统计而创建新的每日测验 session。
-export function getStoredDailyQuizSession(): DailyQuizSession | null {
-  const session = readDailyQuizSession();
-  if (!session) {
-    return null;
-  }
-
-  const todayKey = getDateKey(new Date());
-  return session.dateKey === todayKey ? session : null;
 }
 
 // 保存每日测验进度数据到本地存储

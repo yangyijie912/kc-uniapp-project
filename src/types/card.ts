@@ -1,4 +1,22 @@
-export type CardStatus = 'unknown' | 'fuzzy' | 'mastered';
+// 定义卡片状态的相关类型
+export type CardStatusMap = {
+  unknown: {
+    code: 0;
+    label: '未知';
+  };
+  fuzzy: {
+    code: 1;
+    label: '模糊';
+  };
+  mastered: {
+    code: 2;
+    label: '掌握';
+  };
+};
+
+export type CardStatus = keyof CardStatusMap;
+export type CardStatusCode = CardStatusMap[CardStatus]['code'];
+export type CardStatusLabel = CardStatusMap[CardStatus]['label'];
 
 export interface Category {
   id: string;
@@ -16,7 +34,7 @@ export type RawCard = {
   answer: string;
   content?: string;
   tags?: string[];
-  status?: Card['status'];
+  status?: CardStatus;
   createdAt?: number;
   updatedAt?: number;
   statusUpdatedAt?: number;
@@ -70,3 +88,10 @@ export type Move = {
 
 // 卡片列表的交互模式
 export type InteractionMode = 'browse' | 'select' | 'sort';
+
+// 卡片的每日学习状态统计数据结构
+export type DailyLearningStats = {
+  date: string; // 最多保留60天
+  practicedCardIds: string[]; // 存储不去重，下同。需要去重再根据业务手动去重
+  practiceStatuses: CardStatusCode[]; // 与 practicedCardIds 一一对应，记录每次练习的状态，存储用数字表示，减少存储空间
+};

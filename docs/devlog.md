@@ -288,3 +288,12 @@
 - 继续对齐 TS7 默认行为：把 strict、module: esnext、target: esnext、noUncheckedSideEffectImports 统一放到共享 tsconfig 中，减少 TS7/TS6 两套配置的割裂感。
 - 保留 stableTypeOrdering 作为 TS7 专属项，只放在 tsgo 配置里，避免影响现有 vue-tsc 类型检查链路。
 - 验证 type-check 和 type-check:tsgo 都能正常通过，当前 TS7 入口和 Vue 兼容入口都保持可用。
+
+**05.10**
+
+- 设计变更: 优化统计取数方案，不完全靠卡片的时间字段了：新增 DailyLearningStats 结构，专门记录每日测验的练习记录和状态，避免过度依赖卡片时间字段导致的口径混乱和统计误差。暂时不做日志存储，日志数据量太大，不适合当前的本地存储方案。
+- 重构卡片状态类型，新增卡片状态相关常量，由类型推导得出。卡片状态只维护CardStatusMap，避免状态码和状态文案分散维护导致的错误和不一致。
+- 卡片服务层更新 updateCard 和 updateDailyLearningStats 接口，增加状态更新时的状态码记录，优化每日测验统计数据结构，调整相关类型定义。
+- 新增 getCardStats 接口，专门用来统计以卡片为核心的各种统计数据，清理之前分散在 useCategoryView 里的逻辑，新增useStatsView 专门负责统计页的数据聚合和计算，避免把统计职责混在分类视图里导致的职责不清和性能问题。
+- 当前刷题数和掌握数的口径以 dailyStats 为准，去重展示，卡片各个时间字段仅作为兼容和兜底，不能混算。后续业务和口径调整也优先考虑在 dailyStats 里实现，减少对卡片字段的依赖，避免状态变更、转分类等操作引起的统计口径混乱。
+- 风险: batchUpdateCards 仍然是通用补丁式更新，如果以后新增“批量改状态”这类入口，它还不会自动联动状态时间字段和 DailyLearningStats，由于当前现有页面只拿它做转移分类，所以此次没有做更大范围变更。

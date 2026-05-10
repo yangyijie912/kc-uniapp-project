@@ -1,4 +1,4 @@
-import { cardStatusTextMap } from '@/constants/cardStatus';
+import { CARD_STATUS_LABELS } from '@/constants/cardStatus';
 import type { Card, CardView, Category } from '@/types/card';
 
 // 创建一个映射，将分类ID映射到分类名称，方便在转换卡片视图时使用
@@ -11,7 +11,7 @@ export function toCardView(card: Card, categoryNameById: Map<string, string>): C
   return {
     ...card,
     categoryName: categoryNameById.get(card.categoryId),
-    statusName: card.status ? cardStatusTextMap[card.status] : undefined,
+    statusName: card.status ? CARD_STATUS_LABELS[card.status] : undefined,
   };
 }
 

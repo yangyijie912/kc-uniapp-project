@@ -134,9 +134,11 @@
 import { computed, ref } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
 import useCategoryView from '@/composables/useCategoryView';
+import useStatsView from '@/composables/useStatsView';
 
 const activityRange = ref<'7d' | '30d'>('7d');
-const { categoryViewList, loadAllData, stats } = useCategoryView();
+const { categoryViewList, loadAllData } = useCategoryView();
+const { stats, loadStats } = useStatsView();
 
 function formatRate(value: number, total: number) {
   if (total <= 0) {
@@ -239,6 +241,7 @@ const categoryRows = computed(() =>
 
 onShow(() => {
   loadAllData();
+  loadStats();
 });
 </script>
 

@@ -27,7 +27,7 @@
       <view v-if="!isSearchResultMode" class="filter-row">
         <view class="filter-status">
           <view
-            v-for="value in statusTabs"
+            v-for="value in STATUS_OPTIONS"
             :key="value.value"
             class="filter-chip"
             :class="{ active: queryParams.status === value.value }"
@@ -172,6 +172,7 @@ import CardDragProxy from './components/CardDragProxy.vue';
 import CardList from './components/CardList.vue';
 import TransferCategoryDialog from './components/TransferCategoryDialog.vue';
 import { CARD_SORT_OPTIONS } from '@/constants/sortConfig';
+import { STATUS_OPTIONS } from '@/constants/cardStatus';
 import { batchDeleteCards, batchUpdateCards } from '@/services/cardService';
 import type { CardSortConfig, CardStatus } from '@/types/card';
 import type { quizQuery } from '@/types/quiz';
@@ -225,13 +226,6 @@ const handleCardTouchEnd = selection.handleCardTouchEnd;
 const handleCardTouchMove = selection.handleCardTouchMove;
 const categoryDialogVisible = ref(false);
 const selectedTransferCategoryId = ref('');
-
-const statusTabs = [
-  { label: '全部', value: undefined },
-  { label: '掌握', value: 'mastered' },
-  { label: '模糊', value: 'fuzzy' },
-  { label: '未知', value: 'unknown' },
-] as const;
 
 const queryParams = reactive<PageOptions>({});
 const enteredFromHomeSearch = ref(false);

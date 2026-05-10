@@ -1,15 +1,30 @@
 import cards from '@/data/cards.json';
 import categories from '@/data/category.json';
 import { UNCATEGORIZED_ID } from '@/constants/category';
-import { CATEGORY_STORAGE_KEY } from '@/constants/storageKeys';
-import { CARD_STORAGE_KEY } from '@/constants/storageKeys';
+import {
+  CATEGORY_STORAGE_KEY,
+  CARD_STORAGE_KEY,
+  DAILY_LEARNING_STATS_KEY,
+} from '@/constants/storageKeys';
 import { SORT_STEP } from '@/constants/sortConfig';
-import type { Card, Category, RawCard, CardSortConfig, Move } from '@/types/card';
+import { CARD_STATUS_TO_CODE } from '@/constants/cardStatus';
+import type {
+  Card,
+  Category,
+  RawCard,
+  CardSortConfig,
+  Move,
+  DailyLearningStats,
+  CardStatus,
+  CardStatusCode,
+} from '@/types/card';
 import type { ServiceResult } from '@/types/service';
-import type { PageResult } from '@/types/common';
+import type { PageResult, StatsResult } from '@/types/common';
 import { success, fail } from './serviceHelper';
 import { generateUUID } from '@/utils/uuid';
 import { sortCards } from '@/utils/cardSort';
+import { getStoredDailyQuizSession } from '@/utils/storage';
+import { getDateKey, getTimestampDaysAgo, dateKeyToTimestamp } from '@/utils/date';
 
 const defaultCategories = categories as Category[];
 
@@ -36,6 +51,8 @@ let cardDataVersion = 0;
 let categorySortCache: CategorySortCache | null = null;
 // 卡片查询缓存，同一组筛选和排序条件重复翻页时直接复用结果。
 let cardQueryCache: CardQueryCache | null = null;
+// 每日最大学习状态统计天数，超过这个天数的统计数据会被丢弃，避免占用过多存储空间。
+const MAX_DAILY_LEARNING_STATS_DAYS = 60;
 
 // 复制分类对象，防止外部修改影响缓存里的原始数据。
 function cloneCategory(category: Category): Category {
@@ -239,6 +256,40 @@ function saveCardsToStorage(list: Card[]) {
   cardQueryCache = null;
 }
 
+// 从本地存储加载日常学习状态统计数据，如果没有则返回空数组
+export function loadDailyLearningStats(): DailyLearningStats[] {
+  const saved = uni.getStorageSync(DAILY_LEARNING_STATS_KEY);
+  if (saved) {
+    try {
+      return JSON.parse(saved) as DailyLearningStats[];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+// 保存日常学习状态统计数据到本地存储，按日期排序后只保留一定日期的天数
+export function saveDailyLearningStats(stats: DailyLearningStats[]) {
+  const trimmedStats = [...stats]
+    .sort((left, right) => dateKeyToTimestamp(left.date) - dateKeyToTimestamp(right.date))
+    .slice(-MAX_DAILY_LEARNING_STATS_DAYS);
+  uni.setStorageSync(DAILY_LEARNING_STATS_KEY, JSON.stringify(trimmedStats));
+}
+
+function hasOwnField<T extends object>(target: T, key: keyof T) {
+  return Object.prototype.hasOwnProperty.call(target, key);
+}
+
+function shouldUpdateContentTimestamp(updates: Partial<Card>) {
+  return (
+    hasOwnField(updates, 'content') ||
+    hasOwnField(updates, 'question') ||
+    hasOwnField(updates, 'answer') ||
+    hasOwnField(updates, 'tags')
+  );
+}
+
 loadCardsFromStorage();
 
 type CardQueryParams = Partial<Card> & {
@@ -402,13 +453,65 @@ export function updateCard(updates: Partial<Card>): ServiceResult<Card> {
   if (index === -1) {
     return fail('题目未找到');
   }
+  const now = Date.now();
+  // 如果包含状态更新，更新statusUpdatedAt和masteredAt字段
+  if (hasOwnField(updates, 'status') && updates.status) {
+    updates.statusUpdatedAt = now;
+    if (updates.status === 'mastered') {
+      updates.masteredAt = now;
+    }
+  }
+  // 如果包含内容更新，更新contentUpdatedAt字段
+  if (shouldUpdateContentTimestamp(updates)) {
+    updates.contentUpdatedAt = now;
+  }
   const updatedCard: Card = {
     ...currentList[index],
     ...updates,
-    updatedAt: Date.now(),
+    updatedAt: now,
   };
   const updatedList = [...currentList];
   updatedList[index] = updatedCard;
+  saveCardsToStorage(updatedList);
+  return success(cloneCard(updatedCard));
+}
+
+// 测验时更新卡片状态并记更新DailyLearningStats
+export function updateDailyLearningStats(cardId: string, status: CardStatus): ServiceResult<Card> {
+  const currentList = loadCardsFromStorage();
+  const index = currentList.findIndex((item) => item.id === cardId);
+  if (index === -1) {
+    return fail('题目未找到');
+  }
+  const now = Date.now();
+  const updatedCard: Card = {
+    ...currentList[index],
+    status,
+    statusUpdatedAt: now,
+    masteredAt: status === 'mastered' ? now : currentList[index].masteredAt,
+    updatedAt: now,
+  };
+  const updatedList = [...currentList];
+  updatedList[index] = updatedCard;
+
+  // 更新卡片的同时更新每日学习状态统计数据
+  const dailyStats = loadDailyLearningStats();
+  const todayKey = getDateKey(new Date(now));
+  const todayStatsIndex = dailyStats.findIndex((stats) => stats.date === todayKey);
+  if (todayStatsIndex !== -1) {
+    const todayStats = dailyStats[todayStatsIndex];
+    todayStats.practicedCardIds.push(cardId);
+    todayStats.practiceStatuses.push(CARD_STATUS_TO_CODE[status]);
+    dailyStats[todayStatsIndex] = todayStats;
+  } else {
+    dailyStats.push({
+      date: todayKey,
+      practicedCardIds: [cardId],
+      practiceStatuses: [CARD_STATUS_TO_CODE[status]],
+    });
+  }
+
+  saveDailyLearningStats(dailyStats);
   saveCardsToStorage(updatedList);
   return success(cloneCard(updatedCard));
 }
@@ -521,4 +624,185 @@ export function updateCardOrderInCategory(categoryId: string, move: Move): Servi
   });
   saveCardsToStorage(nextList);
   return success(null);
+}
+
+// 获取统计数据
+export function getCardStats(): ServiceResult<StatsResult> {
+  // 拿到每日的学习状态统计数据
+  const currentList = loadCardsFromStorage();
+  const currentCategories = loadCategoriesForSort().categories;
+  const dailyStats = loadDailyLearningStats();
+  const todayKey = getDateKey(new Date());
+  const todayStart = dateKeyToTimestamp(todayKey);
+  const now = Date.now();
+
+  // 概览
+  const total = currentList.length;
+  const mastered = currentList.filter((card) => card.status === 'mastered').length;
+  const fuzzy = currentList.filter((card) => card.status === 'fuzzy').length;
+  const unknown = currentList.filter((card) => card.status === 'unknown').length;
+
+  // 今日练习状态统计：刷题数当前口径按去重处理
+  const { dailyQuizLimit, dailyQuizCurrentIndex } = getAnsweredCount();
+  const hasTodayDailyStats = hasDailyStatsInRange(dailyStats, todayStart);
+  const todayPracticeIds = hasTodayDailyStats
+    ? getCardIdsFromDailyStats(dailyStats, todayStart)
+    : getCardIdsByTime(currentList, 'statusUpdatedAt', todayStart, now);
+  const todayMasteredIds = hasTodayDailyStats
+    ? getCardIdsFromDailyStats(dailyStats, todayStart, CARD_STATUS_TO_CODE.mastered)
+    : getCardIdsByTime(currentList, 'masteredAt', todayStart, now);
+  const dailyStudied = getUniqueCount(todayPracticeIds);
+  const dailyMastered = getUniqueCount(todayMasteredIds);
+
+  // 分类统计
+  const categoryStats: StatsResult['categoryStats'] = {};
+  currentCategories.forEach((category) => {
+    const categoryCards = currentList.filter((card) => card.categoryId === category.id);
+    categoryStats[category.id] = {
+      total: categoryCards.length,
+      mastered: categoryCards.filter((card) => card.status === 'mastered').length,
+      fuzzy: categoryCards.filter((card) => card.status === 'fuzzy').length,
+      unknown: categoryCards.filter((card) => card.status === 'unknown').length,
+    };
+  });
+
+  const activityStats = getActivityStats(currentList, dailyStats);
+
+  return success({
+    total,
+    mastered,
+    fuzzy,
+    unknown,
+    dailyQuizLimit,
+    dailyQuizCurrentIndex,
+    dailyStudied,
+    dailyMastered,
+    categoryStats,
+    activityStats,
+  });
+}
+
+function countCardsByTime(
+  cards: Card[],
+  field: 'createdAt' | 'contentUpdatedAt' | 'statusUpdatedAt' | 'masteredAt',
+  start: number,
+  end: number,
+) {
+  return cards.filter((card) => {
+    const value = card[field];
+    return typeof value === 'number' && value >= start && value <= end;
+  }).length;
+}
+
+// 获取每日测验已答题数量和总题量
+function getAnsweredCount() {
+  const quizSession = getStoredDailyQuizSession();
+  if (!quizSession) {
+    return {
+      dailyQuizLimit: 0,
+      dailyQuizCurrentIndex: 0,
+    };
+  }
+
+  return {
+    dailyQuizLimit: quizSession.limit,
+    dailyQuizCurrentIndex: quizSession.finished
+      ? quizSession.queue.length
+      : quizSession.currentIndex,
+  };
+}
+
+// 根据卡片的时间字段筛选出在指定时间范围内的卡片 ID 列表，用于补足 dailyStats 的计算
+function getCardIdsByTime(
+  cards: Card[],
+  field: 'createdAt' | 'contentUpdatedAt' | 'statusUpdatedAt' | 'masteredAt',
+  start: number,
+  end: number,
+) {
+  return cards
+    .filter((card) => {
+      const value = card[field];
+      return typeof value === 'number' && value >= start && value <= end;
+    })
+    .map((card) => card.id);
+}
+
+// 根据 dailyStats 的练习记录统计在指定时间范围内的练习卡片 ID 列表，按状态码过滤
+function getCardIdsFromDailyStats(
+  dailyStats: DailyLearningStats[],
+  start: number,
+  statusCode?: CardStatusCode,
+) {
+  const ids: string[] = [];
+
+  dailyStats.forEach((stats) => {
+    if (dateKeyToTimestamp(stats.date) < start) {
+      return;
+    }
+
+    const pairCount = Math.min(stats.practicedCardIds.length, stats.practiceStatuses.length);
+    for (let index = 0; index < pairCount; index += 1) {
+      if (statusCode === undefined || stats.practiceStatuses[index] === statusCode) {
+        ids.push(stats.practicedCardIds[index]);
+      }
+    }
+  });
+
+  return ids;
+}
+
+// 去重 ID 列表，返回一个新的数组
+function getUniqueCount(ids: string[]) {
+  return new Set(ids).size;
+}
+
+function hasDailyStatsInRange(dailyStats: DailyLearningStats[], start: number) {
+  return dailyStats.some((stats) => dateKeyToTimestamp(stats.date) >= start);
+}
+
+// 新增和内容更新继续使用卡片时间字段；练习和掌握优先使用 dailyStats，仅在窗口内没有 dailyStats 时才回退到时间字段。
+function getActivityStats(
+  currentList: Card[],
+  dailyStats: DailyLearningStats[],
+): StatsResult['activityStats'] {
+  const now = Date.now();
+  const day7Start = getTimestampDaysAgo(7);
+  const day30Start = getTimestampDaysAgo(30);
+
+  const hasDay7DailyStats = hasDailyStatsInRange(dailyStats, day7Start);
+  const hasDay30DailyStats = hasDailyStatsInRange(dailyStats, day30Start);
+
+  const day7PracticeIds = hasDay7DailyStats
+    ? getCardIdsFromDailyStats(dailyStats, day7Start)
+    : getCardIdsByTime(currentList, 'statusUpdatedAt', day7Start, now);
+  const day30PracticeIds = hasDay30DailyStats
+    ? getCardIdsFromDailyStats(dailyStats, day30Start)
+    : getCardIdsByTime(currentList, 'statusUpdatedAt', day30Start, now);
+  const day7MasteredIds = hasDay7DailyStats
+    ? getCardIdsFromDailyStats(dailyStats, day7Start, CARD_STATUS_TO_CODE.mastered)
+    : getCardIdsByTime(currentList, 'masteredAt', day7Start, now);
+  const day30MasteredIds = hasDay30DailyStats
+    ? getCardIdsFromDailyStats(dailyStats, day30Start, CARD_STATUS_TO_CODE.mastered)
+    : getCardIdsByTime(currentList, 'masteredAt', day30Start, now);
+
+  const day7Stats = {
+    added: countCardsByTime(currentList, 'createdAt', day7Start, now),
+    updated: countCardsByTime(currentList, 'contentUpdatedAt', day7Start, now),
+    practice: getUniqueCount(day7PracticeIds),
+    mastered: getUniqueCount(day7MasteredIds),
+  };
+
+  const day30Stats = {
+    added: countCardsByTime(currentList, 'createdAt', day30Start, now),
+    updated: countCardsByTime(currentList, 'contentUpdatedAt', day30Start, now),
+    practice: getUniqueCount(day30PracticeIds),
+    mastered: getUniqueCount(day30MasteredIds),
+  };
+
+  const activityStats = {
+    '7day': day7Stats,
+    '30day': day30Stats,
+  };
+
+  return activityStats;
 }

@@ -11,7 +11,7 @@
       <view class="detail-summary">
         <view class="detail-top">
           <view class="detail-status" :class="`status-${cardData?.status}`">{{
-            cardData?.status ? cardStatusTextMap[cardData.status] : '新'
+            cardData?.status ? CARD_STATUS_LABELS[cardData.status] : '新'
           }}</view>
           <view class="detail-tag">
             {{
@@ -44,7 +44,7 @@ import { getCardById } from '@/services/cardService';
 import { getCategoryById } from '@/services/categoryService';
 import type { Card } from '@/types/card';
 import { UNCATEGORIZED_NAME } from '@/constants/category';
-import { cardStatusTextMap } from '@/constants/cardStatus';
+import { CARD_STATUS_LABELS } from '@/constants/cardStatus';
 import MarkdownContent from '@/components/MarkdownContent.vue';
 
 const cardId = ref<string | null>(null);
