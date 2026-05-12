@@ -12,13 +12,15 @@
 
         <view class="action-card action-card-import" @click="importData">
           <view class="action-title">数据导入</view>
-          <view class="action-desc">支持从 JSON 文件恢复卡片与分类</view>
+          <view class="action-desc"
+            >支持从 JSON 文件恢复卡片与分类；学习统计仅在覆盖导入时恢复</view
+          >
         </view>
 
         <view class="action-card action-card-export" @click="exportData">
           <view class="action-title">数据导出</view>
           <view class="action-desc"
-            >导出格式为 JSON，支持自定义文件名，最多保留5个备份并自动轮转覆盖最旧文件</view
+            >导出格式为 JSON，包含卡片、分类和学习统计，最多保留5个备份并自动轮转覆盖最旧文件</view
           >
         </view>
       </view>
@@ -77,8 +79,8 @@
           <view class="import-section-tip">
             {{
               importMode === 'merge'
-                ? '保留当前数据，并按你的规则处理冲突卡片。'
-                : '用导入文件整体替换当前分类和卡片。'
+                ? '保留当前数据，并按你的规则处理冲突卡片；学习统计会跳过，继续以本地记录为准。'
+                : '用导入文件整体替换当前分类和卡片，并恢复导入文件里的学习统计。'
             }}
           </view>
         </view>
@@ -140,7 +142,14 @@
         <view class="import-dialog-note" v-if="importMode !== 'merge'">
           <view class="import-dialog-note-title"> 覆盖导入提醒 </view>
           <view class="import-dialog-note-text">
-            覆盖导入会整体替换当前分类和卡片，导入文件里的内容和状态都会直接生效。
+            覆盖导入会整体替换当前分类和卡片，导入文件里的内容、状态和学习统计都会直接生效。
+          </view>
+        </view>
+
+        <view class="import-dialog-note" v-else>
+          <view class="import-dialog-note-title"> 合并导入提醒 </view>
+          <view class="import-dialog-note-text">
+            合并导入只处理分类、卡片和状态策略，不导入学习统计，避免覆盖你当前设备上的练习记录。
           </view>
         </view>
       </view>

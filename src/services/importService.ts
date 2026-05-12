@@ -1,10 +1,10 @@
 import { getCategories, saveAllCategories } from './categoryService';
-import { getCards, saveAllCards } from './cardService';
+import { getCards, saveAllCards, saveDailyLearningStats } from './cardService';
 import { fail, success } from './serviceHelper';
 import { generateUUID } from '@/utils/uuid';
 import { UNCATEGORIZED_ID, UNCATEGORIZED_NAME } from '@/constants/category';
 import type { ImportData, ImportResult, ImportMode, MergeConfig } from '@/types/migration';
-import type { RawCard, Card, Category } from '@/types/card';
+import type { RawCard, Card, Category, DailyLearningStats } from '@/types/card';
 import type { ServiceResult } from '@/types/service';
 
 /**
@@ -182,9 +182,31 @@ function isImportData(data: any): data is ImportData {
     typeof data === 'object' &&
     Array.isArray(data.categories) &&
     Array.isArray(data.cards) &&
+    (data.dailyLearningStats === undefined || Array.isArray(data.dailyLearningStats)) &&
     typeof data.version === 'string' &&
     typeof data.exportedAt === 'number'
   );
+}
+
+function normalizeDailyLearningStats(stats?: DailyLearningStats[]): DailyLearningStats[] {
+  if (!Array.isArray(stats)) {
+    return [];
+  }
+
+  return stats
+    .filter(
+      (item) =>
+        !!item &&
+        typeof item === 'object' &&
+        typeof item.date === 'string' &&
+        Array.isArray(item.practicedCardIds) &&
+        Array.isArray(item.practiceStatuses),
+    )
+    .map((item) => ({
+      date: item.date,
+      practicedCardIds: item.practicedCardIds.filter((id) => typeof id === 'string'),
+      practiceStatuses: item.practiceStatuses.filter((status) => typeof status === 'number'),
+    }));
 }
 
 // 解析JSON
@@ -444,6 +466,7 @@ export async function importFromJsonFile(
     }
     // 1、解析数据
     const importData = parseImportData(jsonStr);
+    const importedDailyLearningStats = normalizeDailyLearningStats(importData.dailyLearningStats);
     let mergedCategories: Category[] = [];
     let mergedCards: Card[] = [];
     // 合并模式
@@ -472,6 +495,9 @@ export async function importFromJsonFile(
     const cardRes = saveAllCards(mergedCards);
     if (!cardRes.success) {
       return fail(cardRes.message || '导入卡片失败');
+    }
+    if (mode === 'overwrite') {
+      saveDailyLearningStats(importedDailyLearningStats);
     }
     // 5、返回导入结果
     return success({

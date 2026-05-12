@@ -1,5 +1,5 @@
 import { getCategories } from './categoryService';
-import { getCards } from './cardService';
+import { getCards, loadDailyLearningStats } from './cardService';
 import type { ExportData } from '@/types/migration';
 
 // 导出的数据结构
@@ -9,10 +9,12 @@ const buildExportData = async (): Promise<ExportData> => {
 
   const categories = categoriesRes.data || [];
   const cards = cardsRes.data?.list || [];
+  const dailyLearningStats = loadDailyLearningStats();
 
   return {
     categories,
     cards,
+    dailyLearningStats,
     version: '1.0',
     exportedAt: Date.now(),
   };

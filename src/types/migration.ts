@@ -1,4 +1,4 @@
-import type { Card, Category } from './card';
+import type { Card, Category, DailyLearningStats } from './card';
 
 export type ExportType = 'json';
 export type ImportType = 'json';
@@ -6,6 +6,7 @@ export type ImportType = 'json';
 export interface ExportData {
   categories: Category[];
   cards: Card[];
+  dailyLearningStats?: DailyLearningStats[];
   version: string;
   exportedAt: number;
 }
@@ -13,6 +14,7 @@ export interface ExportData {
 export interface ImportData {
   categories: Category[];
   cards: Card[];
+  dailyLearningStats?: DailyLearningStats[];
   version: string;
   exportedAt: number;
 }
