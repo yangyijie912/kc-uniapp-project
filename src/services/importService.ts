@@ -6,6 +6,11 @@ import { UNCATEGORIZED_ID, UNCATEGORIZED_NAME } from '@/constants/category';
 import type { ImportData, ImportResult, ImportMode, MergeConfig } from '@/types/migration';
 import type { RawCard, Card, Category, DailyLearningStats } from '@/types/card';
 import type { ServiceResult } from '@/types/service';
+import {
+  getCategoryThemeIndexByName,
+  isValidCategoryThemeIndex,
+  pickAvailableCategoryThemeIndex,
+} from '@/utils/categoryTheme';
 
 /**
  * ==============================================================
@@ -258,6 +263,19 @@ type MergeCategoriesResult = {
   importedCategoryMap: Map<string, string>; // key: 导入分类ID，value: 系统分类ID，用于后续关联卡片时转换导入的 categoryId
 };
 
+// 根据导入的分类信息和当前系统中的分类列表，选择一个合适的主题索引，确保新分类有主题且尽量避免与现有分类冲突。
+function resolveImportedCategoryThemeIndex(
+  importedCategory: Category,
+  currentCategories: Category[],
+): number {
+  // 没有 themeIndex 的分类，或者 themeIndex 无效的分类，利用原来的哈希规则计算一个首选的主题索引
+  const preferredThemeIndex = isValidCategoryThemeIndex(importedCategory.themeIndex)
+    ? importedCategory.themeIndex
+    : getCategoryThemeIndexByName(importedCategory.name.trim());
+
+  return pickAvailableCategoryThemeIndex(currentCategories, preferredThemeIndex);
+}
+
 // 处理导入的分类数据，返回合并后的分类列表和导入分类ID到系统分类ID的映射关系
 function mergeCategories(
   importedCategories: ImportData['categories'],
@@ -301,6 +319,7 @@ function mergeCategories(
         id: generateUUID(),
         name: importedName,
         sort: mergedCategories.length, // 新分类排序值放到最后
+        themeIndex: resolveImportedCategoryThemeIndex(importedCategory, mergedCategories),
       };
       mergedCategories.push(newCategory);
       importedCategoryMap.set(importedId, newCategory.id);
@@ -313,7 +332,9 @@ function mergeCategories(
     // 3、名称和ID都不匹配，认为是新分类，添加到列表中
     const newCategory: Category = {
       ...importedCategory,
+      name: importedName,
       sort: importedCategory.sort ?? mergedCategories.length, // 保留原排序值，或者放到最后
+      themeIndex: resolveImportedCategoryThemeIndex(importedCategory, mergedCategories),
     };
     mergedCategories.push(newCategory);
     importedCategoryMap.set(importedId, newCategory.id);

@@ -15,7 +15,7 @@ const buildExportData = async (): Promise<ExportData> => {
     categories,
     cards,
     dailyLearningStats,
-    version: '1.0',
+    version: '1.1',
     exportedAt: Date.now(),
   };
 };

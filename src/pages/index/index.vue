@@ -59,8 +59,8 @@
           :key="c.id"
           class="category-item"
           :style="{
-            background: getCategoryTheme(c.name).background,
-            color: getCategoryTheme(c.name).color,
+            background: getCategoryTheme(c).background,
+            color: getCategoryTheme(c).color,
           }"
           @click="goToCardList(c.id)"
         >

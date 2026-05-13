@@ -22,6 +22,7 @@ export interface Category {
   id: string;
   name: string;
   sort: number;
+  themeIndex?: number;
   isSystem?: boolean;
 }
 
