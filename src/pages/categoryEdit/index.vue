@@ -17,7 +17,7 @@
         <input
           class="form-input"
           v-model="form.name"
-          placeholder="例如：Vue"
+          placeholder="例如：数学"
           placeholder-class="input-placeholder"
         />
       </view>

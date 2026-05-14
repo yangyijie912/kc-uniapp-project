@@ -59,7 +59,7 @@
       @focus="onFocus"
       @blur="onBlur"
       class="form-textarea form-textarea-content"
-      placeholder="补充更完整的解释、例子或笔记内容。"
+      placeholder="补充更完整的解释、例子或笔记内容"
       placeholder-class="input-placeholder"
       maxlength="-1"
       auto-height

@@ -36,7 +36,7 @@
         <textarea
           v-model="form.question"
           class="form-textarea form-textarea-title color-2"
-          placeholder="例如：Vue 的 computed 和 watch 有什么区别？"
+          placeholder="可以调动回忆或知识点的提问"
           placeholder-class="input-placeholder"
           maxlength="-1"
           auto-height
@@ -48,7 +48,7 @@
         <textarea
           v-model="form.answer"
           class="form-textarea color-3"
-          placeholder="先写一个简短、能直接展示的答案。"
+          placeholder="先写一个简短、能直接展示的答案"
           placeholder-class="input-placeholder"
           maxlength="-1"
           auto-height
@@ -65,10 +65,12 @@
         <input
           v-model="form.tagsText"
           class="form-input color-4"
-          placeholder="例如：响应式、生命周期、组件通信"
+          placeholder="用顿号或逗号分隔，中英文均可"
           placeholder-class="input-placeholder"
         />
-        <view class="field-tip">用顿号或逗号分隔。</view>
+        <view class="field-tip"
+          >尽量使用标签来标记题目的相关知识点、考点、难度等信息，方便后续搜索和复习。</view
+        >
       </view>
 
       <view v-if="cardId" class="danger-card">

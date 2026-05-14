@@ -13,7 +13,7 @@
         <input
           v-model="inputKeyword"
           class="search-input"
-          placeholder="搜索问题或答案"
+          placeholder="问题/答案/笔记/标签"
           placeholder-class="placeholder"
         />
         <view class="filter-btn" @click="searchCard">筛选</view>

@@ -6,8 +6,8 @@
 
       <view class="action-grid">
         <view class="action-card action-card-stats" @click="goToStats">
-          <view class="action-title">统计</view>
-          <view class="action-desc">查看学习概览与分类表现</view>
+          <view class="action-title">学习统计</view>
+          <view class="action-desc">查看总量、今日进度、活跃度和分类表现</view>
         </view>
 
         <view class="action-card action-card-import" @click="importData">
@@ -35,15 +35,12 @@
       @confirm="confirmExport"
     >
       <view class="export-dialog">
-        <view class="export-dialog-tip"
-          >请输入文件名，不超过
-          {{ MAX_EXPORT_FILE_NAME_LENGTH }} 个字，留空则使用默认命名规则。</view
-        >
+        <view class="export-dialog-tip">请输入文件名，留空则使用默认命名规则。</view>
         <input
           v-model="exportFileName"
           class="export-input"
           :maxlength="MAX_EXPORT_FILE_NAME_LENGTH"
-          placeholder="例如：前端知识卡200张"
+          :placeholder="`不超过 ${MAX_EXPORT_FILE_NAME_LENGTH} 个字`"
           placeholder-class="export-input-placeholder"
         />
       </view>
@@ -79,7 +76,7 @@
           <view class="import-section-tip">
             {{
               importMode === 'merge'
-                ? '保留当前数据，并按你的规则处理冲突卡片；学习统计会跳过，继续以本地记录为准。'
+                ? '保留当前数据，并按规则处理冲突卡片；学习统计会跳过，继续以本地记录为准。'
                 : '用导入文件整体替换当前分类和卡片，并恢复导入文件里的学习统计。'
             }}
           </view>
@@ -106,7 +103,7 @@
           <view class="import-choice-desc">
             {{
               importConfig.conflictStrategy === 'skip'
-                ? ' ID 卡片保留本地数据，不做覆盖。'
+                ? '同 ID 卡片保留本地数据，不做覆盖。'
                 : '同 ID 卡片以新导入的数据为准。'
             }}
           </view>
@@ -133,7 +130,7 @@
           <view class="import-choice-desc">
             {{
               importConfig.statusStrategy === 'imported'
-                ? '适合导入你自己另一套题库，保留卡片状态。'
+                ? '适合导入自己另一套题库，保留卡片状态。'
                 : '适合别人的题库，只导入题目内容，不带学习状态。'
             }}
           </view>
@@ -149,7 +146,7 @@
         <view class="import-dialog-note" v-else>
           <view class="import-dialog-note-title"> 合并导入提醒 </view>
           <view class="import-dialog-note-text">
-            合并导入只处理分类、卡片和状态策略，不导入学习统计，避免覆盖你当前设备上的练习记录。
+            合并导入只处理分类、卡片和状态策略，不导入学习统计，避免覆盖当前设备上的练习记录。
           </view>
         </view>
       </view>
