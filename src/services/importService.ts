@@ -299,7 +299,7 @@ function mergeCategories(
     // 未分类是系统保留分类，直接跳过
     if (importedId === UNCATEGORIZED_ID || importedName === UNCATEGORIZED_NAME) {
       importedCategoryMap.set(importedId, UNCATEGORIZED_ID); // 无论ID还是名称匹配，都映射到系统的未分类ID
-      countTotal.skippedCategoryCount += 1;
+      // 系统保留分类只做映射，不参与“跳过分类”统计，避免没有实际数据的未分类也被算一条。
       continue;
     }
 
