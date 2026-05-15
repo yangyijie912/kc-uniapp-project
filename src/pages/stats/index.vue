@@ -27,7 +27,7 @@
     <view class="section">
       <view class="section-title">今日状态</view>
       <view class="today-panel">
-        <view class="today-main-card">
+        <view class="today-main-card" @click="handleTodayQuizClick">
           <view class="today-main-head">
             <view>
               <view class="today-main-label">今日测验进度</view>
@@ -174,6 +174,24 @@ const todayStats = computed(() => {
     correctRate,
   };
 });
+
+function handleTodayQuizClick() {
+  const { quizDone, quizTarget } = todayStats.value;
+
+  // 统计页只在当日测验真正完成后开放结果页，避免点进空结果或半截进度。
+  if (quizTarget <= 0 || quizDone < quizTarget) {
+    uni.showToast({
+      title: '今日测验还没完成，快去开始吧',
+      icon: 'none',
+    });
+    return;
+  }
+
+  // 结果页现有逻辑依赖测验参数识别入口类型，这里保持和测验结束时一致。
+  uni.navigateTo({
+    url: '/pages/quizResult/index?type=today',
+  });
+}
 
 const statusDistribution = computed(() => [
   {
@@ -333,6 +351,11 @@ onShow(() => {
   background:
     linear-gradient(135deg, rgba(31, 94, 255, 0.12), rgba(255, 252, 247, 0.92)),
     rgba(255, 252, 247, 0.9);
+  cursor: pointer;
+}
+
+.today-main-card:active {
+  transform: scale(0.99);
 }
 
 .today-main-head {

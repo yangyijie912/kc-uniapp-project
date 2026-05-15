@@ -91,6 +91,14 @@ onShow(() => {
 });
 
 const toHome = () => {
+  // 结果页入口不固定，优先返回上一页；只有页面栈为空时才兜底回首页。
+  if (getCurrentPages().length <= 1) {
+    uni.switchTab({
+      url: '/pages/index/index',
+    });
+    return;
+  }
+
   uni.navigateBack({
     delta: 1,
   });
