@@ -71,6 +71,7 @@
 <script setup lang="ts">
 import { reactive } from 'vue';
 import { onLoad, onShow } from '@dcloudio/uni-app';
+import { QUIZ_RESULT_STORAGE_KEY } from '@/constants/storageKeys';
 import { jsonToUrlParam } from '@/utils/jsonToUrl';
 import type { quizQuery } from '@/types/quiz';
 
@@ -84,7 +85,7 @@ const quizResult = reactive({
 const quizOptions = reactive<Partial<quizQuery>>({});
 
 onShow(() => {
-  const resultStr = uni.getStorageSync('quizResult');
+  const resultStr = uni.getStorageSync(QUIZ_RESULT_STORAGE_KEY);
   if (resultStr) {
     Object.assign(quizResult, JSON.parse(resultStr));
   }

@@ -69,6 +69,7 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 import { CARD_STATUS_LABELS } from '@/constants/cardStatus';
+import { QUIZ_RESULT_STORAGE_KEY } from '@/constants/storageKeys';
 import { updateDailyLearningStats } from '@/services/cardService';
 import {
   getFreedomQuizQuestions,
@@ -127,7 +128,7 @@ const finishQuiz = () => {
   if (quizOptions.type === 'today') {
     syncDailyProgress(true);
   }
-  uni.setStorageSync('quizResult', JSON.stringify(quizResult));
+  uni.setStorageSync(QUIZ_RESULT_STORAGE_KEY, JSON.stringify(quizResult));
   uni.redirectTo({
     url: `/pages/quizResult/index?${jsonToUrlParam(quizOptions)}`,
   });
