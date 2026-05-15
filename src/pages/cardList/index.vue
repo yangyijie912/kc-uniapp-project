@@ -38,11 +38,15 @@
 
         <picker
           class="sort-picker-wrap"
+          :class="{ disabled: isSortPickerDisabled }"
           :range="sortOptionLabels"
           :value="selectedSortIndex"
+          :disabled="isSortPickerDisabled"
           @change="handleSortChange"
         >
-          <view class="sort-picker">排序：{{ selectedSortLabel }}</view>
+          <view class="sort-picker" :class="{ disabled: isSortPickerDisabled }">{{
+            selectedSortLabel
+          }}</view>
         </picker>
 
         <view class="page-actions">
@@ -236,6 +240,11 @@ const selectedSortConfig = computed<CardSortConfig>(() => {
 });
 const selectedSortLabel = computed(() => {
   return sortOptionLabels[selectedSortIndex.value] ?? sortOptionLabels[0];
+});
+
+// 拖拽中不能再切换排序维度，否则列表顺序和拖拽命中锚点会同时变化，手感会直接乱掉。
+const isSortPickerDisabled = computed(() => {
+  return isSortMode.value || isSortModeDisabled.value;
 });
 
 // 只有分类页里的正常列表才显示“测验”入口；搜索结果页不在这里直接开始测验。
@@ -489,6 +498,11 @@ const toggleStatusFilter = (status?: CardStatus) => {
 };
 
 const handleSortChange = (event: { detail: { value: string } }) => {
+  if (isSortMode.value) {
+    uni.showToast({ title: '请先退出拖拽模式', icon: 'none' });
+    return;
+  }
+
   resetInteractionModes();
   selectedSortIndex.value = Number(event.detail.value);
   currentPage.value = 1;
@@ -772,6 +786,10 @@ onShow(() => {
   flex-shrink: 0;
 }
 
+.sort-picker-wrap.disabled {
+  opacity: 0.56;
+}
+
 .sort-picker {
   min-height: 64rpx;
   padding: 0 22rpx;
@@ -783,6 +801,11 @@ onShow(() => {
   color: #6c645a;
   font-size: 24rpx;
   box-sizing: border-box;
+}
+
+.sort-picker.disabled {
+  background: rgba(255, 252, 247, 0.68);
+  color: #9d9487;
 }
 
 .filter-chip {

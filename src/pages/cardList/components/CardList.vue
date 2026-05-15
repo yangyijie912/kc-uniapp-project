@@ -568,7 +568,7 @@ function formatAnswerPreview(answer: string | null | undefined) {
 }
 
 .status-unknown {
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(61, 43, 24, 0.08);
   color: #6c645a;
 }
 
