@@ -16,7 +16,7 @@
       </view>
     </view>
     <view class="card-question">{{ card.question }}</view>
-    <text class="card-answer">{{ card.answer }}</text>
+    <text class="card-answer">{{ formatAnswerPreview(card.answer) }}</text>
     <view v-if="Array.isArray(card.tags) && card.tags.length > 0" class="card-tag card-tag-bottom">
       {{ card.tags.join(' • ') }}
     </view>
@@ -33,6 +33,18 @@ type Props = {
 };
 
 defineProps<Props>();
+
+function formatAnswerPreview(answer: string | null | undefined) {
+  if (!answer) {
+    return '';
+  }
+
+  // 拖拽代理要和列表卡片完全同构，避免拖起后卡高和文本分布发生跳变。
+  return answer
+    .replace(/\s*\r?\n\s*/g, ' ')
+    .replace(/[\t ]+/g, ' ')
+    .trim();
+}
 </script>
 
 <style scoped>

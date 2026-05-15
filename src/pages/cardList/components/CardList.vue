@@ -65,7 +65,7 @@
             }}</view>
           </view>
           <view class="card-question">{{ item.card.question }}</view>
-          <text class="card-answer">{{ item.card.answer }}</text>
+          <text class="card-answer">{{ formatAnswerPreview(item.card.answer) }}</text>
           <view
             v-if="Array.isArray(item.card.tags) && item.card.tags.length > 0"
             class="card-tag card-tag-bottom"
@@ -140,7 +140,7 @@
             }}</view>
           </view>
           <view class="card-question">{{ item.card.question }}</view>
-          <text class="card-answer">{{ item.card.answer }}</text>
+          <text class="card-answer">{{ formatAnswerPreview(item.card.answer) }}</text>
           <view
             v-if="Array.isArray(item.card.tags) && item.card.tags.length > 0"
             class="card-tag card-tag-bottom"
@@ -270,6 +270,18 @@ const renderItems = computed<RenderItem[]>(() => {
 
   return baseItems;
 });
+
+function formatAnswerPreview(answer: string | null | undefined) {
+  if (!answer) {
+    return '';
+  }
+
+  // 列表预览必须固定卡高：把显式换行压成空格，再交给两行省略处理。
+  return answer
+    .replace(/\s*\r?\n\s*/g, ' ')
+    .replace(/[\t ]+/g, ' ')
+    .trim();
+}
 </script>
 
 <style scoped>
