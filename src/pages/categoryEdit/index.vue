@@ -100,10 +100,10 @@ const save = () => {
     return;
   }
 
-  // 将排序转换为数字，如果输入为空则默认为 0
-  const sort = form.sort.trim() === '' ? 0 : Number(form.sort);
+  // 将排序转换为数字，如果输入为空则交给服务层自动追加到末尾
+  const sort = form.sort.trim() === '' ? undefined : Number(form.sort);
 
-  if (Number.isNaN(sort)) {
+  if (sort !== undefined && !Number.isFinite(sort)) {
     uni.showToast({
       title: '排序必须是数字',
       icon: 'none',
@@ -115,9 +115,15 @@ const save = () => {
   let res;
 
   if (categoryId) {
-    res = updateCategory({ id: categoryId, name: form.name.trim(), sort });
+    res = updateCategory(
+      sort === undefined
+        ? { id: categoryId, name: form.name.trim() }
+        : { id: categoryId, name: form.name.trim(), sort },
+    );
   } else {
-    res = addCategory({ name: form.name.trim(), sort });
+    res = addCategory(
+      sort === undefined ? { name: form.name.trim() } : { name: form.name.trim(), sort },
+    );
   }
 
   if (!res.success) {
