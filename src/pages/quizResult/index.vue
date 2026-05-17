@@ -71,8 +71,8 @@
 <script setup lang="ts">
 import { reactive } from 'vue';
 import { onLoad, onShow } from '@dcloudio/uni-app';
-import { QUIZ_RESULT_STORAGE_KEY } from '@/constants/storageKeys';
 import { jsonToUrlParam } from '@/utils/jsonToUrl';
+import { getStoredDailyQuizSession, readStoredQuizResult } from '@/utils/storage';
 import type { quizQuery } from '@/types/quiz';
 
 const quizResult = reactive({
@@ -84,11 +84,33 @@ const quizResult = reactive({
 
 const quizOptions = reactive<Partial<quizQuery>>({});
 
+const resetQuizResult = () => {
+  quizResult.total = 0;
+  quizResult.unknown = 0;
+  quizResult.fuzzy = 0;
+  quizResult.mastered = 0;
+};
+
 onShow(() => {
-  const resultStr = uni.getStorageSync(QUIZ_RESULT_STORAGE_KEY);
-  if (resultStr) {
-    Object.assign(quizResult, JSON.parse(resultStr));
+  if (quizOptions.type === 'today') {
+    // 今日测验结果以每日 session 为准，避免和自由测验结果缓存串源。
+    const session = getStoredDailyQuizSession();
+    if (session) {
+      Object.assign(quizResult, session.result);
+      return;
+    }
+
+    resetQuizResult();
+    return;
   }
+
+  const storedResult = readStoredQuizResult();
+  if (storedResult) {
+    Object.assign(quizResult, storedResult);
+    return;
+  }
+
+  resetQuizResult();
 });
 
 const toHome = () => {

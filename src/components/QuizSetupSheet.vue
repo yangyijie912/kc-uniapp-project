@@ -103,6 +103,9 @@
         {{ selectedQuizType !== 'today' ? practiceModeText + '，' : '' }}
         数量：{{ selectedQuizType !== 'today' ? selectedLimit : '固定' + dailyQuizLimit }}</view
       >
+      <view v-if="selectedQuizType === 'today'" class="quiz-setup-note-tip"
+        >提示：当天题集生成后，如其中卡片的分类、问题、答案或笔记发生变动，续答时会按当前内容重建题集；仅修改标签不影响续答。</view
+      >
     </view>
 
     <view class="quiz-setup-actions">
@@ -261,6 +264,13 @@ const onCustomLimitInput = (event: InputLikeEvent) => {
 
 .quiz-setup-section {
   margin-top: 24rpx;
+}
+
+.quiz-setup-note-tip {
+  margin-top: 10rpx;
+  color: #cc8419;
+  font-size: 22rpx;
+  line-height: 1.6;
 }
 
 .quiz-setup-label {

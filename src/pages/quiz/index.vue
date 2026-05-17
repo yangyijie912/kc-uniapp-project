@@ -127,8 +127,10 @@ const finishQuiz = () => {
   // 如果是每日测验，确保最后一次进度同步，标记为已完成
   if (quizOptions.type === 'today') {
     syncDailyProgress(true);
+  } else {
+    // 自由测验结果没有 session 兜底，仍然单独持久化供结果页读取。
+    uni.setStorageSync(QUIZ_RESULT_STORAGE_KEY, JSON.stringify(quizResult));
   }
-  uni.setStorageSync(QUIZ_RESULT_STORAGE_KEY, JSON.stringify(quizResult));
   uni.redirectTo({
     url: `/pages/quizResult/index?${jsonToUrlParam(quizOptions)}`,
   });
@@ -151,6 +153,12 @@ function buildQueue() {
     cardQueue.value = res.data.queue;
     cardIndex.value = res.data.currentIndex;
     Object.assign(quizResult, res.data.result);
+    if (res.message) {
+      uni.showToast({
+        title: res.message,
+        icon: 'none',
+      });
+    }
     // 如果测验已经完成，直接跳转到结果页
     if (res.data.finished) {
       finishQuiz();
@@ -181,14 +189,24 @@ function buildQueue() {
 
 // 状态更新接口
 const changeStatus = (cardId: string | undefined, status: CardStatus) => {
-  if (!cardId) return;
+  if (!cardId) {
+    uni.showToast({
+      title: '当前题目已失效，请重新开始测验',
+      icon: 'none',
+    });
+    return false;
+  }
+
   const res = updateDailyLearningStats(cardId, status);
   if (!res.success) {
     uni.showToast({
       title: res.message || '状态更新失败',
       icon: 'none',
     });
+    return false;
   }
+
+  return true;
 };
 
 // 进入下一题
@@ -206,17 +224,23 @@ const nextQuestion = () => {
 const onQuiz = (status: string) => {
   switch (status) {
     case CARD_STATUS_LABELS.unknown:
-      changeStatus(currentCard.value?.id, 'unknown');
+      if (!changeStatus(currentCard.value?.id, 'unknown')) {
+        return;
+      }
       quizResult.unknown += 1;
       nextQuestion();
       break;
     case CARD_STATUS_LABELS.fuzzy:
-      changeStatus(currentCard.value?.id, 'fuzzy');
+      if (!changeStatus(currentCard.value?.id, 'fuzzy')) {
+        return;
+      }
       quizResult.fuzzy += 1;
       nextQuestion();
       break;
     case CARD_STATUS_LABELS.mastered:
-      changeStatus(currentCard.value?.id, 'mastered');
+      if (!changeStatus(currentCard.value?.id, 'mastered')) {
+        return;
+      }
       quizResult.mastered += 1;
       nextQuestion();
       break;

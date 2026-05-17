@@ -23,7 +23,7 @@ import type { PageResult, StatsResult } from '@/types/common';
 import { success, fail } from './serviceHelper';
 import { generateUUID } from '@/utils/uuid';
 import { sortCards } from '@/utils/cardSort';
-import { getStoredDailyQuizSession } from '@/utils/storage';
+import { getStoredDailyQuizSession, readStorageJson } from '@/utils/storage';
 import { getDateKey, getTimestampDaysAgo, dateKeyToTimestamp } from '@/utils/date';
 
 const defaultCategories = categories as Category[];
@@ -234,16 +234,17 @@ function loadCardsFromStorage(): Card[] {
     return cardList.map(cloneCard);
   }
 
-  const saved = uni.getStorageSync(CARD_STORAGE_KEY);
-  if (saved) {
-    const savedCards = JSON.parse(saved) as Card[];
-    const normalizedCards = savedCards.map(mergeMissingCardFields);
+  const { hasStoredValue, parsed, value } = readStorageJson<unknown>(CARD_STORAGE_KEY, null);
+
+  if (hasStoredValue && parsed && Array.isArray(value)) {
+    const normalizedCards = (value as Card[]).map(mergeMissingCardFields);
     saveCardsToStorage(normalizedCards);
     return normalizedCards.map(cloneCard);
-  } else {
-    saveCardsToStorage(defaultCards); // 保存默认卡片到本地存储
-    return defaultCards.map(cloneCard);
   }
+
+  // 坏数据不能继续让卡片服务在模块初始化时抛异常，这里直接回写一份可用题库自愈。
+  saveCardsToStorage(defaultCards);
+  return defaultCards.map(cloneCard);
 }
 
 // 保存整个卡片列表到本地存储
