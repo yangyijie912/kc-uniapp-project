@@ -181,7 +181,7 @@ function handleTodayQuizClick() {
   // 统计页只在当日测验真正完成后开放结果页，避免点进空结果或半截进度。
   if (quizTarget <= 0 || quizDone < quizTarget) {
     uni.showToast({
-      title: '今日测验还没完成，快去开始吧',
+      title: '今日测验还没完成，快去完成吧',
       icon: 'none',
     });
     return;
