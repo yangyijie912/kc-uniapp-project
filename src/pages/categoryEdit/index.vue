@@ -18,6 +18,7 @@
           class="form-input"
           v-model="form.name"
           placeholder="例如：数学"
+          maxlength="20"
           placeholder-class="input-placeholder"
         />
       </view>
@@ -86,6 +87,14 @@ const save = () => {
   if (form.name.trim() === '') {
     uni.showToast({
       title: '名称不能为空',
+      icon: 'none',
+    });
+    return;
+  }
+
+  if (form.name.trim().length > 20) {
+    uni.showToast({
+      title: '名称最多20个字',
       icon: 'none',
     });
     return;

@@ -13,7 +13,7 @@
 
     <view class="list-card">
       <view v-for="category in categoryViewList" :key="category.id" class="category-row">
-        <view>
+        <view class="category-info">
           <view class="category-name">{{ category.name }}</view>
           <view class="category-count">{{ category.cardCount }} 张卡片</view>
         </view>
@@ -229,6 +229,12 @@ onShow(() => {
   border-bottom: 1rpx solid rgba(61, 43, 24, 0.08);
 }
 
+.category-info {
+  min-width: 0;
+  flex: 1;
+  padding-right: 16rpx;
+}
+
 .category-row:last-child {
   border-bottom: none;
 }
@@ -237,6 +243,9 @@ onShow(() => {
   color: #1e1c18;
   font-size: 30rpx;
   font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .category-count {
@@ -246,7 +255,7 @@ onShow(() => {
 
 .row-actions {
   display: flex;
-  gap: 12rpx;
+  gap: 14rpx;
 }
 
 .row-btn {
@@ -268,12 +277,12 @@ onShow(() => {
 }
 
 .row-icon {
-  width: 56rpx;
-  height: 56rpx;
+  width: 64rpx;
+  height: 64rpx;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8rpx;
+  border-radius: 10rpx;
   background: #ffffff; /* white square */
   border: 1rpx solid rgba(61, 43, 24, 0.04);
   box-sizing: border-box;
@@ -290,13 +299,12 @@ onShow(() => {
 }
 
 .row-icon-danger {
-  background: rgba(239, 125, 66, 0.12);
-  color: #c76530;
+  background: rgba(215, 75, 63, 0.12);
 }
 
 .row-icon-image {
-  width: 28rpx;
-  height: 28rpx;
+  width: 32rpx;
+  height: 32rpx;
   display: block;
 }
 
