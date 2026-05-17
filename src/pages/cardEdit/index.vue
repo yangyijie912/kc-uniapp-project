@@ -10,7 +10,7 @@
       <view class="form-header">
         <view class="form-title">基础信息</view>
         <view class="form-tip"
-          >修改基础信息，答案尽量概括，正文内容可补充更完整的解释、例子或笔记内容。</view
+          >修改基础信息，答案尽量概括，笔记可补充更完整的解释、例子或其他相关内容。</view
         >
       </view>
 
@@ -56,7 +56,7 @@
       </view>
 
       <view class="form-group">
-        <view class="form-label">正文内容</view>
+        <view class="form-label">笔记</view>
         <MarkdownToolbar v-model="form.content" />
       </view>
 

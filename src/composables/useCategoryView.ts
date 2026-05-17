@@ -62,13 +62,17 @@ export default function useCategoryView() {
         const cardCount = cardCountMap.value[category.id] ?? 0;
         const isUncategorized = category.id === UNCATEGORIZED_ID;
 
-        // 计算是否可向上/向下移动：不能移动系统分类或未分类，也不能移动到未分类位置
+        // 视图层统一裁剪未分类的交互能力，页面只消费这里的结果，不再自己判断系统 ID。
         const prev = categoryList.value[idx - 1];
         const next = categoryList.value[idx + 1];
         const canEdit = !isUncategorized && !category.isSystem;
         const canDelete = !isUncategorized && !category.isSystem;
-        const canMoveUp = Boolean(canEdit && prev && prev.id !== UNCATEGORIZED_ID);
-        const canMoveDown = Boolean(canEdit && next && next.id !== UNCATEGORIZED_ID);
+        const canMoveUp = Boolean(
+          canEdit && !isUncategorized && prev && prev.id !== UNCATEGORIZED_ID,
+        );
+        const canMoveDown = Boolean(
+          canEdit && !isUncategorized && next && next.id !== UNCATEGORIZED_ID,
+        );
 
         return {
           ...category,

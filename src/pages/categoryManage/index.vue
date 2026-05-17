@@ -19,34 +19,30 @@
             <view class="category-count">{{ category.cardCount }} 张卡片</view>
           </view>
           <view class="row-actions">
-            <view
-              class="row-icon"
-              @click="category.canMoveUp && moveUp(category.id)"
-              :class="{ disabled: !category.canMoveUp }"
-            >
+            <view v-if="category.canMoveUp" class="row-icon" @click="moveUp(category.id)">
               <image
                 class="row-icon-image"
-                :src="
-                  category.canMoveUp
-                    ? '/static/actions/shangjiantou.svg'
-                    : '/static/actions/shangjiantou-disabled.svg'
-                "
+                src="/static/actions/shangjiantou.svg"
                 mode="aspectFit"
               />
             </view>
 
-            <view
-              class="row-icon"
-              @click="category.canMoveDown && moveDown(category.id)"
-              :class="{ disabled: !category.canMoveDown }"
-            >
+            <view v-else-if="category.canEdit" class="row-icon" :class="{ disabled: true }">
               <image
                 class="row-icon-image"
-                :src="
-                  category.canMoveDown
-                    ? '/static/actions/xiajiantou.svg'
-                    : '/static/actions/xiajiantou-disabled.svg'
-                "
+                src="/static/actions/shangjiantou-disabled.svg"
+                mode="aspectFit"
+              />
+            </view>
+
+            <view v-if="category.canMoveDown" class="row-icon" @click="moveDown(category.id)">
+              <image class="row-icon-image" src="/static/actions/xiajiantou.svg" mode="aspectFit" />
+            </view>
+
+            <view v-else-if="category.canEdit" class="row-icon disabled">
+              <image
+                class="row-icon-image"
+                src="/static/actions/xiajiantou-disabled.svg"
                 mode="aspectFit"
               />
             </view>
