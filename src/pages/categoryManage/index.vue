@@ -18,13 +18,49 @@
           <view class="category-count">{{ category.cardCount }} 张卡片</view>
         </view>
         <view class="row-actions">
-          <view class="row-btn" @click="goToEdit(category.id)" v-if="category.canEdit">编辑</view>
           <view
-            class="row-btn row-btn-danger"
+            class="row-icon"
+            @click="category.canMoveUp && moveUp(category.id)"
+            :class="{ disabled: !category.canMoveUp }"
+          >
+            <image
+              class="row-icon-image"
+              :src="
+                category.canMoveUp
+                  ? '/static/actions/shangjiantou.svg'
+                  : '/static/actions/shangjiantou-disabled.svg'
+              "
+              mode="aspectFit"
+            />
+          </view>
+
+          <view
+            class="row-icon"
+            @click="category.canMoveDown && moveDown(category.id)"
+            :class="{ disabled: !category.canMoveDown }"
+          >
+            <image
+              class="row-icon-image"
+              :src="
+                category.canMoveDown
+                  ? '/static/actions/xiajiantou.svg'
+                  : '/static/actions/xiajiantou-disabled.svg'
+              "
+              mode="aspectFit"
+            />
+          </view>
+
+          <view class="row-icon" @click="goToEdit(category.id)" v-if="category.canEdit">
+            <image class="row-icon-image" src="/static/actions/bianji.svg" mode="aspectFit" />
+          </view>
+
+          <view
+            class="row-icon row-icon-danger"
             @click="removeCategory(category.id)"
             v-if="category.canDelete"
-            >删除</view
           >
+            <image class="row-icon-image" src="/static/actions/shanchu.svg" mode="aspectFit" />
+          </view>
         </view>
       </view>
     </view>
@@ -32,7 +68,7 @@
 </template>
 
 <script setup lang="ts">
-import { deleteCategory } from '@/services/categoryService';
+import { deleteCategory, moveCategoryUp, moveCategoryDown } from '@/services/categoryService';
 import { onShow } from '@dcloudio/uni-app';
 import useCategoryView from '@/composables/useCategoryView';
 const { categoryViewList, loadAllData } = useCategoryView();
@@ -63,6 +99,32 @@ const performDelete = (id: string) => {
     title: res.success ? '分类删除成功' : res.message || '分类删除失败',
     icon: res.success ? 'success' : 'none',
   });
+};
+
+// 向上移动分类
+const moveUp = (id: string) => {
+  const res = moveCategoryUp(id);
+  if (res.success) {
+    loadAllData();
+  } else {
+    uni.showToast({
+      title: res.message || '移动失败',
+      icon: 'none',
+    });
+  }
+};
+
+// 向下移动分类
+const moveDown = (id: string) => {
+  const res = moveCategoryDown(id);
+  if (res.success) {
+    loadAllData();
+  } else {
+    uni.showToast({
+      title: res.message || '移动失败',
+      icon: 'none',
+    });
+  }
 };
 
 // 进入分类编辑页
@@ -203,6 +265,39 @@ onShow(() => {
 .row-btn-danger {
   background: rgba(239, 125, 66, 0.12);
   color: #c76530;
+}
+
+.row-icon {
+  width: 56rpx;
+  height: 56rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8rpx;
+  background: #ffffff; /* white square */
+  border: 1rpx solid rgba(61, 43, 24, 0.04);
+  box-sizing: border-box;
+}
+
+.row-icon.selected {
+  border: 2rpx solid #2f6fa8; /* blue selected border */
+}
+
+.row-icon.disabled {
+  background: #f3f4f6; /* disabled grey square */
+  pointer-events: none;
+  opacity: 1;
+}
+
+.row-icon-danger {
+  background: rgba(239, 125, 66, 0.12);
+  color: #c76530;
+}
+
+.row-icon-image {
+  width: 28rpx;
+  height: 28rpx;
+  display: block;
 }
 
 @media (max-width: 320px) {

@@ -58,15 +58,25 @@ export default function useCategoryView() {
   // 计算分类视图列表，包含每个分类的卡片数量和是否可编辑/删除等属性
   const categoryViewList = computed<CategoryView[]>(() => {
     return categoryList.value
-      .map((category) => {
+      .map((category, idx) => {
         const cardCount = cardCountMap.value[category.id] ?? 0;
         const isUncategorized = category.id === UNCATEGORIZED_ID;
+
+        // 计算是否可向上/向下移动：不能移动系统分类或未分类，也不能移动到未分类位置
+        const prev = categoryList.value[idx - 1];
+        const next = categoryList.value[idx + 1];
+        const canEdit = !isUncategorized && !category.isSystem;
+        const canDelete = !isUncategorized && !category.isSystem;
+        const canMoveUp = Boolean(canEdit && prev && prev.id !== UNCATEGORIZED_ID);
+        const canMoveDown = Boolean(canEdit && next && next.id !== UNCATEGORIZED_ID);
 
         return {
           ...category,
           cardCount,
-          canEdit: !isUncategorized,
-          canDelete: !isUncategorized,
+          canEdit,
+          canDelete,
+          canMoveUp,
+          canMoveDown,
           visible: !(isUncategorized && cardCount === 0),
         };
       })
