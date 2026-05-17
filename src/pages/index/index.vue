@@ -51,7 +51,7 @@
         <view class="section-tip">从熟悉的主题开始刷题</view>
       </view>
 
-      <view class="category-list">
+      <view v-if="categoryViewList.length > 0" class="category-list">
         <view
           v-for="c in categoryViewList"
           :key="c.id"
@@ -64,6 +64,15 @@
         >
           <text class="category-name">{{ c.name }}</text>
           <text class="category-count">{{ c.cardCount }} 张卡片</text>
+        </view>
+      </view>
+
+      <view v-else class="category-empty">
+        <view class="empty-card">
+          <view class="empty-text"
+            >还没有可展示的分类，先去分类管理新建一个分类，或者把卡片归类后再回来查看。</view
+          >
+          <view class="empty-action" @click="goToCategoryManage">去分类管理</view>
         </view>
       </view>
     </view>
@@ -131,6 +140,13 @@ const startQuizWithCurrentUI = (query: quizQuery) => {
 const goToCardListByAll = () => {
   uni.navigateTo({
     url: '/pages/cardList/index',
+  });
+};
+
+// 当前没有可见分类时，直接引导到分类管理页，避免页面只剩空白区域。
+const goToCategoryManage = () => {
+  uni.switchTab({
+    url: '/pages/categoryManage/index',
   });
 };
 
@@ -337,6 +353,43 @@ const goToCardList = (categoryId: string) => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18rpx;
+}
+
+.category-empty {
+  margin-top: 24rpx;
+}
+
+.empty-card {
+  padding: 30rpx 26rpx;
+  border-radius: 28rpx;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1rpx dashed rgba(31, 94, 255, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+}
+
+.empty-text {
+  color: var(--text-muted);
+  font-size: 24rpx;
+  line-height: 1.7;
+}
+
+.empty-action {
+  margin-top: 6rpx;
+  align-self: flex-start;
+  min-width: 180rpx;
+  height: 74rpx;
+  padding: 0 22rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, #1f5eff, #3b82ff);
+  color: #fff;
+  font-size: 26rpx;
+  font-weight: 600;
+  box-shadow: 0 14rpx 28rpx rgba(31, 94, 255, 0.18);
 }
 
 .category-item {

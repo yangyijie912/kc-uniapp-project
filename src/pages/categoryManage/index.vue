@@ -12,56 +12,64 @@
     </view>
 
     <view class="list-card">
-      <view v-for="category in categoryViewList" :key="category.id" class="category-row">
-        <view class="category-info">
-          <view class="category-name">{{ category.name }}</view>
-          <view class="category-count">{{ category.cardCount }} 张卡片</view>
+      <view v-if="categoryViewList.length > 0">
+        <view v-for="category in categoryViewList" :key="category.id" class="category-row">
+          <view class="category-info">
+            <view class="category-name">{{ category.name }}</view>
+            <view class="category-count">{{ category.cardCount }} 张卡片</view>
+          </view>
+          <view class="row-actions">
+            <view
+              class="row-icon"
+              @click="category.canMoveUp && moveUp(category.id)"
+              :class="{ disabled: !category.canMoveUp }"
+            >
+              <image
+                class="row-icon-image"
+                :src="
+                  category.canMoveUp
+                    ? '/static/actions/shangjiantou.svg'
+                    : '/static/actions/shangjiantou-disabled.svg'
+                "
+                mode="aspectFit"
+              />
+            </view>
+
+            <view
+              class="row-icon"
+              @click="category.canMoveDown && moveDown(category.id)"
+              :class="{ disabled: !category.canMoveDown }"
+            >
+              <image
+                class="row-icon-image"
+                :src="
+                  category.canMoveDown
+                    ? '/static/actions/xiajiantou.svg'
+                    : '/static/actions/xiajiantou-disabled.svg'
+                "
+                mode="aspectFit"
+              />
+            </view>
+
+            <view class="row-icon" @click="goToEdit(category.id)" v-if="category.canEdit">
+              <image class="row-icon-image" src="/static/actions/bianji.svg" mode="aspectFit" />
+            </view>
+
+            <view
+              class="row-icon row-icon-danger"
+              @click="removeCategory(category.id)"
+              v-if="category.canDelete"
+            >
+              <image class="row-icon-image" src="/static/actions/shanchu.svg" mode="aspectFit" />
+            </view>
+          </view>
         </view>
-        <view class="row-actions">
-          <view
-            class="row-icon"
-            @click="category.canMoveUp && moveUp(category.id)"
-            :class="{ disabled: !category.canMoveUp }"
-          >
-            <image
-              class="row-icon-image"
-              :src="
-                category.canMoveUp
-                  ? '/static/actions/shangjiantou.svg'
-                  : '/static/actions/shangjiantou-disabled.svg'
-              "
-              mode="aspectFit"
-            />
-          </view>
+      </view>
 
-          <view
-            class="row-icon"
-            @click="category.canMoveDown && moveDown(category.id)"
-            :class="{ disabled: !category.canMoveDown }"
-          >
-            <image
-              class="row-icon-image"
-              :src="
-                category.canMoveDown
-                  ? '/static/actions/xiajiantou.svg'
-                  : '/static/actions/xiajiantou-disabled.svg'
-              "
-              mode="aspectFit"
-            />
-          </view>
-
-          <view class="row-icon" @click="goToEdit(category.id)" v-if="category.canEdit">
-            <image class="row-icon-image" src="/static/actions/bianji.svg" mode="aspectFit" />
-          </view>
-
-          <view
-            class="row-icon row-icon-danger"
-            @click="removeCategory(category.id)"
-            v-if="category.canDelete"
-          >
-            <image class="row-icon-image" src="/static/actions/shanchu.svg" mode="aspectFit" />
-          </view>
-        </view>
+      <view v-else class="empty-card">
+        <view class="empty-text"
+          >当前还没有可管理的分类，请点击右上角新增分类，先建立一个分类结构再回来管理。</view
+        >
       </view>
     </view>
   </view>
@@ -218,6 +226,23 @@ onShow(() => {
 .list-card {
   margin-top: 20rpx;
   padding: 12rpx 20rpx;
+}
+
+.empty-card {
+  margin: 12rpx 0 6rpx;
+  padding: 30rpx 24rpx;
+  border-radius: 24rpx;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1rpx dashed rgba(31, 94, 255, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+}
+
+.empty-text {
+  color: #6c645a;
+  font-size: 24rpx;
+  line-height: 1.7;
 }
 
 .category-row {
